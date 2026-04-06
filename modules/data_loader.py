@@ -31,12 +31,14 @@ def fetch_file(url):
     try:
         response = requests.get(url, timeout=30)
 
-        if response.status_code == 200:
+        if response.status_code == 200 and len(response.content) > 0:
             return response.content, response.headers
         else:
+            st.warning(f"⚠️ Failed to fetch: {url}")
             return None, None
 
-    except Exception:
+    except Exception as e:
+        st.error(f"Error fetching file: {e}")
         return None, None
 
 
@@ -100,7 +102,8 @@ def build_ptc(df):
 @st.cache_data(ttl=REFRESH_INTERVAL)
 def load_data():
 
-    urls = CONFIG[ENV]
+    st.write("ENV:", ENV)
+    st.write(CONFIG[ENV])
 
     data_info = {}
 
