@@ -67,17 +67,6 @@ def show_table(df):
     </style>
     """, unsafe_allow_html=True)
 
-    # --- Display Table ---
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "SL No": st.column_config.NumberColumn(width="small"),
-            "Description": st.column_config.TextColumn(width="large"),
-        }
-    )
-
 st.markdown("""
 <style>
 /* Enable tooltip on hover */
@@ -102,4 +91,16 @@ st.markdown("""
     font-size: 12px;
 }
 </style>
-""", unsafe_allow_html=True)
+""", unsafe_allow_html=True)    
+    
+    # --- Display Table ---
+    st.dataframe(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "SL No": st.column_config.NumberColumn(width="small"),
+            "Description": st.column_config.TextColumn(width="large"),
+        }
+    )
+
