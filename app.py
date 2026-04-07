@@ -24,8 +24,6 @@ with col3:
     if st.button("SNOW"):
         st.session_state.source = "SNOW"
 
-with col4:
-    st.markdown("### 📊 Ops Insight Dashboard (DEV)")
 
 # ---------------- LOAD DATA ----------------
 df, info = load_data()
