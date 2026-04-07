@@ -4,17 +4,12 @@ import re
 
 
 def clean_name(value):
-    try:
-        if pd.isna(value):
-            return value
-
-        value = str(value)
-        value = re.sub(r"\s*<.*?>", "", value)
-        value = re.sub(r"\s*\(.*?\)", "", value)
-        return value.strip()
-
-    except Exception:
+    if pd.isna(value):
         return value
+    value = str(value)
+    value = re.sub(r"\s*<.*?>", "", value)
+    value = re.sub(r"\s*\(.*?\)", "", value)
+    return value.strip()
 
 
 def build_link(row):
@@ -42,47 +37,48 @@ def show_table(df):
     df = df.reset_index(drop=True)
     df.insert(0, "SL No", df.index + 1)
 
-    # --- Clean Names ---
+    # --- CLEAN ---
     for col in ["Created By", "Assigned To"]:
         if col in df.columns:
             df[col] = df[col].apply(clean_name)
 
-    # --- Date Format ---
+    # --- DATE FORMAT ---
     for col in ["Created Date", "Resolved Date"]:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
-    # --- Create Link Column ---
+    # --- REMOVE .0 issue ---
+    if "Assigned To" in df.columns:
+        df["Assigned To"] = df["Assigned To"].astype(str).str.replace(".0", "", regex=False)
+
+    # --- LINK COLUMN ---
     df["Open"] = df.apply(build_link, axis=1)
 
-    # --- Styling ---
-    st.markdown("""
-    <style>
-    [data-testid="stDataFrame"] {
-        font-size: 12px;
-    }
+    # --- COLUMN ORDER ---
+    columns_order = [
+        "SL No",
+        "Number",
+        "Description",
+        "Priority",
+        "Status",
+        "Created By",
+        "Created Date",
+        "Assigned To",
+        "Resolved Date",
+        "Source",
+        "Open"
+    ]
 
-    [data-testid="stDataFrame"] th,
-    [data-testid="stDataFrame"] td {
-        text-align: center !important;
-        vertical-align: middle !important;
-    }
+    df = df[[col for col in columns_order if col in df.columns]]
 
-    /* Left align Description */
-    [data-testid="stDataFrame"] td:nth-child(3) {
-        text-align: left !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # --- Render table (STABLE) ---
+    # --- DISPLAY ---
     st.dataframe(
         df,
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Open": st.column_config.LinkColumn("🔗 Open"),
-            "SL No": st.column_config.NumberColumn(width="small"),
+            "Open": st.column_config.LinkColumn("Open"),
             "Description": st.column_config.TextColumn(width="large"),
+            "SL No": st.column_config.NumberColumn(width="small")
         }
     )
