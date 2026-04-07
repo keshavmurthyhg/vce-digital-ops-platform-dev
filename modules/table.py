@@ -17,23 +17,20 @@ def clean_name(value):
         return value
 
 
-# --- Build URL ---
 def build_link(row):
     number = str(row.get("Number", ""))
     source = str(row.get("Source", "")).upper()
 
     if source == "SNOW":
         return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={number}"
+
     elif source == "PTC":
         return f"https://support.ptc.com/appserver/cs/view/case.jsp?n={number}"
+
     elif source == "AZURE":
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{number}"
-    return ""
 
-df["Open"] = df.apply(
-    lambda x: f'<a href="{build_link(x)}" target="_blank">🔗</a>',
-    axis=1
-)
+    return ""
 
 
 def show_table(df):
@@ -55,36 +52,53 @@ def show_table(df):
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
-    # --- Build Links ---
-    df["Open"] = df.apply(build_link, axis=1)
+    # --- Create Icon Link ---
+    df["Open"] = df.apply(
+        lambda x: f'<a href="{build_link(x)}" target="_blank">🔗</a>',
+        axis=1
+    )
 
-    # --- Table Styling ---
+    # --- Styling ---
     st.markdown("""
     <style>
-    [data-testid="stDataFrame"] th,
-    [data-testid="stDataFrame"] td {
-        text-align: center !important;
-        vertical-align: middle !important;
-        font-size: 12px;
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
     }
 
-    /* Left align text-heavy columns */
-    [data-testid="stDataFrame"] td:nth-child(4),
-    [data-testid="stDataFrame"] td:nth-child(8),
-    [data-testid="stDataFrame"] td:nth-child(9) {
-        text-align: left !important;
+    thead th {
+        background-color: #f0f2f6;
+        padding: 8px;
+        text-align: center;
+    }
+
+    tbody td {
+        padding: 8px;
+        border-bottom: 1px solid #ddd;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    /* Left align description */
+    tbody td:nth-child(3) {
+        text-align: left;
+    }
+
+    /* Hover */
+    tbody tr:hover {
+        background-color: #f9f9f9;
+    }
+
+    a {
+        text-decoration: none;
+        font-size: 16px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # --- Display ---
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Open": st.column_config.LinkColumn("Open Link"),
-            "SL No": st.column_config.NumberColumn(width="small"),
-            "Description": st.column_config.TextColumn(width="large"),
-        }
+    # --- Display HTML table (needed for clickable icon) ---
+    st.markdown(
+        df.to_html(escape=False, index=False),
+        unsafe_allow_html=True
     )
