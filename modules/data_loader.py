@@ -35,7 +35,7 @@ def build_azure(df):
         "Created By": safe_col(df, "created by"),
         "Created Date": safe_col(df, "created date"),
         "Assigned To": safe_col(df, "assigned to"),
-        "Resolution Date": safe_col(df, "resolved date"),
+        "Resolved Date": safe_col(df, "resolved date"),
         "Release": safe_col(df, "release_windchill"),
         "Source": ["AZURE"] * len(df)
     })
@@ -50,7 +50,7 @@ def build_snow(df):
         "Created By": safe_col(df, "opened by"),
         "Created Date": safe_col(df, "created"),
         "Assigned To": safe_col(df, "assigned to"),
-        "Resolution Date": safe_col(df, "resolved"),
+        "Resolved Date": safe_col(df, "resolved"),
         "Release": [None] * len(df),
         "Source": ["SNOW"] * len(df)
     })
@@ -65,7 +65,7 @@ def build_ptc(df):
         "Created By": safe_col(df, "case contact"),
         "Created Date": safe_col(df, "created date"),
         "Assigned To": safe_col(df, "case assignee"),
-        "Resolution Date": safe_col(df, "resolved date"),
+        "Resolved Date": safe_col(df, "resolved date"),
         "Release": [None] * len(df),
         "Source": ["PTC"] * len(df)
     })
