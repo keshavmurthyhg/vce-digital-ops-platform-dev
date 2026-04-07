@@ -93,22 +93,57 @@ def build_snow(df):
 
 def build_ptc(df):
 
-    # -------- FIND HEADER ROW --------
+    # -------------------------------
+    # STEP 1: FIND HEADER ANYWHERE
+    # -------------------------------
     header_row = None
-    for i in range(min(5, len(df))):
-        row_values = df.iloc[i].astype(str).str.lower().tolist()
-        if "case number" in row_values:
+
+    for i in range(len(df)):
+        row = df.iloc[i].astype(str).str.lower().tolist()
+
+        if "case number" in row and "subject" in row:
             header_row = i
             break
 
+    # -------------------------------
+    # STEP 2: APPLY HEADER
+    # -------------------------------
     if header_row is not None:
         df.columns = df.iloc[header_row]
         df = df[(header_row + 1):]
+    else:
+        st.error("❌ PTC header not found")
+        return pd.DataFrame()
 
-    df = normalize_columns(df)
+    # -------------------------------
+    # STEP 3: CLEAN COLUMNS
+    # -------------------------------
+    df.columns = (
+        df.columns.astype(str)
+        .str.replace("\n", " ")
+        .str.strip()
+        .str.lower()
+    )
 
+    # -------------------------------
+    # STEP 4: DROP EMPTY ROWS
+    # -------------------------------
+    df = df.dropna(how="all")
+
+    # -------------------------------
+    # STEP 5: DEBUG (IMPORTANT)
+    # -------------------------------
+    st.write("PTC columns detected:", df.columns)
+
+    # -------------------------------
+    # STEP 6: EXTRACT COLUMNS SAFELY
+    # -------------------------------
     def col(name):
-        return df[name] if name in df.columns else pd.Series([None]*len(df))
+        if name in df.columns:
+            return df[name]
+        else:
+            st.warning(f"Missing column: {name}")
+            return pd.Series([None] * len(df))
 
     return pd.DataFrame({
         "Number": col("case number"),
@@ -119,8 +154,8 @@ def build_ptc(df):
         "Created Date": col("created date"),
         "Assigned To": col("case assignee"),
         "Resolved Date": col("resolved date"),
-        "Release": pd.Series([None]*len(df)),
-        "Source": "PTC"
+        "Release": pd.Series([None] * len(df)),
+        "Source": pd.Series(["PTC"] * len(df))
     })
 
 
