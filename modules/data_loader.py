@@ -88,10 +88,19 @@ def build_snow(df):
 
 
 def build_ptc(df):
-    df = normalize_columns(df)
 
-    # DEBUG (remove later if needed)
-    # st.write("PTC Columns:", df.columns)
+    # --- FIX HEADER ISSUE ---
+    # If first row is actually header, fix it
+    if "case number" not in df.columns:
+        df.columns = df.iloc[0]
+        df = df[1:]
+
+    # Normalize after fixing header
+    df.columns = df.columns.astype(str).str.strip().str.lower()
+
+    # --- DEBUG (remove later) ---
+    # st.write("PTC columns after fix:", df.columns)
+    # st.write(df.head())
 
     return pd.DataFrame({
         "Number": df.get("case number"),
