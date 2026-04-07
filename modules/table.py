@@ -67,31 +67,7 @@ def show_table(df):
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-/* Enable tooltip on hover */
-[data-testid="stDataFrame"] td {
-    position: relative;
-}
 
-/* Tooltip */
-[data-testid="stDataFrame"] td:hover::after {
-    content: attr(title);
-    position: absolute;
-    left: 0;
-    top: 100%;
-    background: #333;
-    color: #fff;
-    padding: 6px 10px;
-    border-radius: 6px;
-    white-space: pre-wrap;
-    z-index: 9999;
-    min-width: 200px;
-    max-width: 500px;
-    font-size: 12px;
-}
-</style>
-""", unsafe_allow_html=True)    
     
     # --- Display Table ---
     st.dataframe(
