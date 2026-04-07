@@ -4,7 +4,7 @@ import requests
 from io import BytesIO
 from config import CONFIG, ENV
 
-REFRESH_INTERVAL = 300  # 5 mins
+REFRESH_INTERVAL = 300
 
 
 # -------------------------------
@@ -29,18 +29,15 @@ def fetch_file(url):
         if response.status_code == 200 and len(response.content) > 100:
             return response.content, response.headers
         else:
-            st.warning(f"⚠️ Failed or empty file: {url}")
+            st.warning(f"⚠️ Failed file: {url}")
             return None, None
 
     except Exception as e:
-        st.error(f"❌ Error fetching file: {e}")
+        st.error(f"❌ Fetch error: {e}")
         return None, None
 
 
 def read_file(content, url):
-    """
-    Smart reader: handles csv/excel automatically
-    """
     try:
         if url.endswith(".csv"):
             return pd.read_csv(BytesIO(content))
@@ -49,7 +46,7 @@ def read_file(content, url):
     except Exception:
         try:
             return pd.read_csv(BytesIO(content))
-        except Exception:
+        except:
             return pd.DataFrame()
 
 
@@ -61,13 +58,13 @@ def build_azure(df):
 
     return pd.DataFrame({
         "Number": get_col(df, "id"),
-        "Description": get_col(df, "title", "system.title"),
-        "Status": get_col(df, "state", "system.state"),
+        "Description": get_col(df, "title"),
         "Priority": get_col(df, "priority"),
-        "Created By": get_col(df, "created by", "system.createdby"),
-        "Created Date": get_col(df, "created date", "system.createddate"),
-        "Assigned To": get_col(df, "assigned to", "system.assignedto"),
-        "Resolved Date": get_col(df, "resolved date", "closed date", "system.closeddate"),
+        "Status": get_col(df, "state"),
+        "Created By": get_col(df, "created by"),
+        "Created Date": get_col(df, "created date"),
+        "Assigned To": get_col(df, "assigned to"),
+        "Resolved Date": get_col(df, "resolved date"),
         "Release": get_col(df, "release_windchill"),
         "Source": "AZURE"
     })
@@ -79,12 +76,12 @@ def build_snow(df):
     return pd.DataFrame({
         "Number": get_col(df, "number"),
         "Description": get_col(df, "short description"),
-        "Status": get_col(df, "incident state", "state"),
         "Priority": get_col(df, "priority"),
-        "Created By": get_col(df, "opened by", "caller"),
-        "Created Date": get_col(df, "created", "opened"),
+        "Status": get_col(df, "incident state"),
+        "Created By": get_col(df, "opened by"),
+        "Created Date": get_col(df, "created date", "created"),
         "Assigned To": get_col(df, "assigned to"),
-        "Resolved Date": get_col(df, "resolved", "closed"),
+        "Resolved Date": get_col(df, "resolved"),
         "Release": None,
         "Source": "SNOW"
     })
@@ -96,8 +93,8 @@ def build_ptc(df):
     return pd.DataFrame({
         "Number": get_col(df, "case number"),
         "Description": get_col(df, "subject"),
-        "Status": get_col(df, "status"),
         "Priority": get_col(df, "severity"),
+        "Status": get_col(df, "status"),
         "Created By": get_col(df, "case contact"),
         "Created Date": get_col(df, "created date"),
         "Assigned To": get_col(df, "case assignee"),
@@ -116,71 +113,34 @@ def load_data():
     urls = CONFIG[ENV]
     data_info = {}
 
-    # -------- SNOW --------
+    # --- SNOW ---
     snow_content, snow_headers = fetch_file(urls["SNOW_URL"])
-
     if snow_content:
-        try:
-            df_snow_raw = read_file(snow_content, urls["SNOW_URL"])
-            df_snow = build_snow(df_snow_raw)
-            data_info["SNOW"] = snow_headers.get("Last-Modified", "Updated")
-        except Exception as e:
-            st.error(f"❌ SNOW error: {e}")
-            df_snow = pd.DataFrame()
-            data_info["SNOW"] = "FAILED"
+        df_snow = build_snow(read_file(snow_content, urls["SNOW_URL"]))
+        data_info["SNOW"] = snow_headers.get("Last-Modified", "Updated")
     else:
         df_snow = pd.DataFrame()
         data_info["SNOW"] = "FAILED"
 
-    # -------- PTC --------
+    # --- PTC ---
     ptc_content, ptc_headers = fetch_file(urls["PTC_URL"])
-
     if ptc_content:
-        try:
-            df_ptc_raw = read_file(ptc_content, urls["PTC_URL"])
-            df_ptc = build_ptc(df_ptc_raw)
-            data_info["PTC"] = ptc_headers.get("Last-Modified", "Updated")
-        except Exception as e:
-            st.error(f"❌ PTC error: {e}")
-            df_ptc = pd.DataFrame()
-            data_info["PTC"] = "FAILED"
+        df_ptc = build_ptc(read_file(ptc_content, urls["PTC_URL"]))
+        data_info["PTC"] = ptc_headers.get("Last-Modified", "Updated")
     else:
         df_ptc = pd.DataFrame()
         data_info["PTC"] = "FAILED"
 
-    # -------- AZURE --------
+    # --- AZURE ---
     azure_content, azure_headers = fetch_file(urls["AZURE_URL"])
-
     if azure_content:
-        try:
-            df_azure_raw = read_file(azure_content, urls["AZURE_URL"])
-            df_azure = build_azure(df_azure_raw)
-            data_info["AZURE"] = azure_headers.get("Last-Modified", "Updated")
-        except Exception as e:
-            st.error(f"❌ AZURE error: {e}")
-            df_azure = pd.DataFrame()
-            data_info["AZURE"] = "FAILED"
+        df_azure = build_azure(read_file(azure_content, urls["AZURE_URL"]))
+        data_info["AZURE"] = azure_headers.get("Last-Modified", "Updated")
     else:
         df_azure = pd.DataFrame()
         data_info["AZURE"] = "FAILED"
 
-    # -------- COMBINE --------
+    # --- COMBINE ---
     df = pd.concat([df_snow, df_ptc, df_azure], ignore_index=True)
-
-    # -------- FINAL COLUMN ORDER --------
-    final_columns = [
-        "Number",
-        "Description",
-        "Priority",
-        "Status",
-        "Created By",
-        "Created Date",
-        "Assigned To",
-        "Resolved Date",
-        "Release",
-        "Source"
-    ]
-
-    df = df.reindex(columns=final_columns)
 
     return df, data_info
