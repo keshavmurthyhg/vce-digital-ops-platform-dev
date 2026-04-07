@@ -18,17 +18,29 @@ def show_table(df):
 
     # --- Alignment CSS ---
     st.markdown("""
-    <style>
-    [data-testid="stDataFrame"] td {
-        text-align: center;
-    }
-    [data-testid="stDataFrame"] td:nth-child(4),
-    [data-testid="stDataFrame"] td:nth-child(7),
-    [data-testid="stDataFrame"] td:nth-child(9) {
-        text-align: left !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+<style>
+/* Header alignment */
+[data-testid="stDataFrame"] th {
+    display: flex;
+    align-items: center !important;
+    justify-content: center;
+}
+
+/* Cell alignment */
+[data-testid="stDataFrame"] td {
+    display: flex;
+    align-items: center !important;
+    justify-content: center;
+}
+
+/* Left-align specific columns (override) */
+[data-testid="stDataFrame"] td:nth-child(4),
+[data-testid="stDataFrame"] td:nth-child(7),
+[data-testid="stDataFrame"] td:nth-child(9) {
+    justify-content: flex-start !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
     # --- Table ---
     st.dataframe(
