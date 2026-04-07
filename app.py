@@ -1,72 +1,134 @@
 import streamlit as st
+import pandas as pd
 from modules.data_loader import load_data
-from modules.filters import create_filter, apply_filters
-from modules.kpi import show_kpi
-from modules.search import search_box
-from modules.table import show_table
 
+# --------------------------------------------------
+# PAGE CONFIG
+# --------------------------------------------------
 st.set_page_config(layout="wide")
+st.title("📊 Ops Insight Dashboard (DEV)")
 
-# ---------------- PAGE TITLE ----------------
-st.sidebar.markdown("## ⚙️ Ops Insight Dashboard")
-st.sidebar.markdown("---")
+# --------------------------------------------------
+# LOAD DATA
+# --------------------------------------------------
+df, info = load_data()
 
-st.sidebar.selectbox("Menu", ["Search Tool"])
-
-# ---------------- LOAD DATA ----------------
-df, data_info = load_data()
-
-# ---------------- ERROR HANDLING ----------------
+# Safety check
 if df.empty:
     st.error("⚠️ Data could not be loaded from sources")
     st.stop()
 
-# ---------------- SOURCE ----------------
-st.sidebar.markdown("### Source")
+# --------------------------------------------------
+# SIDEBAR
+# --------------------------------------------------
+st.sidebar.header("Menu")
 
+# Source selection (horizontal radio)
 source = st.sidebar.radio(
-    "",
+    "Source",
     ["ALL", "AZURE", "SNOW", "PTC"],
     horizontal=True
 )
 
-# Base dataset
-base_df = df if source == "ALL" else df[df["Source"] == source]
+# --------------------------------------------------
+# FILTER DATA BASED ON SOURCE
+# --------------------------------------------------
+filtered_df = df.copy()
 
-# ---------------- FILTERS ----------------
-st.sidebar.markdown("### 🔧 Filters")
+if source != "ALL":
+    filtered_df = filtered_df[filtered_df["Source"] == source]
 
-state = create_filter(base_df, "Status")
-priority = create_filter(base_df, "Priority")
+# --------------------------------------------------
+# KPI (Dynamic)
+# --------------------------------------------------
+total = len(filtered_df)
 
-release = "ALL"
-if source == "AZURE":
-    release = create_filter(base_df, "Release")
+open_count = filtered_df["Status"].astype(str).str.contains(
+    "Open|New|Active", case=False, na=False
+).sum()
 
-# ---------------- SEARCH ----------------
-keyword = search_box()
+closed = filtered_df["Status"].astype(str).str.contains(
+    "Closed", case=False, na=False
+).sum()
 
-# ---------------- APPLY FILTER ----------------
-filtered = apply_filters(base_df, state, priority, release, keyword)
+cancelled = filtered_df["Status"].astype(str).str.contains(
+    "Cancel", case=False, na=False
+).sum()
 
-# ---------------- DATA STATUS ----------------
-st.markdown("### 📊 Data Status")
+# KPI layout (compact)
+st.sidebar.markdown("### 📊 KPI")
 
-col1, col2, col3 = st.columns(3)
+k1, k2 = st.sidebar.columns(2)
+k1.metric("Total", total)
+k2.metric("Open", open_count)
 
-col1.metric("SNOW", data_info.get("SNOW", "NA"))
-col2.metric("PTC", data_info.get("PTC", "NA"))
-col3.metric("AZURE", data_info.get("AZURE", "NA"))
+k3, k4 = st.sidebar.columns(2)
+k3.metric("Closed", closed)
+k4.metric("Cancelled", cancelled)
 
-# ---------------- REFRESH BUTTON ----------------
-if st.button("🔄 Refresh Data"):
-    st.cache_data.clear()
+# --------------------------------------------------
+# SEARCH BAR
+# --------------------------------------------------
+st.subheader("🔍 Search")
+
+col1, col2 = st.columns([8, 1])
+
+if "search" not in st.session_state:
+    st.session_state.search = ""
+
+search = col1.text_input(
+    "",
+    value=st.session_state.search,
+    placeholder="Type keyword and press Enter"
+)
+
+if col2.button("❌ Clear"):
+    st.session_state.search = ""
     st.rerun()
 
-# ---------------- TABLE ----------------
-show_table(filtered)
+# --------------------------------------------------
+# APPLY SEARCH FILTER
+# --------------------------------------------------
+if search:
+    filtered_df = filtered_df[
+        filtered_df.apply(
+            lambda row: search.lower() in str(row).lower(),
+            axis=1
+        )
+    ]
 
-# ---------------- KPI ----------------
-st.sidebar.markdown("---")
-st.sidebar.markdown("### 📊 KPI")
-show_kpi(base_df)
+# --------------------------------------------------
+# RESULTS
+# --------------------------------------------------
+st.markdown(f"### 📄 Results: {len(filtered_df)}")
+
+# Align columns (center except text fields)
+def style_table(df):
+    return df.style.set_properties(
+        subset=[
+            "Number", "Priority", "Status",
+            "Created Date", "Resolution Date",
+            "Release", "Source"
+        ],
+        **{"text-align": "center"}
+    )
+
+st.dataframe(filtered_df, use_container_width=True)
+
+# --------------------------------------------------
+# DOWNLOAD BUTTON
+# --------------------------------------------------
+csv = filtered_df.to_csv(index=False).encode("utf-8")
+
+st.download_button(
+    label="⬇ Download",
+    data=csv,
+    file_name="filtered_results.csv",
+    mime="text/csv"
+)
+
+# --------------------------------------------------
+# DATA FRESHNESS
+# --------------------------------------------------
+if info:
+    st.caption(f"🕒 Last refreshed: {info.get('last_refresh')}")
