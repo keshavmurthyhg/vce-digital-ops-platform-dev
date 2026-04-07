@@ -2,10 +2,9 @@ import pandas as pd
 import streamlit as st
 import requests
 from io import BytesIO
-from datetime import datetime
 from config import CONFIG, ENV
 
-REFRESH_INTERVAL = 300  # seconds
+REFRESH_INTERVAL = 300  # 5 mins
 
 
 # -------------------------------
@@ -27,15 +26,31 @@ def fetch_file(url):
     try:
         response = requests.get(url, timeout=30)
 
-        if response.status_code == 200 and len(response.content) > 0:
+        if response.status_code == 200 and len(response.content) > 100:
             return response.content, response.headers
         else:
-            st.warning(f"⚠️ Failed to fetch: {url}")
+            st.warning(f"⚠️ Failed or empty file: {url}")
             return None, None
 
     except Exception as e:
-        st.error(f"Error fetching file: {e}")
+        st.error(f"❌ Error fetching file: {e}")
         return None, None
+
+
+def read_file(content, url):
+    """
+    Smart reader: handles csv/excel automatically
+    """
+    try:
+        if url.endswith(".csv"):
+            return pd.read_csv(BytesIO(content))
+        else:
+            return pd.read_excel(BytesIO(content))
+    except Exception:
+        try:
+            return pd.read_csv(BytesIO(content))
+        except Exception:
+            return pd.DataFrame()
 
 
 # -------------------------------
@@ -98,17 +113,21 @@ def build_ptc(df):
 @st.cache_data(ttl=REFRESH_INTERVAL)
 def load_data():
 
-    urls = CONFIG[ENV]   # ✅ FIXED
-
+    urls = CONFIG[ENV]
     data_info = {}
 
     # -------- SNOW --------
     snow_content, snow_headers = fetch_file(urls["SNOW_URL"])
 
     if snow_content:
-        df_snow_raw = pd.read_excel(BytesIO(snow_content))
-        df_snow = build_snow(df_snow_raw)
-        data_info["SNOW"] = snow_headers.get("Last-Modified", "Updated")
+        try:
+            df_snow_raw = read_file(snow_content, urls["SNOW_URL"])
+            df_snow = build_snow(df_snow_raw)
+            data_info["SNOW"] = snow_headers.get("Last-Modified", "Updated")
+        except Exception as e:
+            st.error(f"❌ SNOW error: {e}")
+            df_snow = pd.DataFrame()
+            data_info["SNOW"] = "FAILED"
     else:
         df_snow = pd.DataFrame()
         data_info["SNOW"] = "FAILED"
@@ -117,9 +136,14 @@ def load_data():
     ptc_content, ptc_headers = fetch_file(urls["PTC_URL"])
 
     if ptc_content:
-        df_ptc_raw = pd.read_excel(BytesIO(ptc_content))
-        df_ptc = build_ptc(df_ptc_raw)
-        data_info["PTC"] = ptc_headers.get("Last-Modified", "Updated")
+        try:
+            df_ptc_raw = read_file(ptc_content, urls["PTC_URL"])
+            df_ptc = build_ptc(df_ptc_raw)
+            data_info["PTC"] = ptc_headers.get("Last-Modified", "Updated")
+        except Exception as e:
+            st.error(f"❌ PTC error: {e}")
+            df_ptc = pd.DataFrame()
+            data_info["PTC"] = "FAILED"
     else:
         df_ptc = pd.DataFrame()
         data_info["PTC"] = "FAILED"
@@ -128,9 +152,14 @@ def load_data():
     azure_content, azure_headers = fetch_file(urls["AZURE_URL"])
 
     if azure_content:
-        df_azure_raw = pd.read_csv(BytesIO(azure_content))
-        df_azure = build_azure(df_azure_raw)
-        data_info["AZURE"] = azure_headers.get("Last-Modified", "Updated")
+        try:
+            df_azure_raw = read_file(azure_content, urls["AZURE_URL"])
+            df_azure = build_azure(df_azure_raw)
+            data_info["AZURE"] = azure_headers.get("Last-Modified", "Updated")
+        except Exception as e:
+            st.error(f"❌ AZURE error: {e}")
+            df_azure = pd.DataFrame()
+            data_info["AZURE"] = "FAILED"
     else:
         df_azure = pd.DataFrame()
         data_info["AZURE"] = "FAILED"
@@ -147,7 +176,7 @@ def load_data():
         "Created By",
         "Created Date",
         "Assigned To",
-        "Resolved Date",   # ✅ FIXED
+        "Resolved Date",
         "Release",
         "Source"
     ]
