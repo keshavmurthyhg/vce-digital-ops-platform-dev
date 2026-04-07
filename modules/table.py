@@ -36,6 +36,13 @@ def show_table(df):
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
+    # --- Row selector ---
+    selected_index = st.selectbox(
+        "🔍 Select a row to preview",
+        options=df.index,
+        format_func=lambda x: f"{df.loc[x, 'Number']} | {df.loc[x, 'Description'][:60]}..."
+    )
+
     # --- Alignment CSS ---
     st.markdown("""
     <style>
@@ -45,7 +52,7 @@ def show_table(df):
         vertical-align: middle !important;
     }
 
-    /* Left align specific columns */
+    /* Left align text-heavy columns */
     [data-testid="stDataFrame"] td:nth-child(4),
     [data-testid="stDataFrame"] td:nth-child(8),
     [data-testid="stDataFrame"] td:nth-child(9) {
@@ -54,9 +61,32 @@ def show_table(df):
     </style>
     """, unsafe_allow_html=True)
 
-    # --- Display ---
+    # --- Table ---
     st.dataframe(
         df,
         use_container_width=True,
         hide_index=True
     )
+
+    # --- Preview Panel ---
+    st.markdown("---")
+    st.markdown("### 🔎 Preview")
+
+    selected_row = df.loc[selected_index]
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown(f"**Number:** {selected_row.get('Number', '')}")
+        st.markdown(f"**Priority:** {selected_row.get('Priority', '')}")
+        st.markdown(f"**Status:** {selected_row.get('Status', '')}")
+        st.markdown(f"**Created By:** {selected_row.get('Created By', '')}")
+        st.markdown(f"**Assigned To:** {selected_row.get('Assigned To', '')}")
+
+    with col2:
+        st.markdown(f"**Created Date:** {selected_row.get('Created Date', '')}")
+        st.markdown(f"**Resolution Date:** {selected_row.get('Resolution Date', '')}")
+        st.markdown(f"**Source:** {selected_row.get('Source', '')}")
+
+    st.markdown("#### 📝 Description")
+    st.info(selected_row.get("Description", ""))
