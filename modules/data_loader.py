@@ -3,7 +3,16 @@ import streamlit as st
 from config import CONFIG, ENV
 
 # --------------------------------------------------
-# FILE READER (AUTO DETECT)
+# SAFE COLUMN GETTER
+# --------------------------------------------------
+def safe_col(df, col):
+    for c in df.columns:
+        if c.lower().strip() == col.lower():
+            return df[c]
+    return pd.Series([None] * len(df))
+
+# --------------------------------------------------
+# FILE READER
 # --------------------------------------------------
 def read_file(url):
     if url.endswith(".csv"):
@@ -14,51 +23,51 @@ def read_file(url):
         raise ValueError(f"Unsupported file format: {url}")
 
 # --------------------------------------------------
-# BUILD FUNCTIONS
+# BUILD FUNCTIONS (FIXED)
 # --------------------------------------------------
 
 def build_azure(df):
     return pd.DataFrame({
-        "Number": df.get("id"),
-        "Description": df.get("title"),
-        "Priority": None,
-        "Status": df.get("state"),
-        "Created By": df.get("created by"),
-        "Created Date": df.get("created date"),
-        "Assigned To": df.get("assigned to"),
-        "Resolution Date": df.get("resolved date"),
-        "Release": df.get("release_windchill"),
-        "Source": "AZURE"
+        "Number": safe_col(df, "id"),
+        "Description": safe_col(df, "title"),
+        "Priority": [None] * len(df),
+        "Status": safe_col(df, "state"),
+        "Created By": safe_col(df, "created by"),
+        "Created Date": safe_col(df, "created date"),
+        "Assigned To": safe_col(df, "assigned to"),
+        "Resolution Date": safe_col(df, "resolved date"),
+        "Release": safe_col(df, "release_windchill"),
+        "Source": ["AZURE"] * len(df)
     })
 
 
 def build_snow(df):
     return pd.DataFrame({
-        "Number": df.get("number"),
-        "Description": df.get("short description"),
-        "Priority": df.get("priority"),
-        "Status": df.get("incident state"),
-        "Created By": df.get("opened by"),
-        "Created Date": df.get("created"),
-        "Assigned To": df.get("assigned to"),
-        "Resolution Date": df.get("resolved"),
-        "Release": None,
-        "Source": "SNOW"
+        "Number": safe_col(df, "number"),
+        "Description": safe_col(df, "short description"),
+        "Priority": safe_col(df, "priority"),
+        "Status": safe_col(df, "incident state"),
+        "Created By": safe_col(df, "opened by"),
+        "Created Date": safe_col(df, "created"),
+        "Assigned To": safe_col(df, "assigned to"),
+        "Resolution Date": safe_col(df, "resolved"),
+        "Release": [None] * len(df),
+        "Source": ["SNOW"] * len(df)
     })
 
 
 def build_ptc(df):
     return pd.DataFrame({
-        "Number": df.get("case number"),
-        "Description": df.get("subject"),
-        "Priority": df.get("severity"),
-        "Status": df.get("status"),
-        "Created By": df.get("case contact"),
-        "Created Date": df.get("created date"),
-        "Assigned To": df.get("case assignee"),
-        "Resolution Date": df.get("resolved date"),
-        "Release": None,
-        "Source": "PTC"
+        "Number": safe_col(df, "case number"),
+        "Description": safe_col(df, "subject"),
+        "Priority": safe_col(df, "severity"),
+        "Status": safe_col(df, "status"),
+        "Created By": safe_col(df, "case contact"),
+        "Created Date": safe_col(df, "created date"),
+        "Assigned To": safe_col(df, "case assignee"),
+        "Resolution Date": safe_col(df, "resolved date"),
+        "Release": [None] * len(df),
+        "Source": ["PTC"] * len(df)
     })
 
 # --------------------------------------------------
@@ -70,7 +79,6 @@ def load_data():
     try:
         urls = CONFIG[ENV]
 
-        # 🔥 AUTO FILE TYPE HANDLING
         azure_raw = read_file(urls["AZURE_URL"])
         snow_raw = read_file(urls["SNOW_URL"])
         ptc_raw = read_file(urls["PTC_URL"])
