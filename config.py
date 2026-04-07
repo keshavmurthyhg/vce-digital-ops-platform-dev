@@ -2,8 +2,8 @@ ENV = "DEV"
 
 CONFIG = {
     "DEV": {
-        "SNOW_URL": "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Snow-incidents.xlsx",
-        "PTC_URL": "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/PTC-Cases-Report.csv",
-        "AZURE_URL": "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/All-VCE-Bugs.csv"
+        "SNOW_URL": "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Snow.xlsx",
+        "PTC_URL": "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/PTC.csv",
+        "AZURE_URL": "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Azure.csv"
     }
 }
