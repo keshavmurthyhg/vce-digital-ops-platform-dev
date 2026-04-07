@@ -1,70 +1,157 @@
 import pandas as pd
+import streamlit as st
+import requests
+from io import BytesIO
+from datetime import datetime
 from config import CONFIG, ENV
 
+REFRESH_INTERVAL = 300  # seconds
 
+
+# -------------------------------
+# HELPERS
+# -------------------------------
+def normalize_columns(df):
+    df.columns = df.columns.str.strip().str.lower()
+    return df
+
+
+def get_col(df, *cols):
+    for col in cols:
+        if col in df.columns:
+            return df[col]
+    return None
+
+
+def fetch_file(url):
+    try:
+        response = requests.get(url, timeout=30)
+
+        if response.status_code == 200 and len(response.content) > 0:
+            return response.content, response.headers
+        else:
+            st.warning(f"⚠️ Failed to fetch: {url}")
+            return None, None
+
+    except Exception as e:
+        st.error(f"Error fetching file: {e}")
+        return None, None
+
+
+# -------------------------------
+# TRANSFORMATIONS
+# -------------------------------
+def build_azure(df):
+    df = normalize_columns(df)
+
+    return pd.DataFrame({
+        "Number": get_col(df, "id"),
+        "Description": get_col(df, "title", "system.title"),
+        "Status": get_col(df, "state", "system.state"),
+        "Priority": get_col(df, "priority"),
+        "Created By": get_col(df, "created by", "system.createdby"),
+        "Created Date": get_col(df, "created date", "system.createddate"),
+        "Assigned To": get_col(df, "assigned to", "system.assignedto"),
+        "Resolved Date": get_col(df, "resolved date", "closed date", "system.closeddate"),
+        "Release": get_col(df, "release_windchill"),
+        "Source": "AZURE"
+    })
+
+
+def build_snow(df):
+    df = normalize_columns(df)
+
+    return pd.DataFrame({
+        "Number": get_col(df, "number"),
+        "Description": get_col(df, "short description"),
+        "Status": get_col(df, "incident state", "state"),
+        "Priority": get_col(df, "priority"),
+        "Created By": get_col(df, "opened by", "caller"),
+        "Created Date": get_col(df, "created", "opened"),
+        "Assigned To": get_col(df, "assigned to"),
+        "Resolved Date": get_col(df, "resolved", "closed"),
+        "Release": None,
+        "Source": "SNOW"
+    })
+
+
+def build_ptc(df):
+    df = normalize_columns(df)
+
+    return pd.DataFrame({
+        "Number": get_col(df, "case number"),
+        "Description": get_col(df, "subject"),
+        "Status": get_col(df, "status"),
+        "Priority": get_col(df, "severity"),
+        "Created By": get_col(df, "case contact"),
+        "Created Date": get_col(df, "created date"),
+        "Assigned To": get_col(df, "case assignee"),
+        "Resolved Date": get_col(df, "resolved date"),
+        "Release": None,
+        "Source": "PTC"
+    })
+
+
+# -------------------------------
+# MAIN LOADER
+# -------------------------------
+@st.cache_data(ttl=REFRESH_INTERVAL)
 def load_data():
 
-    config = CONFIG[ENV]
-    all_data = []
+    urls = CONFIG[ENV]   # ✅ FIXED
 
-    for key, url in config.items():
+    data_info = {}
 
-        try:
-            # --- LOAD FILE ---
-            if url.endswith(".csv"):
-                df = pd.read_csv(url)
-            else:
-                df = pd.read_excel(url)
+    # -------- SNOW --------
+    snow_content, snow_headers = fetch_file(urls["SNOW_URL"])
 
-            # --- SOURCE NAME ---
-            source_name = key.replace("_URL", "")
-            df["Source"] = source_name
+    if snow_content:
+        df_snow_raw = pd.read_excel(BytesIO(snow_content))
+        df_snow = build_snow(df_snow_raw)
+        data_info["SNOW"] = snow_headers.get("Last-Modified", "Updated")
+    else:
+        df_snow = pd.DataFrame()
+        data_info["SNOW"] = "FAILED"
 
-            # --- PTC COLUMN MAPPING (ONLY STRUCTURE, NOT RESOLUTION) ---
-            if source_name == "PTC":
-                df.rename(columns={
-                    "Case Number": "Number",
-                    "Summary": "Description",
-                    "Created On": "Created Date",
-                    "Owner": "Assigned To"
-                }, inplace=True)
+    # -------- PTC --------
+    ptc_content, ptc_headers = fetch_file(urls["PTC_URL"])
 
-            # --- GLOBAL STANDARDIZATION ---
-            # 👉 Convert ALL possible variants → "Resolved Date"
-            df.rename(columns={
-                "Resolution Date": "Resolved Date",
-                "Resolved On": "Resolved Date",
-                "Closed Date": "Resolved Date"
-            }, inplace=True)
+    if ptc_content:
+        df_ptc_raw = pd.read_excel(BytesIO(ptc_content))
+        df_ptc = build_ptc(df_ptc_raw)
+        data_info["PTC"] = ptc_headers.get("Last-Modified", "Updated")
+    else:
+        df_ptc = pd.DataFrame()
+        data_info["PTC"] = "FAILED"
 
-            # --- ENSURE REQUIRED COLUMNS EXIST ---
-            required_cols = [
-                "Number",
-                "Description",
-                "Priority",
-                "Status",
-                "Created By",
-                "Created Date",
-                "Assigned To",
-                "Resolved Date"
-            ]
+    # -------- AZURE --------
+    azure_content, azure_headers = fetch_file(urls["AZURE_URL"])
 
-            for col in required_cols:
-                if col not in df.columns:
-                    df[col] = None
+    if azure_content:
+        df_azure_raw = pd.read_csv(BytesIO(azure_content))
+        df_azure = build_azure(df_azure_raw)
+        data_info["AZURE"] = azure_headers.get("Last-Modified", "Updated")
+    else:
+        df_azure = pd.DataFrame()
+        data_info["AZURE"] = "FAILED"
 
-            # --- KEEP ONLY RELEVANT COLUMNS ---
-            df = df[required_cols + ["Source"]]
+    # -------- COMBINE --------
+    df = pd.concat([df_snow, df_ptc, df_azure], ignore_index=True)
 
-            all_data.append(df)
+    # -------- FINAL COLUMN ORDER --------
+    final_columns = [
+        "Number",
+        "Description",
+        "Priority",
+        "Status",
+        "Created By",
+        "Created Date",
+        "Assigned To",
+        "Resolved Date",   # ✅ FIXED
+        "Release",
+        "Source"
+    ]
 
-        except Exception as e:
-            print(f"❌ Error loading {key}: {e}")
+    df = df.reindex(columns=final_columns)
 
-    # --- FINAL MERGE ---
-    if not all_data:
-        return pd.DataFrame(), {}
-
-    final_df = pd.concat(all_data, ignore_index=True)
-
-    return final_df, {"last_refresh": "Auto"}
+    return df, data_info
