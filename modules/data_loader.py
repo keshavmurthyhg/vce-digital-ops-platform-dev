@@ -11,15 +11,13 @@ REFRESH_INTERVAL = 300
 # HELPERS
 # -------------------------------
 def normalize_columns(df):
-    df.columns = df.columns.str.strip().str.lower()
+    df.columns = (
+        df.columns.astype(str)
+        .str.replace("\n", " ")
+        .str.strip()
+        .str.lower()
+    )
     return df
-
-
-def get_col(df, *cols):
-    for col in cols:
-        if col in df.columns:
-            return df[col]
-    return None
 
 
 def fetch_file(url):
@@ -51,21 +49,24 @@ def read_file(content, url):
 
 
 # -------------------------------
-# TRANSFORMATIONS
+# BUILDERS
 # -------------------------------
 def build_azure(df):
     df = normalize_columns(df)
 
+    def col(name):
+        return df[name] if name in df.columns else pd.Series([None]*len(df))
+
     return pd.DataFrame({
-        "Number": get_col(df, "id"),
-        "Description": get_col(df, "title"),
-        "Priority": get_col(df, "priority"),
-        "Status": get_col(df, "state"),
-        "Created By": get_col(df, "created by"),
-        "Created Date": get_col(df, "created date"),
-        "Assigned To": get_col(df, "assigned to"),
-        "Resolved Date": get_col(df, "resolved date"),
-        "Release": get_col(df, "release_windchill"),
+        "Number": col("id"),
+        "Description": col("title"),
+        "Priority": col("priority"),
+        "Status": col("state"),
+        "Created By": col("created by"),
+        "Created Date": col("created date"),
+        "Assigned To": col("assigned to"),
+        "Resolved Date": col("resolved date"),
+        "Release": col("release_windchill"),
         "Source": "AZURE"
     })
 
@@ -73,45 +74,52 @@ def build_azure(df):
 def build_snow(df):
     df = normalize_columns(df)
 
+    def col(name):
+        return df[name] if name in df.columns else pd.Series([None]*len(df))
+
     return pd.DataFrame({
-        "Number": get_col(df, "number"),
-        "Description": get_col(df, "short description"),
-        "Priority": get_col(df, "priority"),
-        "Status": get_col(df, "incident state"),
-        "Created By": get_col(df, "opened by"),
-        "Created Date": get_col(df, "created date", "created"),
-        "Assigned To": get_col(df, "assigned to"),
-        "Resolved Date": get_col(df, "resolved"),
-        "Release": None,
+        "Number": col("number"),
+        "Description": col("short description"),
+        "Priority": col("priority"),
+        "Status": col("incident state"),
+        "Created By": col("opened by"),
+        "Created Date": col("created date"),
+        "Assigned To": col("assigned to"),
+        "Resolved Date": col("resolved"),
+        "Release": pd.Series([None]*len(df)),
         "Source": "SNOW"
     })
 
 
 def build_ptc(df):
 
-    # --- FIX HEADER ISSUE ---
-    # If first row is actually header, fix it
-    if "case number" not in df.columns:
-        df.columns = df.iloc[0]
-        df = df[1:]
+    # -------- FIND HEADER ROW --------
+    header_row = None
+    for i in range(min(5, len(df))):
+        row_values = df.iloc[i].astype(str).str.lower().tolist()
+        if "case number" in row_values:
+            header_row = i
+            break
 
-    # Normalize after fixing header
-    df.columns = df.columns.astype(str).str.strip().str.lower()
+    if header_row is not None:
+        df.columns = df.iloc[header_row]
+        df = df[(header_row + 1):]
 
-    # --- DEBUG (remove later) ---
-    # st.write("PTC columns after fix:", df.columns)
-    # st.write(df.head())
+    df = normalize_columns(df)
+
+    def col(name):
+        return df[name] if name in df.columns else pd.Series([None]*len(df))
 
     return pd.DataFrame({
-        "Number": df.get("case number"),
-        "Description": df.get("subject"),
-        "Priority": df.get("severity"),
-        "Status": df.get("status"),
-        "Created By": df.get("case contact"),
-        "Created Date": df.get("created date"),
-        "Assigned To": df.get("case assignee"),
-        "Resolved Date": df.get("resolved date"),
-        "Release": None,
+        "Number": col("case number"),
+        "Description": col("subject"),
+        "Priority": col("severity"),
+        "Status": col("status"),
+        "Created By": col("case contact"),
+        "Created Date": col("created date"),
+        "Assigned To": col("case assignee"),
+        "Resolved Date": col("resolved date"),
+        "Release": pd.Series([None]*len(df)),
         "Source": "PTC"
     })
 
@@ -125,34 +133,18 @@ def load_data():
     urls = CONFIG[ENV]
     data_info = {}
 
-    # --- SNOW ---
+    # SNOW
     snow_content, snow_headers = fetch_file(urls["SNOW_URL"])
-    if snow_content:
-        df_snow = build_snow(read_file(snow_content, urls["SNOW_URL"]))
-        data_info["SNOW"] = snow_headers.get("Last-Modified", "Updated")
-    else:
-        df_snow = pd.DataFrame()
-        data_info["SNOW"] = "FAILED"
+    df_snow = build_snow(read_file(snow_content, urls["SNOW_URL"])) if snow_content else pd.DataFrame()
 
-    # --- PTC ---
+    # PTC
     ptc_content, ptc_headers = fetch_file(urls["PTC_URL"])
-    if ptc_content:
-        df_ptc = build_ptc(read_file(ptc_content, urls["PTC_URL"]))
-        data_info["PTC"] = ptc_headers.get("Last-Modified", "Updated")
-    else:
-        df_ptc = pd.DataFrame()
-        data_info["PTC"] = "FAILED"
+    df_ptc = build_ptc(read_file(ptc_content, urls["PTC_URL"])) if ptc_content else pd.DataFrame()
 
-    # --- AZURE ---
+    # AZURE
     azure_content, azure_headers = fetch_file(urls["AZURE_URL"])
-    if azure_content:
-        df_azure = build_azure(read_file(azure_content, urls["AZURE_URL"]))
-        data_info["AZURE"] = azure_headers.get("Last-Modified", "Updated")
-    else:
-        df_azure = pd.DataFrame()
-        data_info["AZURE"] = "FAILED"
+    df_azure = build_azure(read_file(azure_content, urls["AZURE_URL"])) if azure_content else pd.DataFrame()
 
-    # --- COMBINE ---
     df = pd.concat([df_snow, df_ptc, df_azure], ignore_index=True)
 
     return df, data_info
