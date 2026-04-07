@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import re
+from st_aggrid import AgGrid, GridOptionsBuilder
 
 
 def clean_name(value):
@@ -14,7 +15,7 @@ def clean_name(value):
         # Remove email inside <>
         value = re.sub(r"\s*<.*?>", "", value)
 
-        # Optional: remove (2), (1), etc.
+        # Remove (1), (2), etc.
         value = re.sub(r"\s*\(.*?\)", "", value)
 
         return value.strip()
@@ -25,58 +26,60 @@ def clean_name(value):
 
 def show_table(df):
 
-    # --- Safety copy (prevents modifying original data) ---
+    # --- Safety copy ---
     df = df.copy()
 
-    # --- Add SL No ---
+    # --- SL No ---
     df = df.reset_index(drop=True)
     df.insert(0, "SL No", df.index + 1)
 
     # --- Clean Name Columns ---
-    cols_to_clean = ["Created By", "Assigned To"]
-    for col in cols_to_clean:
+    for col in ["Created By", "Assigned To"]:
         if col in df.columns:
             df[col] = df[col].apply(clean_name)
 
     # --- Date Formatting ---
-    date_cols = ["Created Date", "Resolution Date"]
-    for col in date_cols:
+    for col in ["Created Date", "Resolution Date"]:
         if col in df.columns:
-            df[col] = (
-                pd.to_datetime(df[col], errors="coerce")
-                .dt.strftime("%d-%b-%y")
-            )
+            df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
-    # --- Vertical + Horizontal Alignment CSS ---
-    st.markdown("""
-    <style>
-    /* Center everything */
-    [data-testid="stDataFrame"] th,
-    [data-testid="stDataFrame"] td {
-        display: flex;
-        align-items: center !important;
-        justify-content: center;
-    }
+    # --- Build AgGrid ---
+    gb = GridOptionsBuilder.from_dataframe(df)
 
-    /* Left align specific columns */
-    [data-testid="stDataFrame"] td:nth-child(4),
-    [data-testid="stDataFrame"] td:nth-child(8),
-    [data-testid="stDataFrame"] td:nth-child(9) {
-        justify-content: flex-start !important;
-    }
-    </style>
-    """, unsafe_allow_html=True)
+    # Enable tooltip for ALL columns
+    for col in df.columns:
+        gb.configure_column(col, tooltipField=col)
 
-
-    
-    # --- Display Table ---
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "SL No": st.column_config.NumberColumn(width="small"),
-            "Description": st.column_config.TextColumn(width="large"),
+    # Default center alignment (vertical + horizontal)
+    gb.configure_default_column(
+        resizable=True,
+        sortable=True,
+        filter=True,
+        cellStyle={
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "center"
         }
     )
 
+    # Left align specific columns
+    for col in ["Description", "Assigned To", "Created By", "Resolved By"]:
+        if col in df.columns:
+            gb.configure_column(col, cellStyle={"justifyContent": "flex-start"})
+
+    # Optional: better column widths
+    gb.configure_column("SL No", maxWidth=90)
+    if "Description" in df.columns:
+        gb.configure_column("Description", flex=2)
+
+    gridOptions = gb.build()
+
+    # --- Display Grid ---
+    AgGrid(
+        df,
+        gridOptions=gridOptions,
+        fit_columns_on_grid_load=True,
+        enable_enterprise_modules=False,
+        height=500,
+        theme="streamlit"
+    )
