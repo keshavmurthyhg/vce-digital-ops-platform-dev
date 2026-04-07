@@ -24,14 +24,16 @@ def build_link(row):
 
     if source == "SNOW":
         return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={number}"
-
     elif source == "PTC":
         return f"https://support.ptc.com/appserver/cs/view/case.jsp?n={number}"
-
     elif source == "AZURE":
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{number}"
-
     return ""
+
+df["Open"] = df.apply(
+    lambda x: f'<a href="{build_link(x)}" target="_blank">🔗</a>',
+    axis=1
+)
 
 
 def show_table(df):
