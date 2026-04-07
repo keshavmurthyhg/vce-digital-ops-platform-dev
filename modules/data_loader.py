@@ -94,56 +94,70 @@ def build_snow(df):
 def build_ptc(df):
 
     # -------------------------------
-    # STEP 1: FIND HEADER ANYWHERE
+    # NORMALIZE RAW
+    # -------------------------------
+    df = df.copy()
+
+    # convert all to string for detection
+    df_str = df.astype(str)
+
+    # -------------------------------
+    # FIND HEADER ROW (FUZZY MATCH)
     # -------------------------------
     header_row = None
 
-    for i in range(len(df)):
-        row = df.iloc[i].astype(str).str.lower().tolist()
+    for i in range(len(df_str)):
+        row = " ".join(df_str.iloc[i].str.lower().tolist())
 
-        if "case number" in row and "subject" in row:
+        if "case" in row and "subject" in row:
             header_row = i
             break
 
-    # -------------------------------
-    # STEP 2: APPLY HEADER
-    # -------------------------------
-    if header_row is not None:
-        df.columns = df.iloc[header_row]
-        df = df[(header_row + 1):]
-    else:
-        st.error("❌ PTC header not found")
+    if header_row is None:
+        st.error("❌ PTC header not found (fuzzy match failed)")
+        st.write("Preview rows:", df.head(5))
         return pd.DataFrame()
 
     # -------------------------------
-    # STEP 3: CLEAN COLUMNS
+    # APPLY HEADER
+    # -------------------------------
+    df.columns = df.iloc[header_row]
+    df = df[(header_row + 1):]
+
+    # -------------------------------
+    # CLEAN COLUMN NAMES
     # -------------------------------
     df.columns = (
         df.columns.astype(str)
-        .str.replace("\n", " ")
-        .str.strip()
         .str.lower()
+        .str.replace(r"[^a-z0-9 ]", "", regex=True)
+        .str.strip()
     )
 
     # -------------------------------
-    # STEP 4: DROP EMPTY ROWS
+    # HELPER: FIND COLUMN BY KEYWORD
     # -------------------------------
-    df = df.dropna(how="all")
+    def find_col(keywords):
+        for col in df.columns:
+            if all(k in col for k in keywords):
+                return df[col]
+        return pd.Series([None]*len(df))
 
     # -------------------------------
-    # STEP 5: DEBUG (IMPORTANT)
+    # BUILD FINAL TABLE
     # -------------------------------
-    st.write("PTC columns detected:", df.columns)
-
-    # -------------------------------
-    # STEP 6: EXTRACT COLUMNS SAFELY
-    # -------------------------------
-    def col(name):
-        if name in df.columns:
-            return df[name]
-        else:
-            st.warning(f"Missing column: {name}")
-            return pd.Series([None] * len(df))
+    return pd.DataFrame({
+        "Number": find_col(["case", "number"]),
+        "Description": find_col(["subject"]),
+        "Priority": find_col(["severity"]),
+        "Status": find_col(["status"]),
+        "Created By": find_col(["contact"]),
+        "Created Date": find_col(["created"]),
+        "Assigned To": find_col(["assignee"]),
+        "Resolved Date": find_col(["resolved"]),
+        "Release": pd.Series([None]*len(df)),
+        "Source": pd.Series(["PTC"]*len(df))
+    })
 
     return pd.DataFrame({
         "Number": col("case number"),
