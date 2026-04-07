@@ -6,8 +6,9 @@ def show_table(df):
         use_container_width=True,
         hide_index=True,
         df = df.reset_index(drop=True)
-        df.insert(0, "SL No", df.index + 1)
+        
         column_config={
+            df.insert(0, "SL No", df.index + 1)
             "Number": st.column_config.TextColumn(width="small"),
             "Description": st.column_config.TextColumn(width="large"),
             "Priority": st.column_config.TextColumn(width="small"),
