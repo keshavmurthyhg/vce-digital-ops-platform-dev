@@ -85,7 +85,7 @@ def show_table(df):
 
     with col2:
         st.markdown(f"**Created Date:** {selected_row.get('Created Date', '')}")
-        st.markdown(f"**Resolution Date:** {selected_row.get('Resolved Date', '')}")
+        st.markdown(f"**Resolved Date:** {selected_row.get('Resolved Date', '')}")
         st.markdown(f"**Source:** {selected_row.get('Source', '')}")
 
     st.markdown("#### 📝 Description")
