@@ -1,80 +1,76 @@
 import streamlit as st
 from modules.data_loader import load_data
-from modules.filters import create_filter, apply_filters
+from modules.filters import apply_filters
 from modules.kpi import show_kpi
-from modules.search import search_box
 from modules.table import show_table
 
-# ---------------- PAGE CONFIG ----------------
+# --- PAGE CONFIG ---
 st.set_page_config(layout="wide")
 
-# ---------------- TITLE ----------------
-# --- TOP BAR ---
+# --- GLOBAL UI CLEANUP ---
+st.markdown("""
+<style>
 
-# ---------------- LOAD DATA ----------------
+/* Reduce overall padding */
+.block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+
+/* Sidebar spacing */
+section[data-testid="stSidebar"] > div {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+/* Reduce gaps */
+.stSelectbox, .stRadio, .stMarkdown {
+    margin-bottom: 0.3rem !important;
+}
+
+/* Smaller headings */
+h1, h2, h3 {
+    margin-bottom: 0.3rem !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# --- LOAD DATA ---
 df, info = load_data()
 
 if df.empty:
     st.error("❌ Data could not be loaded from sources")
     st.stop()
 
-# ---------------- SIDEBAR ----------------
-with st.sidebar:
-    st.markdown("## ⚙️ Ops Insight Dashboard")
-    st.markdown("---")
-
-    # MENU
-    st.selectbox("Menu", ["Search Tool"])
-
-    # ---------------- SOURCE ----------------
-    st.markdown("### 📂 Source")
-    source = st.radio(
-        "",
-        ["ALL", "AZURE", "SNOW", "PTC"],
-        horizontal=True
-    )
-
-# ---------------- BASE DATA ----------------
-base_df = df if source == "ALL" else df[df["Source"] == source]
-
-# ---------------- FILTERS ----------------
-with st.sidebar:
-    st.markdown("### 🔧 Filters")
-
-    state = create_filter(base_df, "Status")
-    priority = create_filter(base_df, "Priority")
-
-    # Azure-only filter
-    if source == "AZURE":
-        release = create_filter(base_df, "Release")
-    else:
-        release = "ALL"
-
-# ---------------- SEARCH ----------------
-keyword = search_box()
-
-# ---------------- APPLY FILTERS ----------------
-filtered = apply_filters(base_df, state, priority, release, keyword)
-
-# ---------------- RESULTS HEADER ----------------
-st.markdown(f"### 📄 Results: {len(filtered)}")
-
-# ---------------- TABLE ----------------
-show_table(filtered)
-
-# ---------------- DOWNLOAD ----------------
-st.download_button(
-    "⬇ Download",
-    filtered.to_csv(index=False),
-    "filtered_results.csv"
+# --- TITLE ---
+st.markdown(
+    "<div style='font-size:20px; font-weight:600;'>Ops Insight Dashboard</div>",
+    unsafe_allow_html=True
 )
 
-# ---------------- KPI (BOTTOM LEFT) ----------------
-with st.sidebar:
-    st.markdown("---")
-    st.markdown("### 📊 KPI")
-    show_kpi(base_df)
+# --- SEARCH ---
+keyword = st.text_input("🔎 Search")
 
-# ---------------- DATA FRESHNESS ----------------
+# --- FILTERS ---
+status = st.selectbox("Status", ["ALL"] + sorted(df["Status"].dropna().unique().tolist()))
+priority = st.selectbox("Priority", ["ALL"] + sorted(df["Priority"].dropna().unique().tolist()))
+
+# --- APPLY FILTERS ---
+filtered = apply_filters(df, status=status, priority=priority, keyword=keyword)
+
+# --- RESULTS HEADER ---
+st.markdown(
+    f"<div style='font-size:16px; font-weight:600;'>Results: {len(filtered)}</div>",
+    unsafe_allow_html=True
+)
+
+# --- KPI ---
+show_kpi(filtered)
+
+# --- TABLE ---
+show_table(filtered)
+
+# --- DATA FRESHNESS ---
 if info:
-    st.caption(f"🕒 Last refreshed: {info.get('last_refresh')}")
+    st.caption(f"Last refreshed: {info.get('last_refresh', '')}")
