@@ -55,20 +55,66 @@ def build_snow(df):
         "Source": ["SNOW"] * len(df)
     })
 
+import pandas as pd
+from config import CONFIG, ENV
 
-def build_ptc(df):
-    return pd.DataFrame({
-        "Number": safe_col(df, "case number"),
-        "Description": safe_col(df, "subject"),
-        "Priority": safe_col(df, "severity"),
-        "Status": safe_col(df, "status"),
-        "Created By": safe_col(df, "case contact"),
-        "Created Date": safe_col(df, "created date"),
-        "Assigned To": safe_col(df, "case assignee"),
-        "Resolved Date": safe_col(df, "resolved date"),
-        "Release": [None] * len(df),
-        "Source": ["PTC"] * len(df)
-    })
+
+def load_data():
+    config = CONFIG[ENV]
+
+    all_data = []
+
+    for source, url in config.items():
+
+        try:
+            if url.endswith(".csv"):
+                df = pd.read_csv(url)
+            else:
+                df = pd.read_excel(url)
+
+            source_name = source.replace("_URL", "")
+            df["Source"] = source_name
+
+            # --- FIX PTC COLUMN MAPPING ---
+            if source_name == "PTC":
+                df.rename(columns={
+                    "Case Number": "Number",
+                    "Summary": "Description",
+                    "Created On": "Created Date",
+                    "Owner": "Assigned To",
+                    "Resolution Date": "Resolved Date"
+                }, inplace=True)
+
+            # --- STANDARD COLUMN FIX ---
+            df.rename(columns={
+                "Resolution Date": "Resolved Date"
+            }, inplace=True)
+
+            all_data.append(df)
+
+        except Exception as e:
+            print(f"Error loading {source}: {e}")
+
+    if not all_data:
+        return pd.DataFrame(), {}
+
+    final_df = pd.concat(all_data, ignore_index=True)
+
+    return final_df, {"last_refresh": "Auto"}
+    
+#def build_ptc(df):
+   # return pd.DataFrame({
+   #     "Number": safe_col(df, "case number"),
+  #      "Description": safe_col(df, "subject"),
+  #      "Priority": safe_col(df, "severity"),
+  #      "Status": safe_col(df, "status"),
+ #       "Created By": safe_col(df, "case contact"),
+   #     "Created Date": safe_col(df, "created date"),
+  #     "Assigned To": safe_col(df, "case assignee"),
+     #   "Resolved Date": safe_col(df, "resolved date"),
+    #    "Release": [None] * len(df),
+   #     "Source": ["PTC"] * len(df)
+#    })
 
 # --------------------------------------------------
 # LOAD DATA
