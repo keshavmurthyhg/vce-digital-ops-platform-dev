@@ -26,6 +26,23 @@ with st.sidebar:
     status = st.selectbox("Status", ["ALL"] + sorted(df["Status"].dropna().unique().tolist()))
     priority = st.selectbox("Priority", ["ALL"] + sorted(df["Priority"].dropna().unique().tolist()))
 
+# --- KPI ---
+st.markdown("### 📊 KPI")
+
+total = len(filtered)
+open_ = len(filtered[filtered["Status"] == "Open"])
+closed = len(filtered[filtered["Status"] == "Closed"])
+cancelled = len(filtered[filtered["Status"] == "Cancelled"])
+
+st.markdown(f"""
+<div style="font-size:12px">
+<b>Total:</b> {total}<br>
+<b>Open:</b> {open_}<br>
+<b>Closed:</b> {closed}<br>
+<b>Cancelled:</b> {cancelled}
+</div>
+""", unsafe_allow_html=True)
+
 # --- MAIN AREA ---
 
 # Title
@@ -45,14 +62,15 @@ filtered = apply_filters(
     keyword=keyword
 )
 
+# ✅ Apply SOURCE filter separately
+if source != "ALL":
+    filtered = filtered[filtered["Source"] == source]
+
 # --- RESULTS ---
 st.markdown(
     f"<div style='font-size:16px; font-weight:600;'>Results: {len(filtered)}</div>",
     unsafe_allow_html=True
 )
-
-# --- KPI ---
-show_kpi(filtered)
 
 # --- TABLE ---
 show_table(filtered)
