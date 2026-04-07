@@ -36,7 +36,6 @@ def show_table(df):
         st.warning("No data available")
         return
 
-    # --- Copy ---
     df = df.copy()
 
     # --- SL No ---
@@ -53,53 +52,37 @@ def show_table(df):
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
-    # --- Build Links ---
+    # --- Create Link Column ---
     df["Open"] = df.apply(build_link, axis=1)
-
-    # --- Replace NaN (CRITICAL FIX) ---
-    df = df.fillna("")
 
     # --- Styling ---
     st.markdown("""
     <style>
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
+    [data-testid="stDataFrame"] {
+        font-size: 12px;
     }
 
-    thead th {
-        background-color: #f0f2f6;
-        padding: 8px;
-        text-align: center;
-    }
-
-    tbody td {
-        padding: 8px;
-        border-bottom: 1px solid #ddd;
-        text-align: center;
-        vertical-align: middle;
+    [data-testid="stDataFrame"] th,
+    [data-testid="stDataFrame"] td {
+        text-align: center !important;
+        vertical-align: middle !important;
     }
 
     /* Left align Description */
-    tbody td:nth-child(3) {
-        text-align: left;
-    }
-
-    tbody tr:hover {
-        background-color: #f9f9f9;
+    [data-testid="stDataFrame"] td:nth-child(3) {
+        text-align: left !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # --- Render table (SAFE) ---
-    try:
-        html = df.to_html(
-            index=False,
-            escape=False,
-            render_links=True
-        )
-        st.markdown(html, unsafe_allow_html=True)
-
-    except Exception as e:
-        st.error(f"Table rendering failed: {e}")
+    # --- Render table (STABLE) ---
+    st.dataframe(
+        df,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Open": st.column_config.LinkColumn("🔗 Open"),
+            "SL No": st.column_config.NumberColumn(width="small"),
+            "Description": st.column_config.TextColumn(width="large"),
+        }
+    )
