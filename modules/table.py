@@ -3,82 +3,68 @@ import pandas as pd
 import re
 
 
-def clean_name(value):
-    if pd.isna(value):
-        return value
-    value = str(value)
-    value = re.sub(r"\s*<.*?>", "", value)
-    value = re.sub(r"\s*\(.*?\)", "", value)
-    return value.strip()
+def clean_name(val):
+    if pd.isna(val):
+        return val
+    val = str(val)
+    val = re.sub(r"\s*<.*?>", "", val)
+    val = re.sub(r"\s*\(.*?\)", "", val)
+    return val.strip()
 
 
 def build_link(row):
-    number = str(row.get("Number", ""))
-    source = str(row.get("Source", "")).upper()
+    num = str(row.get("Number", ""))
+    src = row.get("Source", "")
 
-    if source == "SNOW":
-        return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={number}"
-    elif source == "PTC":
-        return f"https://support.ptc.com/appserver/cs/view/case.jsp?n={number}"
-    elif source == "AZURE":
-        return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{number}"
+    if src == "SNOW":
+        return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
+    elif src == "PTC":
+        return f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
+    elif src == "AZURE":
+        return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
     return ""
 
 
 def show_table(df):
 
-    if df is None or df.empty:
-        st.warning("No data available")
+    if df.empty:
+        st.warning("No data")
         return
 
-    df = df.copy()
-
-    # --- SL No ---
-    df = df.reset_index(drop=True)
+    df = df.copy().reset_index(drop=True)
     df.insert(0, "SL No", df.index + 1)
 
-    # --- CLEAN ---
+    # Clean names
     for col in ["Created By", "Assigned To"]:
         if col in df.columns:
             df[col] = df[col].apply(clean_name)
 
-    # --- DATE FORMAT ---
+    # Format dates
     for col in ["Created Date", "Resolved Date"]:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
-    # --- REMOVE .0 issue ---
+    # Remove .0 issue
     if "Assigned To" in df.columns:
         df["Assigned To"] = df["Assigned To"].astype(str).str.replace(".0", "", regex=False)
 
-    # --- LINK COLUMN ---
+    # Link column
     df["Open"] = df.apply(build_link, axis=1)
 
-    # --- COLUMN ORDER ---
-    columns_order = [
-        "SL No",
-        "Number",
-        "Description",
-        "Priority",
-        "Status",
-        "Created By",
-        "Created Date",
-        "Assigned To",
-        "Resolved Date",
-        "Source",
-        "Open"
+    # Column order
+    cols = [
+        "SL No", "Number", "Description", "Priority", "Status",
+        "Created By", "Created Date", "Assigned To",
+        "Resolved Date", "Source", "Open"
     ]
+    df = df[[c for c in cols if c in df.columns]]
 
-    df = df[[col for col in columns_order if col in df.columns]]
-
-    # --- DISPLAY ---
     st.dataframe(
         df,
         use_container_width=True,
         hide_index=True,
         column_config={
-            "Open": st.column_config.LinkColumn("Open"),
+            "Open": st.column_config.LinkColumn("🔗"),
             "Description": st.column_config.TextColumn(width="large"),
-            "SL No": st.column_config.NumberColumn(width="small")
         }
     )
