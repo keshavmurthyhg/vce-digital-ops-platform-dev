@@ -6,7 +6,7 @@ from modules.search import search_box
 from modules.table import show_table
 
 st.set_page_config(layout="wide")
-
+st.write(df.head())
 # ---------------- PAGE TITLE ----------------
 st.sidebar.markdown("## ⚙️ Ops Insight Dashboard")
 st.sidebar.markdown("---")
