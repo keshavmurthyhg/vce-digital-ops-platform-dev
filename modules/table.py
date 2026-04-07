@@ -32,7 +32,7 @@ def show_table(df):
             df[col] = df[col].apply(clean_name)
 
     # --- Date Format ---
-    for col in ["Created Date", "Resolution Date"]:
+    for col in ["Created Date", "Resolved Date"]:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
@@ -85,7 +85,7 @@ def show_table(df):
 
     with col2:
         st.markdown(f"**Created Date:** {selected_row.get('Created Date', '')}")
-        st.markdown(f"**Resolution Date:** {selected_row.get('Resolution Date', '')}")
+        st.markdown(f"**Resolution Date:** {selected_row.get('Resolved Date', '')}")
         st.markdown(f"**Source:** {selected_row.get('Source', '')}")
 
     st.markdown("#### 📝 Description")
