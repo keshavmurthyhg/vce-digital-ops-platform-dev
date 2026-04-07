@@ -90,15 +90,18 @@ def build_snow(df):
 def build_ptc(df):
     df = normalize_columns(df)
 
+    # DEBUG (remove later if needed)
+    # st.write("PTC Columns:", df.columns)
+
     return pd.DataFrame({
-        "Number": get_col(df, "case number"),
-        "Description": get_col(df, "subject"),
-        "Priority": get_col(df, "severity"),
-        "Status": get_col(df, "status"),
-        "Created By": get_col(df, "case contact"),
-        "Created Date": get_col(df, "created date"),
-        "Assigned To": get_col(df, "case assignee"),
-        "Resolved Date": get_col(df, "resolved date"),
+        "Number": df.get("case number"),
+        "Description": df.get("subject"),
+        "Priority": df.get("severity"),
+        "Status": df.get("status"),
+        "Created By": df.get("case contact"),
+        "Created Date": df.get("created date"),
+        "Assigned To": df.get("case assignee"),
+        "Resolved Date": df.get("resolved date"),
         "Release": None,
         "Source": "PTC"
     })
