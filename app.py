@@ -9,7 +9,23 @@ from modules.table import show_table
 st.set_page_config(layout="wide")
 
 # ---------------- TITLE ----------------
-st.title("📊 Ops Insight Dashboard (DEV)")
+# --- TOP BAR ---
+col1, col2, col3, col4 = st.columns([1,1,1,6])
+
+with col1:
+    if st.button("ALL"):
+        st.session_state.source = "ALL"
+
+with col2:
+    if st.button("AZURE"):
+        st.session_state.source = "AZURE"
+
+with col3:
+    if st.button("SNOW"):
+        st.session_state.source = "SNOW"
+
+with col4:
+    st.markdown("### 📊 Ops Insight Dashboard (DEV)")
 
 # ---------------- LOAD DATA ----------------
 df, info = load_data()
