@@ -23,17 +23,18 @@ def build_link(row):
 
     if source == "SNOW":
         return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={number}"
-
     elif source == "PTC":
         return f"https://support.ptc.com/appserver/cs/view/case.jsp?n={number}"
-
     elif source == "AZURE":
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{number}"
-
     return ""
 
 
 def show_table(df):
+
+    if df is None or df.empty:
+        st.warning("No data available")
+        return
 
     # --- Copy ---
     df = df.copy()
@@ -52,11 +53,11 @@ def show_table(df):
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
-    # --- Create Icon Link ---
-    df["Open"] = df.apply(
-        lambda x: f'<a href="{build_link(x)}" target="_blank">🔗</a>',
-        axis=1
-    )
+    # --- Build Links ---
+    df["Open"] = df.apply(build_link, axis=1)
+
+    # --- Replace NaN (CRITICAL FIX) ---
+    df = df.fillna("")
 
     # --- Styling ---
     st.markdown("""
@@ -80,25 +81,25 @@ def show_table(df):
         vertical-align: middle;
     }
 
-    /* Left align description */
+    /* Left align Description */
     tbody td:nth-child(3) {
         text-align: left;
     }
 
-    /* Hover */
     tbody tr:hover {
         background-color: #f9f9f9;
-    }
-
-    a {
-        text-decoration: none;
-        font-size: 16px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    # --- Display HTML table (needed for clickable icon) ---
-    st.markdown(
-        df.to_html(escape=False, index=False),
-        unsafe_allow_html=True
-    )
+    # --- Render table (SAFE) ---
+    try:
+        html = df.to_html(
+            index=False,
+            escape=False,
+            render_links=True
+        )
+        st.markdown(html, unsafe_allow_html=True)
+
+    except Exception as e:
+        st.error(f"Table rendering failed: {e}")
