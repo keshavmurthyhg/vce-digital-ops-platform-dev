@@ -1,170 +1,104 @@
 import pandas as pd
-import streamlit as st
-import requests
-from io import BytesIO
-from config import CONFIG, ENV
 
-REFRESH_INTERVAL = 300
-
-
-# ---------------------------------
-# FETCH FILE
-# ---------------------------------
-def fetch_file(url):
-    try:
-        r = requests.get(url, timeout=30)
-        if r.status_code == 200 and len(r.content) > 100:
-            return r.content
-        else:
-            st.warning(f"⚠️ Failed to load: {url}")
-            return None
-    except Exception as e:
-        st.error(f"❌ Fetch error: {e}")
-        return None
-
-
-# ---------------------------------
-# READ FILE
-# ---------------------------------
-def read_file(content, url):
-    try:
-        if url.endswith(".csv"):
-            return pd.read_csv(BytesIO(content))
-        else:
-            return pd.read_excel(BytesIO(content))
-    except Exception:
-        return pd.DataFrame()
-
-
-# ---------------------------------
-# NORMALIZE COLUMN NAMES
-# ---------------------------------
-def normalize_columns(df):
-    df.columns = (
-        df.columns.astype(str)
-        .str.replace("\n", " ")
-        .str.strip()
-        .str.lower()
-    )
+# -------------------------------
+# NORMALIZE
+# -------------------------------
+def norm(df):
+    df.columns = df.columns.astype(str).str.strip().str.lower()
     return df
 
-
-# ---------------------------------
+# -------------------------------
 # SAFE COLUMN FETCH
-# ---------------------------------
-def safe_get(df, name):
-    return df[name] if name in df.columns else pd.Series([None]*len(df))
+# -------------------------------
+def col(df, *names):
+    for n in names:
+        if n in df.columns:
+            return df[n]
+    return None
 
-
-# ---------------------------------
+# -------------------------------
 # AZURE
-# ---------------------------------
+# -------------------------------
 def build_azure(df):
-    df = normalize_columns(df)
-
     return pd.DataFrame({
-        "Number": safe_get(df, "id"),
-        "Description": safe_get(df, "title"),
-        "Priority": safe_get(df, "priority"),
-        "Status": safe_get(df, "state"),
-        "Created By": safe_get(df, "created by"),
-        "Created Date": safe_get(df, "created date"),
-        "Assigned To": safe_get(df, "assigned to"),
-        "Resolved Date": safe_get(df, "resolved date"),
-        "Release": safe_get(df, "release_windchill"),
+        "Number": col(df, "id"),
+        "Description": col(df, "title"),
+        "Priority": None,
+        "Status": col(df, "state"),
+        "Created By": col(df, "created by"),
+        "Created Date": col(df, "created date"),
+        "Assigned To": col(df, "assigned to"),
+        "Resolved Date": col(df, "resolved date"),
+        "Release": col(df, "release_windchill"),
         "Source": "AZURE"
     })
 
-
-# ---------------------------------
+# -------------------------------
 # SNOW
-# ---------------------------------
+# -------------------------------
 def build_snow(df):
-    df = normalize_columns(df)
-
     return pd.DataFrame({
-        "Number": safe_get(df, "number"),
-        "Description": safe_get(df, "short description"),
-        "Priority": safe_get(df, "priority"),
-        "Status": safe_get(df, "incident state"),
-        "Created By": safe_get(df, "opened by"),
-        "Created Date": safe_get(df, "created date"),
-        "Assigned To": safe_get(df, "assigned to"),
-        "Resolved Date": safe_get(df, "resolved"),
-        "Release": pd.Series([None]*len(df)),
+        "Number": col(df, "number"),
+        "Description": col(df, "short description"),
+        "Priority": col(df, "priority"),
+        "Status": col(df, "incident state"),
+        "Created By": col(df, "opened by", "created by"),
+        "Created Date": col(df, "created", "date"),
+        "Assigned To": col(df, "assigned to"),
+        "Resolved Date": col(df, "resolved"),
+        "Release": None,
         "Source": "SNOW"
     })
 
-
-# ---------------------------------
-# PTC (FINAL ROBUST VERSION)
-# ---------------------------------
+# -------------------------------
+# PTC (FIXED BASED ON YOUR IMAGE)
+# -------------------------------
 def build_ptc(df):
-
-    if df.empty:
-        return df
-
-    # Normalize columns
-    df.columns = df.columns.astype(str).str.strip().str.upper()
-
-    # DEBUG (keep for now)
-    st.write("PTC Columns:", df.columns.tolist())
-
-    # -------------------------------
-    # FIX MISALIGNED DATA (POSITION BASED)
-    # -------------------------------
-    cols = df.columns.tolist()
-
-    # If CASE NUMBER column contains names → shift mapping
-    sample_val = str(df.iloc[0][cols[0]])
-
-    if " " in sample_val:  # crude check → name detected
-        # SHIFTED DATA FIX
-        return pd.DataFrame({
-            "Number": df.iloc[:, 1],          # actual case number
-            "Description": df.iloc[:, 4],     # SUBJECT
-            "Priority": df.iloc[:, 22],       # SEVERITY
-            "Status": df.iloc[:, 3],          # STATUS
-            "Created By": df.iloc[:, 0],      # NAME
-            "Created Date": df.iloc[:, 6],    # CREATED DATE
-            "Assigned To": df.iloc[:, 14],    # CASE ASSIGNEE
-            "Resolved Date": df.iloc[:, 7],   # RESOLVED DATE
-            "Release": df.iloc[:, 11] if len(df.columns) > 11 else None,
-            "Source": "PTC"
-        })
-
-    # -------------------------------
-    # NORMAL CASE (IF CORRECT)
-    # -------------------------------
     return pd.DataFrame({
-        "Number": df.get("CASE NUMBER"),
-        "Description": df.get("SUBJECT"),
-        "Priority": df.get("SEVERITY"),
-        "Status": df.get("STATUS"),
-        "Created By": df.get("CASE CONTACT"),
-        "Created Date": df.get("CREATED DATE"),
-        "Assigned To": df.get("CASE ASSIGNEE"),
-        "Resolved Date": df.get("RESOLVED DATE"),
-        "Release": df.get("RELEASE NAME"),
+        "Number": col(df, "case number"),
+        "Description": col(df, "subject"),
+        "Priority": col(df, "severity"),
+        "Status": col(df, "status"),
+        "Created By": col(df, "case contact"),
+        "Created Date": col(df, "created date"),
+        "Assigned To": col(df, "case assignee"),
+        "Resolved Date": col(df, "resolved date"),
+        "Release": col(df, "release name"),
         "Source": "PTC"
     })
 
-# ---------------------------------
+# -------------------------------
 # LOAD DATA
-# ---------------------------------
-@st.cache_data(ttl=REFRESH_INTERVAL)
+# -------------------------------
 def load_data():
 
-    urls = CONFIG[ENV]
+    azure = pd.read_csv(
+        "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/All-VCE-Bugs.csv"
+    )
 
-    snow = fetch_file(urls["SNOW_URL"])
-    ptc = fetch_file(urls["PTC_URL"])
-    azure = fetch_file(urls["AZURE_URL"])
+    snow = pd.read_excel(
+        "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Snow-incident.xlsx",
+        engine="openpyxl"
+    )
 
-    df_snow = build_snow(read_file(snow, urls["SNOW_URL"])) if snow else pd.DataFrame()
-    df_ptc = build_ptc(read_file(ptc, urls["PTC_URL"])) if ptc else pd.DataFrame()
-    df_azure = build_azure(read_file(azure, urls["AZURE_URL"])) if azure else pd.DataFrame()
+    ptc = pd.read_csv(
+        "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/PTC-Cases-Report.csv"
+    )
 
-    df = pd.concat([df_snow, df_ptc, df_azure], ignore_index=True)
+    # normalize
+    azure = norm(azure)
+    snow = norm(snow)
+    ptc = norm(ptc)
 
-    return df, {}
+    # build unified data
+    df = pd.concat([
+        build_azure(azure),
+        build_snow(snow),
+        build_ptc(ptc)
+    ], ignore_index=True)
+
+    return df, {
+        "AZURE": "Updated",
+        "SNOW": "Updated",
+        "PTC": "Updated"
+    }
