@@ -51,7 +51,7 @@ def build_snow(df):
     })
 
 # -------------------------------
-# PTC (FIXED BASED ON YOUR IMAGE)
+# PTC
 # -------------------------------
 def build_ptc(df):
     return pd.DataFrame({
@@ -72,28 +72,41 @@ def build_ptc(df):
 # -------------------------------
 def load_data():
 
-    azure = pd.read_csv(
-        "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Azure.csv"
-    )
+    try:
+        azure = pd.read_csv(
+            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Azure.csv"
+        )
 
-    snow = pd.read_excel(
-        "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Snow.xlsx",
-        engine="openpyxl"
-    )
-ptc = pd.read_csv(
-    "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Ptc.csv",
-    sep=";",           # try comma first
-    engine="python",
-    encoding="utf-8",
-    on_bad_lines="skip"
-)
+        snow = pd.read_excel(
+            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Snow.xlsx",
+            engine="openpyxl"
+        )
 
-    # normalize
+        # TRY BOTH SEPARATORS (AUTO FIX)
+        try:
+            ptc = pd.read_csv(
+                "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Ptc.csv",
+                sep=",",
+                engine="python"
+            )
+        except:
+            ptc = pd.read_csv(
+                "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Ptc.csv",
+                sep=";",
+                engine="python"
+            )
+
+    except Exception as e:
+        import streamlit as st
+        st.error(f"❌ Data load failed: {e}")
+        return pd.DataFrame(), {}
+
+    # Normalize
     azure = norm(azure)
     snow = norm(snow)
     ptc = norm(ptc)
 
-    # build unified data
+    # Combine
     df = pd.concat([
         build_azure(azure),
         build_snow(snow),
