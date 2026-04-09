@@ -12,16 +12,14 @@ REFRESH_INTERVAL = 300
 # ---------------------------------
 def fetch_file(url):
     try:
-        response = requests.get(url, timeout=30)
-
-        if response.status_code == 200 and len(response.content) > 100:
-            return response.content
+        r = requests.get(url, timeout=30)
+        if r.status_code == 200 and len(r.content) > 100:
+            return r.content
         else:
             st.warning(f"⚠️ Failed to load: {url}")
             return None
-
     except Exception as e:
-        st.error(f"❌ Error fetching file: {e}")
+        st.error(f"❌ Fetch error: {e}")
         return None
 
 
@@ -39,12 +37,11 @@ def read_file(content, url):
 
 
 # ---------------------------------
-# NORMALIZE
+# NORMALIZE COLUMN NAMES
 # ---------------------------------
 def normalize_columns(df):
     df.columns = (
         df.columns.astype(str)
-        .fillna("")
         .str.replace("\n", " ")
         .str.strip()
         .str.lower()
@@ -53,24 +50,28 @@ def normalize_columns(df):
 
 
 # ---------------------------------
+# SAFE COLUMN FETCH
+# ---------------------------------
+def safe_get(df, name):
+    return df[name] if name in df.columns else pd.Series([None]*len(df))
+
+
+# ---------------------------------
 # AZURE
 # ---------------------------------
 def build_azure(df):
     df = normalize_columns(df)
 
-    def col(name):
-        return df[name] if name in df.columns else pd.Series([None]*len(df))
-
     return pd.DataFrame({
-        "Number": col("id"),
-        "Description": col("title"),
-        "Priority": col("priority"),
-        "Status": col("state"),
-        "Created By": col("created by"),
-        "Created Date": col("created date"),
-        "Assigned To": col("assigned to"),
-        "Resolved Date": col("resolved date"),
-        "Release": col("release_windchill"),
+        "Number": safe_get(df, "id"),
+        "Description": safe_get(df, "title"),
+        "Priority": safe_get(df, "priority"),
+        "Status": safe_get(df, "state"),
+        "Created By": safe_get(df, "created by"),
+        "Created Date": safe_get(df, "created date"),
+        "Assigned To": safe_get(df, "assigned to"),
+        "Resolved Date": safe_get(df, "resolved date"),
+        "Release": safe_get(df, "release_windchill"),
         "Source": "AZURE"
     })
 
@@ -81,77 +82,50 @@ def build_azure(df):
 def build_snow(df):
     df = normalize_columns(df)
 
-    def col(name):
-        return df[name] if name in df.columns else pd.Series([None]*len(df))
-
     return pd.DataFrame({
-        "Number": col("number"),
-        "Description": col("short description"),
-        "Priority": col("priority"),
-        "Status": col("incident state"),
-        "Created By": col("opened by"),
-        "Created Date": col("created date"),
-        "Assigned To": col("assigned to"),
-        "Resolved Date": col("resolved"),
+        "Number": safe_get(df, "number"),
+        "Description": safe_get(df, "short description"),
+        "Priority": safe_get(df, "priority"),
+        "Status": safe_get(df, "incident state"),
+        "Created By": safe_get(df, "opened by"),
+        "Created Date": safe_get(df, "created date"),
+        "Assigned To": safe_get(df, "assigned to"),
+        "Resolved Date": safe_get(df, "resolved"),
         "Release": pd.Series([None]*len(df)),
         "Source": "SNOW"
     })
 
 
 # ---------------------------------
-# SAFE COLUMN FINDER
-# ---------------------------------
-def find_col(df, keywords):
-    for col in df.columns:
-        col_str = str(col).lower()  # ✅ FORCE STRING HERE
-
-        try:
-            if all(k in col_str for k in keywords):
-                return df[col]
-        except Exception:
-            continue  # extra safety
-
-    return pd.Series([None] * len(df))
-
-
-# ---------------------------------
-# PTC (FINAL SAFE)
+# PTC (FINAL ROBUST VERSION)
 # ---------------------------------
 def build_ptc(df):
 
     if df.empty:
         return df
 
-    df_safe = df.fillna("").astype(str)
+    df = df.reset_index(drop=True)
 
     # -------------------------------
-    # FIND HEADER ROW
+    # TRY TO FIND HEADER ROW
     # -------------------------------
-    header_row = None
+    header_found = False
 
-    for i in range(len(df_safe)):
-        row = " ".join(df_safe.iloc[i].str.lower())
+    for i in range(min(10, len(df))):
+        row = df.iloc[i].astype(str).str.lower().tolist()
 
-        if "case number" in row and "subject" in row:
-            header_row = i
+        if any("case" in x for x in row) and any("subject" in x for x in row):
+            df.columns = df.iloc[i]
+            df = df[(i + 1):]
+            header_found = True
             break
-
-    if header_row is None:
-        st.error("❌ PTC header not found")
-        st.write(df.head(5))
-        return pd.DataFrame()
-
-    # -------------------------------
-    # APPLY HEADER
-    # -------------------------------
-    df.columns = df.iloc[header_row]
-    df = df[(header_row + 1):]
 
     # -------------------------------
     # CLEAN COLUMN NAMES
     # -------------------------------
     df.columns = (
         df.columns.astype(str)
+        .str.replace("\n", " ")
         .str.strip()
         .str.upper()
     )
@@ -159,20 +133,44 @@ def build_ptc(df):
     df = df.dropna(how="all")
 
     # -------------------------------
-    # EXACT COLUMN MAP (FINAL FIX)
+    # IF HEADER FOUND → USE NAME MAP
     # -------------------------------
+    if header_found:
+
+        return pd.DataFrame({
+            "Number": df.get("CASE NUMBER"),
+            "Description": df.get("SUBJECT"),
+            "Priority": df.get("SEVERITY"),
+            "Status": df.get("STATUS"),
+            "Created By": df.get("CASE CONTACT"),
+            "Created Date": df.get("CREATED DATE"),
+            "Assigned To": df.get("CASE ASSIGNEE"),
+            "Resolved Date": df.get("RESOLVED DATE"),
+            "Release": None,
+            "Source": "PTC"
+        })
+
+    # -------------------------------
+    # FALLBACK → POSITION BASED
+    # -------------------------------
+    cols = list(df.columns)
+
+    def col(idx):
+        return df[cols[idx]] if idx < len(cols) else pd.Series([None]*len(df))
+
     return pd.DataFrame({
-        "Number": df.get("CASE NUMBER"),
-        "Description": df.get("SUBJECT"),
-        "Priority": df.get("SEVERITY"),
-        "Status": df.get("STATUS"),
-        "Created By": df.get("CASE CONTACT"),
-        "Created Date": df.get("CREATED DATE"),
-        "Assigned To": df.get("CASE ASSIGNEE"),
-        "Resolved Date": df.get("RESOLVED DATE"),
+        "Number": col(0),
+        "Description": col(1),
+        "Priority": col(2),
+        "Status": col(3),
+        "Created By": col(4),
+        "Created Date": col(5),
+        "Assigned To": col(6),
+        "Resolved Date": col(7),
         "Release": None,
         "Source": "PTC"
     })
+
 
 # ---------------------------------
 # LOAD DATA
