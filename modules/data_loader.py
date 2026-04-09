@@ -82,7 +82,7 @@ def load_data():
     )
 ptc = pd.read_csv(
     "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Ptc.csv",
-    sep=",",           # try comma first
+    sep=";",           # try comma first
     engine="python",
     encoding="utf-8",
     on_bad_lines="skip"
