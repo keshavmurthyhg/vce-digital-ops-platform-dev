@@ -1,88 +1,103 @@
 import pandas as pd
-from datetime import datetime
 
-# ------------------ COMMON CLEAN ------------------
-def clean_name(val):
-    if pd.isna(val):
-        return ""
-    return str(val).split("<")[0].strip()
+# -------------------------------
+# NORMALIZE COLUMN NAMES
+# -------------------------------
+def norm(df):
+    df.columns = df.columns.astype(str).str.strip().str.lower()
+    return df
 
 
-# ------------------ AZURE ------------------
+# -------------------------------
+# SAFE COLUMN FETCH
+# -------------------------------
+def col(df, *names):
+    for n in names:
+        if n in df.columns:
+            return df[n]
+    return None
+
+
+# -------------------------------
+# AZURE
+# -------------------------------
 def build_azure(df):
-    if df.empty:
-        return df
-
     return pd.DataFrame({
-        "Number": df.get("ID"),
-        "Description": df.get("Title"),
-        "Priority": df.get("Release_windchill"),
-        "Status": df.get("State"),
-        "Created By": df.get("Created By").apply(clean_name),
-        "Created Date": df.get("Created Date"),
-        "Assigned To": df.get("Assigned To").apply(clean_name),
-        "Resolved Date": df.get("Resolved Date"),
-        "Link": "",
+        "Number": col(df, "id"),
+        "Description": col(df, "title"),
+        "Priority": col(df, "release_windchill"),
+        "Status": col(df, "state"),
+        "Created By": col(df, "created by"),
+        "Created Date": col(df, "created date"),
+        "Assigned To": col(df, "assigned to"),
+        "Resolved Date": col(df, "resolved date"),
         "Source": "AZURE"
     })
 
 
-# ------------------ SNOW (FIXED XLSX ISSUE) ------------------
+# -------------------------------
+# SNOW (FIXED)
+# -------------------------------
 def build_snow(df):
-    if df.empty:
-        return df
-
     return pd.DataFrame({
-        "Number": df.get("Number"),
-        "Description": df.get("Short Description"),
-        "Priority": df.get("Priority"),
-        "Status": df.get("Incident State"),
-        "Created By": df.get("Created").apply(clean_name),
-        "Created Date": df.get("Date"),
-        "Assigned To": df.get("Assigned to").apply(clean_name),
-        "Resolved Date": df.get("Resolved"),
-        "Link": "",
+        "Number": col(df, "number"),
+        "Description": col(df, "short description", "description"),
+        "Priority": col(df, "priority"),
+        "Status": col(df, "incident state"),
+        "Created By": col(df, "opened by", "created by"),
+        "Created Date": col(df, "created", "date"),
+        "Assigned To": col(df, "assigned to"),
+        "Resolved Date": col(df, "resolved"),
         "Source": "SNOW"
     })
 
 
-# ------------------ PTC (STRICT MATCH) ------------------
+# -------------------------------
+# PTC (FIXED)
+# -------------------------------
 def build_ptc(df):
-    if df.empty:
-        return df
-
-    df.columns = df.columns.str.strip().str.upper()
-
     return pd.DataFrame({
-        "Number": df.get("CASE NUMBER"),
-        "Description": df.get("SUBJECT"),
-        "Priority": df.get("SEVERITY"),
-        "Status": df.get("STATUS"),
-        "Created By": df.get("CASE CONTACT").apply(clean_name),
-        "Created Date": df.get("CREATED DATE"),
-        "Assigned To": df.get("CASE ASSIGNEE").apply(clean_name),
-        "Resolved Date": df.get("RESOLVED DATE"),
-        "Link": "https://support.ptc.com/appserver/cs/view/case.jsp?n=" + df.get("CASE NUMBER").astype(str),
+        "Number": col(df, "case number"),
+        "Description": col(df, "subject"),
+        "Priority": col(df, "severity"),
+        "Status": col(df, "status"),
+        "Created By": col(df, "case contact"),
+        "Created Date": col(df, "created date"),
+        "Assigned To": col(df, "case assignee"),
+        "Resolved Date": col(df, "resolved date"),
         "Source": "PTC"
     })
 
 
-# ------------------ LOAD ------------------
+# -------------------------------
+# LOAD DATA
+# -------------------------------
 def load_data():
+
     try:
         azure = pd.read_csv("data/Azure.csv")
-    except:
-        azure = pd.DataFrame()
 
-    try:
-        snow = pd.read_excel("data/Snow.xlsx")   # IMPORTANT FIX
-    except:
-        snow = pd.DataFrame()
+        snow = pd.read_excel(
+            "data/Snow.xlsx",
+            engine="openpyxl"
+        )
 
-    try:
-        ptc = pd.read_csv("data/Ptc.csv")
-    except:
-        ptc = pd.DataFrame()
+        ptc = pd.read_csv(
+            "data/Ptc.csv",
+            index_col=False,
+            engine="python"
+        )
+
+        ptc = ptc.reset_index(drop=True)
+
+    except Exception as e:
+        import streamlit as st
+        st.error(f"❌ Data load failed: {e}")
+        return pd.DataFrame(), {}
+
+    azure = norm(azure)
+    snow = norm(snow)
+    ptc = norm(ptc)
 
     df = pd.concat([
         build_azure(azure),
@@ -90,8 +105,10 @@ def load_data():
         build_ptc(ptc)
     ], ignore_index=True)
 
+    df = df.reset_index(drop=True)
     df = df.fillna("")
 
+    from datetime import datetime
     info = datetime.now().strftime("%d-%b-%Y %H:%M")
 
     return df, info
