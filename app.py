@@ -8,8 +8,17 @@ st.set_page_config(layout="wide")
 # ================= STYLE =================
 st.markdown("""
 <style>
-html, body, [class*="css"]  { font-size: 11px !important; }
-.stSelectbox div[data-baseweb="select"] { min-height: 28px !important; }
+
+/* Table font slightly bigger */
+[data-testid="stDataFrame"] {
+    font-size: 12px !important;
+}
+
+/* Header */
+[data-testid="stDataFrame"] th {
+    font-size: 12px !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -37,13 +46,25 @@ with st.sidebar:
     if src_snow: sources.append("SNOW")
     if src_ptc: sources.append("PTC")
 
+    if not sources:
+    st.warning("⚠️ Please select at least one source to view data.")
+    st.stop()
+    
     st.markdown("### Filters")
 
     status = st.selectbox("Status", ["ALL"] + sorted(df["Status"].unique()))
     priority = st.selectbox("Priority", ["ALL"] + sorted(df["Priority"].unique()))
 
 # ================= MAIN =================
-keyword = st.text_input("🔎 Search")
+col1, col2 = st.columns([12,1])
+
+with col1:
+    keyword = st.text_input("🔎 Search", key="search")
+
+with col2:
+    if st.button("❌"):
+        st.session_state.search = ""
+        st.rerun()
 
 filtered = apply_filters(df, status, priority, keyword)
 
@@ -59,10 +80,12 @@ if st.session_state.get("prev") != (status, priority, tuple(sources), keyword):
 st.session_state.prev = (status, priority, tuple(sources), keyword)
 
 # ================= HEADER =================
-col1, col2, col3 = st.columns([6,2,2])
+# ================= HEADER (FIXED ALIGNMENT) =================
+col1, col2, col3, col4 = st.columns([6,1,2,1])
 
 total = len(filtered)
-total_pages = max((total // 10) + 1, 1)
+import math
+total_pages = max(math.ceil(total / page_size), 1)
 
 with col1:
     st.markdown(f"### Results: {total}")
@@ -74,20 +97,29 @@ with col1:
         f"PTC: {counts.get('PTC',0)}"
     )
 
+# ◀ button (left)
 with col2:
-    page_size = st.selectbox("", [5,10,20], index=1)
-
-with col3:
     prev = st.button("◀")
+
+# Page text (center)
+with col3:
+    st.markdown(
+        f"<div style='text-align:center; margin-top:8px;'>Page {st.session_state.page} / {total_pages}</div>",
+        unsafe_allow_html=True
+    )
+
+# ▶ button + page size (right)
+with col4:
     next_ = st.button("▶")
+
+# rows per page (top right)
+page_size = st.selectbox("", [5,10,20], index=1)
 
 if prev and st.session_state.page > 1:
     st.session_state.page -= 1
 
 if next_ and st.session_state.page < total_pages:
     st.session_state.page += 1
-
-st.markdown(f"**Page {st.session_state.page} / {total_pages}**")
 
 # ================= TABLE =================
 show_table(filtered, st.session_state.page, page_size)
