@@ -80,18 +80,18 @@ def load_data():
     try:
         # --- AZURE ---
         azure = pd.read_csv(
-            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/All-VCE-Bugs.csv"
+            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Azure.csv"
         )
 
         # --- SNOW ---
         snow = pd.read_excel(
-            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Snow-incident.xlsx",
+            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Snow.xlsx",
             engine="openpyxl"
         )
 
         # --- PTC (FIXED INDEX ISSUE) ---
         ptc = pd.read_csv(
-            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/PTC-Cases-Report.csv",
+            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Ptc.csv",
             index_col=False,
             engine="python"
         )
