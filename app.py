@@ -2,6 +2,7 @@ import streamlit as st
 from modules.data_loader import load_data
 from modules.filters import apply_filters
 from modules.table import show_table
+import math
 
 st.set_page_config(layout="wide")
 
