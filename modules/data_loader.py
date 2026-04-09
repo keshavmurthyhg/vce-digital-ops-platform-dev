@@ -7,34 +7,27 @@ from config import CONFIG, ENV
 REFRESH_INTERVAL = 300
 
 
-# -------------------------------
-# HELPERS
-# -------------------------------
-def normalize_columns(df):
-    df.columns = (
-        df.columns.astype(str)
-        .str.replace("\n", " ")
-        .str.strip()
-        .str.lower()
-    )
-    return df
-
-
+# ---------------------------------
+# FETCH FILE
+# ---------------------------------
 def fetch_file(url):
     try:
         response = requests.get(url, timeout=30)
 
         if response.status_code == 200 and len(response.content) > 100:
-            return response.content, response.headers
+            return response.content
         else:
-            st.warning(f"⚠️ Failed file: {url}")
-            return None, None
+            st.warning(f"⚠️ Failed to load: {url}")
+            return None
 
     except Exception as e:
-        st.error(f"❌ Fetch error: {e}")
-        return None, None
+        st.error(f"❌ Error fetching file: {e}")
+        return None
 
 
+# ---------------------------------
+# READ FILE
+# ---------------------------------
 def read_file(content, url):
     try:
         if url.endswith(".csv"):
@@ -48,9 +41,22 @@ def read_file(content, url):
             return pd.DataFrame()
 
 
-# -------------------------------
-# BUILDERS
-# -------------------------------
+# ---------------------------------
+# NORMALIZE COLUMNS
+# ---------------------------------
+def normalize_columns(df):
+    df.columns = (
+        df.columns.astype(str)
+        .str.replace("\n", " ")
+        .str.strip()
+        .str.lower()
+    )
+    return df
+
+
+# ---------------------------------
+# AZURE
+# ---------------------------------
 def build_azure(df):
     df = normalize_columns(df)
 
@@ -71,6 +77,9 @@ def build_azure(df):
     })
 
 
+# ---------------------------------
+# SNOW
+# ---------------------------------
 def build_snow(df):
     df = normalize_columns(df)
 
@@ -91,9 +100,15 @@ def build_snow(df):
     })
 
 
+# ---------------------------------
+# PTC (FINAL SAFE VERSION)
+# ---------------------------------
 def build_ptc(df):
 
     df = df.copy()
+
+    if df.empty:
+        return df
 
     # -------------------------------
     # SAFE STRING CONVERSION
@@ -101,20 +116,20 @@ def build_ptc(df):
     df_safe = df.fillna("").astype(str)
 
     # -------------------------------
-    # FIND HEADER ROW (SAFE)
+    # FIND HEADER ROW (ROBUST)
     # -------------------------------
     header_row = None
 
     for i in range(len(df_safe)):
         row = " ".join([str(x).lower() for x in df_safe.iloc[i].tolist()])
 
-        if "case" in row and "subject" in row:
+        if "case" in row and ("subject" in row or "description" in row):
             header_row = i
             break
 
     if header_row is None:
         st.error("❌ PTC header not found")
-        st.write("Preview:", df.head(5))
+        st.write("Preview of PTC file:", df.head(5))
         return pd.DataFrame()
 
     # -------------------------------
@@ -136,7 +151,7 @@ def build_ptc(df):
     df = df.dropna(how="all")
 
     # -------------------------------
-    # SAFE COLUMN FINDER
+    # FLEXIBLE COLUMN FINDER
     # -------------------------------
     def find_col(keywords):
         for col in df.columns:
@@ -145,9 +160,9 @@ def build_ptc(df):
         return pd.Series([None] * len(df))
 
     # -------------------------------
-    # BUILD FINAL DATA
+    # BUILD FINAL STRUCTURE
     # -------------------------------
-    result = pd.DataFrame({
+    return pd.DataFrame({
         "Number": find_col(["case", "number"]),
         "Description": find_col(["subject"]),
         "Priority": find_col(["severity"]),
@@ -156,34 +171,32 @@ def build_ptc(df):
         "Created Date": find_col(["created"]),
         "Assigned To": find_col(["assignee"]),
         "Resolved Date": find_col(["resolved"]),
-        "Release": pd.Series([None] * len(df)),
-        "Source": pd.Series(["PTC"] * len(df))
+        "Release": pd.Series([None]*len(df)),
+        "Source": pd.Series(["PTC"]*len(df))
     })
 
-    return result
 
-
-# -------------------------------
-# MAIN LOADER
-# -------------------------------
+# ---------------------------------
+# LOAD DATA
+# ---------------------------------
 @st.cache_data(ttl=REFRESH_INTERVAL)
 def load_data():
 
     urls = CONFIG[ENV]
-    data_info = {}
 
     # SNOW
-    snow_content, snow_headers = fetch_file(urls["SNOW_URL"])
+    snow_content = fetch_file(urls["SNOW_URL"])
     df_snow = build_snow(read_file(snow_content, urls["SNOW_URL"])) if snow_content else pd.DataFrame()
 
     # PTC
-    ptc_content, ptc_headers = fetch_file(urls["PTC_URL"])
+    ptc_content = fetch_file(urls["PTC_URL"])
     df_ptc = build_ptc(read_file(ptc_content, urls["PTC_URL"])) if ptc_content else pd.DataFrame()
 
     # AZURE
-    azure_content, azure_headers = fetch_file(urls["AZURE_URL"])
+    azure_content = fetch_file(urls["AZURE_URL"])
     df_azure = build_azure(read_file(azure_content, urls["AZURE_URL"])) if azure_content else pd.DataFrame()
 
+    # COMBINE
     df = pd.concat([df_snow, df_ptc, df_azure], ignore_index=True)
 
-    return df, data_info
+    return df, {}
