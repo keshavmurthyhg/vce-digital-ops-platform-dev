@@ -1,95 +1,124 @@
 import streamlit as st
+import pandas as pd
 from modules.data_loader import load_data
-from modules.filters import apply_filters
-from modules.table import show_table
 
 st.set_page_config(layout="wide")
 
-# --- STYLE (compact UI) ---
+# ===================== CSS =====================
 st.markdown("""
 <style>
-section[data-testid="stSidebar"] { font-size: 13px; }
-.stRadio label { font-size: 12px !important; }
-.stSelectbox div[data-baseweb="select"] { min-height: 30px !important; }
+.sidebar-section {
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #ddd;
+}
+label { font-size: 12px !important; }
+div[data-baseweb="select"] { font-size: 12px !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# --- LOAD DATA ---
+# ===================== LOAD =====================
 df, info = load_data()
 
-if df.empty:
-    st.error("No data loaded")
-    st.stop()
+# ===================== SIDEBAR =====================
+st.sidebar.title("Ops Insight Dashboard")
 
-# =========================
-# SIDEBAR (MENU + KPI)
-# =========================
-with st.sidebar:
+st.sidebar.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+menu = st.sidebar.selectbox("Menu", ["Search Tool"])
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown("## Ops Insight Dashboard")
+st.sidebar.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+sources = st.sidebar.multiselect(
+    "Source",
+    ["AZURE", "SNOW", "PTC"],
+    default=["AZURE", "SNOW", "PTC"]
+)
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-    # --- MENU ---
-    menu = st.selectbox("Menu", ["Search Tool"])
+# ===================== FILTER =====================
+filtered = df[df["Source"].isin(sources)]
 
-    # --- SOURCE ---
-    st.markdown("### Source")
-    source = st.radio("", ["ALL", "AZURE", "SNOW", "PTC"], horizontal=True)
+status_list = ["ALL"] + sorted(filtered["Status"].unique())
+priority_list = ["ALL"] + sorted(filtered["Priority"].unique())
 
-    # --- FILTERS ---
-    st.markdown("### Filters")
+st.sidebar.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+status = st.sidebar.selectbox("Status", status_list)
+priority = st.sidebar.selectbox("Priority", priority_list)
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-    status = st.selectbox(
-        "Status",
-        ["ALL"] + sorted(df["Status"].dropna().unique())
-    )
+if status != "ALL":
+    filtered = filtered[filtered["Status"] == status]
 
-    priority = st.selectbox(
-        "Priority",
-        ["ALL"] + sorted(df["Priority"].dropna().unique())
-    )
+if priority != "ALL":
+    filtered = filtered[filtered["Priority"] == priority]
 
-# =========================
-# MAIN AREA
-# =========================
+# ===================== SEARCH =====================
+col1, col2 = st.columns([10,1])
 
-st.markdown("### Ops Insight Dashboard")
+with col1:
+    keyword = st.text_input("🔎 Search", key="search")
 
-keyword = st.text_input("🔎 Search")
+with col2:
+    if st.button("❌"):
+        st.session_state.search = ""
+        st.rerun()
 
-# --- APPLY FILTERS ---
-filtered = apply_filters(df, status, priority, keyword)
+if keyword:
+    filtered = filtered[
+        filtered.apply(lambda row: keyword.lower() in str(row).lower(), axis=1)
+    ]
 
-# --- SOURCE FILTER ---
-if source != "ALL":
-    filtered = filtered[filtered["Source"] == source]
+# ===================== KPI =====================
+def get_kpi(df):
+    status = df["Status"].str.lower()
 
-# --- RESULTS ---
-st.markdown(f"**Results: {len(filtered)}**")
+    total = len(df)
+    open_count = status.str.contains("open|progress|new").sum()
+    closed = status.str.contains("closed|resolved").sum()
+    cancelled = status.str.contains("cancel").sum()
 
-# --- TABLE ---
-show_table(filtered)
+    return total, open_count, closed, cancelled
 
-# =========================
-# KPI (SIDEBAR BOTTOM)
-# =========================
-with st.sidebar:
 
-    st.markdown("### 📊 KPI")
+total, open_count, closed, cancelled = get_kpi(filtered)
 
-    total = len(filtered)
-    open_ = len(filtered[filtered["Status"] == "Open"])
-    closed = len(filtered[filtered["Status"] == "Closed"])
-    cancelled = len(filtered[filtered["Status"] == "Cancelled"])
+# ===================== SIDEBAR KPI =====================
+st.sidebar.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+st.sidebar.markdown("### 📊 KPI")
+st.sidebar.write(f"Total: {total}")
+st.sidebar.write(f"Open: {open_count}")
+st.sidebar.write(f"Closed: {closed}")
+st.sidebar.write(f"Cancelled: {cancelled}")
+st.sidebar.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div style="font-size:12px">
-    <b>Total:</b> {total}<br>
-    <b>Open:</b> {open_}<br>
-    <b>Closed:</b> {closed}<br>
-    <b>Cancelled:</b> {cancelled}
-    </div>
-    """, unsafe_allow_html=True)
+# ===================== RESULT COUNT =====================
+st.write(f"### Results: {len(filtered)}")
 
-# --- FOOTER ---
-if info:
-    st.caption(f"Last refreshed: {info}")
+source_counts = filtered["Source"].value_counts().to_dict()
+
+st.caption(
+    f"AZURE: {source_counts.get('AZURE',0)} | "
+    f"SNOW: {source_counts.get('SNOW',0)} | "
+    f"PTC: {source_counts.get('PTC',0)}"
+)
+
+# ===================== PAGINATION =====================
+PAGE_SIZE = st.selectbox("Rows per page", [10, 20, 50], index=0)
+
+total_rows = len(filtered)
+total_pages = max((total_rows // PAGE_SIZE) + 1, 1)
+
+page = st.number_input("Page", 1, total_pages, 1)
+
+start = (page - 1) * PAGE_SIZE
+end = start + PAGE_SIZE
+
+# ===================== TABLE =====================
+st.dataframe(
+    filtered.iloc[start:end],
+    use_container_width=True,
+    hide_index=True
+)
+
+# ===================== FOOTER =====================
+st.caption(f"Last refreshed: {info}")
