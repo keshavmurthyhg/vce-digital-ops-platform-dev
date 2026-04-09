@@ -107,14 +107,14 @@ def build_ptc(df):
     df = df.reset_index(drop=True)
 
     # -------------------------------
-    # TRY EACH ROW AS HEADER
+    # FIND HEADER ROW (STRICT)
     # -------------------------------
     header_row = None
 
     for i in range(min(10, len(df))):
-        temp_cols = df.iloc[i].astype(str).str.strip().str.upper().tolist()
+        cols = df.iloc[i].astype(str).str.strip().str.upper().tolist()
 
-        if "CASE NUMBER" in temp_cols and "SUBJECT" in temp_cols:
+        if "CASE NUMBER" in cols and "SUBJECT" in cols:
             header_row = i
             break
 
@@ -126,29 +126,36 @@ def build_ptc(df):
     # -------------------------------
     # APPLY HEADER
     # -------------------------------
-    df.columns = df.iloc[header_row].astype(str).str.strip().str.upper()
+    df.columns = df.iloc[header_row]
     df = df[(header_row + 1):]
+
+    # -------------------------------
+    # NORMALIZE COLUMN NAMES
+    # -------------------------------
+    df.columns = (
+        df.columns.astype(str)
+        .str.strip()
+        .str.upper()
+    )
 
     df = df.dropna(how="all")
 
     # -------------------------------
-    # DEBUG (REMOVE LATER)
+    # FORCE EXACT MAPPING (NO GUESSING)
     # -------------------------------
-    st.write("PTC Columns Detected:", df.columns.tolist())
+    def col(name):
+        return df[name] if name in df.columns else pd.Series([None]*len(df))
 
-    # -------------------------------
-    # EXACT COLUMN MAP (MATCHES YOUR FILE)
-    # -------------------------------
     return pd.DataFrame({
-        "Number": df.get("CASE NUMBER"),
-        "Description": df.get("SUBJECT"),
-        "Priority": df.get("SEVERITY"),
-        "Status": df.get("STATUS"),
-        "Created By": df.get("CASE CONTACT"),
-        "Created Date": df.get("CREATED DATE"),
-        "Assigned To": df.get("CASE ASSIGNEE"),
-        "Resolved Date": df.get("RESOLVED DATE"),
-        "Release": df.get("RELEASE NAME"),
+        "Number": col("CASE NUMBER"),
+        "Description": col("SUBJECT"),
+        "Priority": col("SEVERITY"),
+        "Status": col("STATUS"),
+        "Created By": col("CASE CONTACT"),
+        "Created Date": col("CREATED DATE"),
+        "Assigned To": col("CASE ASSIGNEE"),
+        "Resolved Date": col("RESOLVED DATE"),
+        "Release": None,
         "Source": "PTC"
     })
 
