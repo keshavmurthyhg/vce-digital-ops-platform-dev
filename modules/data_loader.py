@@ -104,31 +104,6 @@ def build_ptc(df):
     if df.empty:
         return df
 
-    df = df.reset_index(drop=True)
-
-    # -------------------------------
-    # FIND HEADER ROW (STRICT)
-    # -------------------------------
-    header_row = None
-
-    for i in range(min(10, len(df))):
-        cols = df.iloc[i].astype(str).str.strip().str.upper().tolist()
-
-        if "CASE NUMBER" in cols and "SUBJECT" in cols:
-            header_row = i
-            break
-
-    if header_row is None:
-        st.error("❌ PTC header not found")
-        st.dataframe(df.head(5))
-        return pd.DataFrame()
-
-    # -------------------------------
-    # APPLY HEADER
-    # -------------------------------
-    df.columns = df.iloc[header_row]
-    df = df[(header_row + 1):]
-
     # -------------------------------
     # NORMALIZE COLUMN NAMES
     # -------------------------------
@@ -138,23 +113,23 @@ def build_ptc(df):
         .str.upper()
     )
 
-    df = df.dropna(how="all")
+    # -------------------------------
+    # DEBUG (REMOVE AFTER TEST)
+    # -------------------------------
+    st.write("PTC Columns:", df.columns.tolist())
 
     # -------------------------------
-    # FORCE EXACT MAPPING (NO GUESSING)
+    # SIMPLE DIRECT MAPPING (LIKE SNOW)
     # -------------------------------
-    def col(name):
-        return df[name] if name in df.columns else pd.Series([None]*len(df))
-
     return pd.DataFrame({
-        "Number": col("CASE NUMBER"),
-        "Description": col("SUBJECT"),
-        "Priority": col("SEVERITY"),
-        "Status": col("STATUS"),
-        "Created By": col("CASE CONTACT"),
-        "Created Date": col("CREATED DATE"),
-        "Assigned To": col("CASE ASSIGNEE"),
-        "Resolved Date": col("RESOLVED DATE"),
+        "Number": df.get("CASE NUMBER"),
+        "Description": df.get("SUBJECT"),
+        "Priority": df.get("SEVERITY"),
+        "Status": df.get("STATUS"),
+        "Created By": df.get("CASE CONTACT"),
+        "Created Date": df.get("CREATED DATE"),
+        "Assigned To": df.get("CASE ASSIGNEE"),
+        "Resolved Date": df.get("RESOLVED DATE"),
         "Release": None,
         "Source": "PTC"
     })
