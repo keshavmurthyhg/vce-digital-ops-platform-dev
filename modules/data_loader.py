@@ -1,132 +1,81 @@
 import pandas as pd
+from datetime import datetime
 
-# -------------------------------
-# NORMALIZE COLUMN NAMES
-# -------------------------------
-def norm(df):
-    df.columns = df.columns.astype(str).str.strip().str.lower()
-    return df
-
-
-# -------------------------------
-# SAFE COLUMN FETCH
-# -------------------------------
-def col(df, *names):
-    for n in names:
-        if n in df.columns:
-            return df[n]
-    return None
+def read_file(path):
+    try:
+        return pd.read_csv(path)
+    except:
+        return pd.DataFrame()
 
 
-# -------------------------------
-# AZURE
-# -------------------------------
 def build_azure(df):
+    if df.empty:
+        return df
+
     return pd.DataFrame({
-        "Number": col(df, "id"),
-        "Description": col(df, "title"),
-        "Priority": None,
-        "Status": col(df, "state"),
-        "Created By": col(df, "created by"),
-        "Created Date": col(df, "created date"),
-        "Assigned To": col(df, "assigned to"),
-        "Resolved Date": col(df, "resolved date"),
-        "Release": col(df, "release_windchill"),
+        "Number": df.get("ID"),
+        "Description": df.get("Title"),
+        "Priority": df.get("Release_windchill"),
+        "Status": df.get("State"),
+        "Created By": df.get("Created By"),
+        "Created Date": df.get("Created Date"),
+        "Assigned To": df.get("Assigned To"),
+        "Resolved Date": df.get("Resolved Date"),
         "Source": "AZURE"
     })
 
 
-# -------------------------------
-# SNOW
-# -------------------------------
 def build_snow(df):
+    if df.empty:
+        return df
+
     return pd.DataFrame({
-        "Number": col(df, "number"),
-        "Description": col(df, "short description"),
-        "Priority": col(df, "priority"),
-        "Status": col(df, "incident state"),
-        "Created By": col(df, "opened by", "created by"),
-        "Created Date": col(df, "created", "date"),
-        "Assigned To": col(df, "assigned to"),
-        "Resolved Date": col(df, "resolved"),
-        "Release": None,
+        "Number": df.get("Number"),
+        "Description": df.get("Short Description"),
+        "Priority": df.get("Priority"),
+        "Status": df.get("Incident State"),
+        "Created By": df.get("Created"),
+        "Created Date": df.get("Date"),
+        "Assigned To": df.get("Assigned to"),
+        "Resolved Date": df.get("Resolved"),
         "Source": "SNOW"
     })
 
 
-# -------------------------------
-# PTC (FINAL FIXED VERSION)
-# -------------------------------
 def build_ptc(df):
+    if df.empty:
+        return df
+
     return pd.DataFrame({
-        "Number": col(df, "case number"),
-        "Description": col(df, "subject"),
-        "Priority": col(df, "severity"),
-        "Status": col(df, "status"),
-        "Created By": col(df, "case contact"),
-        "Created Date": col(df, "created date"),
-        "Assigned To": col(df, "case assignee"),
-        "Resolved Date": col(df, "resolved date"),
-        "Release": col(df, "release name"),
+        "Number": df.get("CASE NUMBER"),
+        "Description": df.get("SUBJECT"),
+        "Priority": df.get("SEVERITY"),
+        "Status": df.get("STATUS"),
+        "Created By": df.get("CASE CONTACT"),
+        "Created Date": df.get("CREATED DATE"),
+        "Assigned To": df.get("CASE ASSIGNEE"),
+        "Resolved Date": df.get("RESOLVED DATE"),
         "Source": "PTC"
     })
 
 
-# -------------------------------
-# LOAD DATA
-# -------------------------------
 def load_data():
+    azure = read_file("data/Azure.csv")
+    snow = read_file("data/Snow.csv")
+    ptc = read_file("data/Ptc.csv")
 
-    try:
-        # --- AZURE ---
-        azure = pd.read_csv(
-            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Azure.csv"
-        )
+    df_azure = build_azure(azure)
+    df_snow = build_snow(snow)
+    df_ptc = build_ptc(ptc)
 
-        # --- SNOW ---
-        snow = pd.read_excel(
-            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Snow.xlsx",
-            engine="openpyxl"
-        )
+    df = pd.concat([df_azure, df_snow, df_ptc], ignore_index=True)
 
-        # --- PTC (FIXED INDEX ISSUE) ---
-        ptc = pd.read_csv(
-            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Ptc.csv",
-            index_col=False,
-            engine="python"
-        )
+    df = df.fillna("")
 
-        # 🔥 IMPORTANT FIX
-        ptc = ptc.reset_index(drop=True)
-
-    except Exception as e:
-        import streamlit as st
-        st.error(f"❌ Data load failed: {e}")
-        return pd.DataFrame(), {}
-
-    # -------------------------------
-    # NORMALIZE
-    # -------------------------------
-    azure = norm(azure)
-    snow = norm(snow)
-    ptc = norm(ptc)
-
-    # -------------------------------
-    # COMBINE
-    # -------------------------------
-    df = pd.concat([
-        build_azure(azure),
-        build_snow(snow),
-        build_ptc(ptc)
-    ], ignore_index=True)
-
-    # -------------------------------
-    # INFO
-    # -------------------------------
     info = {
-        "AZURE": "Updated",
-        "SNOW": "Updated",
-        "PTC": "Updated"
+        "AZURE": datetime.now().strftime("%d-%b-%Y %H:%M"),
+        "SNOW": datetime.now().strftime("%d-%b-%Y %H:%M"),
+        "PTC": datetime.now().strftime("%d-%b-%Y %H:%M")
     }
 
     return df, info
