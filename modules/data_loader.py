@@ -162,19 +162,6 @@ def build_ptc(df):
 
     return result
 
-    return pd.DataFrame({
-        "Number": col("case number"),
-        "Description": col("subject"),
-        "Priority": col("severity"),
-        "Status": col("status"),
-        "Created By": col("case contact"),
-        "Created Date": col("created date"),
-        "Assigned To": col("case assignee"),
-        "Resolved Date": col("resolved date"),
-        "Release": pd.Series([None] * len(df)),
-        "Source": pd.Series(["PTC"] * len(df))
-    })
-
 
 # -------------------------------
 # MAIN LOADER
