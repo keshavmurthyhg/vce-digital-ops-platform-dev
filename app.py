@@ -1,63 +1,54 @@
-import math
 import streamlit as st
+import pandas as pd
+
 from modules.data_loader import load_data
 from modules.filters import apply_filters
-from modules.table import show_table
+from modules.search import apply_search
+from modules.kpi import calculate_kpi
 
-
+# ================= CONFIG =================
 st.set_page_config(layout="wide")
 
-# ================= STYLE =================
-st.markdown("""
-<style>
-
-/* Table font slightly bigger */
-[data-testid="stDataFrame"] {
-    font-size: 12px !important;
-}
-
-/* Header */
-[data-testid="stDataFrame"] th {
-    font-size: 12px !important;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-# ================= LOAD =================
+# ================= LOAD DATA =================
 df, info = load_data()
 
-if df.empty:
-    st.stop()
+# ================= SESSION =================
+if "page" not in st.session_state:
+    st.session_state.page = 1
 
 # ================= SIDEBAR =================
-with st.sidebar:
+st.sidebar.title("Ops Insight Dashboard")
 
-    st.markdown("## Ops Insight Dashboard")
+st.sidebar.markdown("### Menu")
+menu = st.sidebar.selectbox("", ["Search Tool"])
 
-    menu = st.selectbox("Menu", ["Search Tool"])
+# -------- SOURCE (CHECKBOX) --------
+st.sidebar.markdown("### Source")
 
-    st.markdown("### Source")
+azure_selected = st.sidebar.checkbox("AZURE")
+snow_selected = st.sidebar.checkbox("SNOW")
+ptc_selected = st.sidebar.checkbox("PTC")
 
-    src_azure = st.checkbox("AZURE", True)
-    src_snow = st.checkbox("SNOW", True)
-    src_ptc = st.checkbox("PTC", True)
+sources = []
+if azure_selected:
+    sources.append("AZURE")
+if snow_selected:
+    sources.append("SNOW")
+if ptc_selected:
+    sources.append("PTC")
 
-    sources = []
-    if src_azure: sources.append("AZURE")
-    if src_snow: sources.append("SNOW")
-    if src_ptc: sources.append("PTC")
+# ✅ NO SOURCE SELECTED
+if not sources:
+    st.warning("⚠️ Please select at least one source to view data.")
+    st.stop()
 
-    if not sources:
-        st.warning("⚠️ Please select at least one source to view data.")
-        st.stop()
-    
-    st.markdown("### Filters")
+# ================= FILTERS =================
+st.sidebar.markdown("### Filters")
 
-    status = st.selectbox("Status", ["ALL"] + sorted(df["Status"].unique()))
-    priority = st.selectbox("Priority", ["ALL"] + sorted(df["Priority"].unique()))
+status = st.sidebar.selectbox("Status", ["ALL"] + sorted(df["Status"].dropna().unique()))
+priority = st.sidebar.selectbox("Priority", ["ALL"] + sorted(df["Priority"].dropna().unique()))
 
-# ================= MAIN =================
+# ================= SEARCH =================
 col1, col2 = st.columns([12,1])
 
 with col1:
@@ -68,26 +59,31 @@ with col2:
         st.session_state.search = ""
         st.rerun()
 
-filtered = apply_filters(df, status, priority, keyword)
+# ================= FILTER DATA =================
+filtered = df[df["Source"].isin(sources)]
 
-filtered = filtered[filtered["Source"].isin(sources)]
+filtered = apply_filters(filtered, status, priority)
+filtered = apply_search(filtered, keyword)
 
-# ================= PAGINATION RESET =================
-if "page" not in st.session_state:
+# ================= RESET PAGE ON FILTER CHANGE =================
+if "prev_filter" not in st.session_state:
+    st.session_state.prev_filter = ""
+
+current_filter = str(sources) + str(status) + str(priority) + str(keyword)
+
+if current_filter != st.session_state.prev_filter:
     st.session_state.page = 1
+    st.session_state.prev_filter = current_filter
 
-if st.session_state.get("prev") != (status, priority, tuple(sources), keyword):
-    st.session_state.page = 1
+# ================= PAGINATION =================
+total = len(filtered)
 
-st.session_state.prev = (status, priority, tuple(sources), keyword)
+page_size = st.selectbox("", [5, 10, 20], index=1)
+
+total_pages = max((total + page_size - 1) // page_size, 1)
 
 # ================= HEADER =================
-# ================= HEADER (FIXED ALIGNMENT) =================
 col1, col2, col3, col4 = st.columns([6,1,2,1])
-
-total = len(filtered)
-import math
-total_pages = max(math.ceil(total / page_size), 1)
 
 with col1:
     st.markdown(f"### Results: {total}")
@@ -99,48 +95,61 @@ with col1:
         f"PTC: {counts.get('PTC',0)}"
     )
 
-# ◀ button (left)
 with col2:
-    prev = st.button("◀")
+    prev_btn = st.button("◀")
 
-# Page text (center)
 with col3:
     st.markdown(
-        f"<div style='text-align:center; margin-top:8px;'>Page {st.session_state.page} / {total_pages}</div>",
+        f"<div style='text-align:center;margin-top:8px;'>Page {st.session_state.page} / {total_pages}</div>",
         unsafe_allow_html=True
     )
 
-# ▶ button + page size (right)
 with col4:
-    next_ = st.button("▶")
+    next_btn = st.button("▶")
 
-# rows per page (top right)
-page_size = st.selectbox("", [5,10,20], index=1)
-
-if prev and st.session_state.page > 1:
+# ================= PAGE NAVIGATION =================
+if prev_btn and st.session_state.page > 1:
     st.session_state.page -= 1
 
-if next_ and st.session_state.page < total_pages:
+if next_btn and st.session_state.page < total_pages:
     st.session_state.page += 1
 
-# ================= TABLE =================
-show_table(filtered, st.session_state.page, page_size)
+# ================= SLICE DATA =================
+start = (st.session_state.page - 1) * page_size
+end = start + page_size
+
+page_df = filtered.iloc[start:end].copy()
+
+# ================= FORMAT =================
+page_df.insert(0, "SL No", range(start+1, start+len(page_df)+1))
+
+# DATE FORMAT
+for col in ["Created Date", "Resolved Date"]:
+    if col in page_df.columns:
+        page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%y")
+
+# LINK COLUMN
+if "Number" in page_df.columns:
+    page_df["Link"] = page_df["Number"].apply(
+        lambda x: f"https://support.ptc.com/appserver/cs/view/case.jsp?n={x}"
+        if pd.notna(x) else ""
+    )
+
+# ================= DISPLAY =================
+st.dataframe(page_df, use_container_width=True)
 
 # ================= KPI =================
-with st.sidebar:
+st.sidebar.markdown("### 📊 KPI")
 
-    st.markdown("### 📊 KPI")
+kpi = calculate_kpi(filtered)
 
-    total = len(filtered)
-    open_ = len(filtered[filtered["Status"].str.lower().str.contains("open")])
-    closed = len(filtered[filtered["Status"].str.lower().str.contains("closed")])
-    cancelled = len(filtered[filtered["Status"].str.lower().str.contains("cancel")])
+col1, col2 = st.sidebar.columns(2)
+col1.metric("Total", kpi["total"])
+col2.metric("Open", kpi["open"])
 
-    col1, col2 = st.columns(2)
-    col1.write(f"Total: {total}")
-    col2.write(f"Open: {open_}")
-    col1.write(f"Closed: {closed}")
-    col2.write(f"Cancelled: {cancelled}")
+col3, col4 = st.sidebar.columns(2)
+col3.metric("Closed", kpi["closed"])
+col4.metric("Cancelled", kpi["cancelled"])
 
-# ================= FOOTER =================
+# ================= LAST REFRESH =================
 st.caption(f"Last refreshed: {info}")
