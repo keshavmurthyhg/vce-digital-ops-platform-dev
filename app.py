@@ -47,8 +47,8 @@ with st.sidebar:
     if src_ptc: sources.append("PTC")
 
     if not sources:
-    st.warning("⚠️ Please select at least one source to view data.")
-    st.stop()
+        st.warning("⚠️ Please select at least one source to view data.")
+        st.stop()
     
     st.markdown("### Filters")
 
