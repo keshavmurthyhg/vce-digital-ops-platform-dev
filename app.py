@@ -1,117 +1,70 @@
 import streamlit as st
-import pandas as pd
 from modules.data_loader import load_data
+from modules.filters import apply_filters
+from modules.table import show_table
 
 st.set_page_config(layout="wide")
 
-# ================= CSS =================
+# ================= STYLE =================
 st.markdown("""
 <style>
-
-/* Sidebar compact */
-.sidebar-section {
-    margin-bottom: 6px;
-    padding-bottom: 4px;
-    border-bottom: 1px solid #ddd;
-}
-
-/* Smaller fonts */
-label { font-size: 11px !important; }
-div[data-baseweb="select"] { font-size: 11px !important; }
-
-/* Reduce padding */
-.block-container { padding-top: 1rem; }
-
-/* KPI grid */
-.kpi-box {
-    font-size: 14px;
-}
-
+html, body, [class*="css"]  { font-size: 11px !important; }
+.stSelectbox div[data-baseweb="select"] { min-height: 28px !important; }
 </style>
 """, unsafe_allow_html=True)
 
 # ================= LOAD =================
-df, refresh_time = load_data()
+df, info = load_data()
+
+if df.empty:
+    st.stop()
 
 # ================= SIDEBAR =================
-st.sidebar.title("Ops Insight Dashboard")
+with st.sidebar:
 
-st.sidebar.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-menu = st.sidebar.selectbox("Menu", ["Search Tool"])
-st.sidebar.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("## Ops Insight Dashboard")
 
-# ✅ CHECKBOX SOURCE (FIXED)
-st.sidebar.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    menu = st.selectbox("Menu", ["Search Tool"])
 
-src_azure = st.sidebar.checkbox("AZURE", True)
-src_snow = st.sidebar.checkbox("SNOW", True)
-src_ptc = st.sidebar.checkbox("PTC", True)
+    st.markdown("### Source")
 
-sources = []
-if src_azure: sources.append("AZURE")
-if src_snow: sources.append("SNOW")
-if src_ptc: sources.append("PTC")
+    src_azure = st.checkbox("AZURE", True)
+    src_snow = st.checkbox("SNOW", True)
+    src_ptc = st.checkbox("PTC", True)
 
-st.sidebar.markdown('</div>', unsafe_allow_html=True)
+    sources = []
+    if src_azure: sources.append("AZURE")
+    if src_snow: sources.append("SNOW")
+    if src_ptc: sources.append("PTC")
 
-filtered = df[df["Source"].isin(sources)]
+    st.markdown("### Filters")
 
-# ================= FILTER =================
-status_list = ["ALL"] + sorted(filtered["Status"].unique())
-priority_list = ["ALL"] + sorted(filtered["Priority"].unique())
+    status = st.selectbox("Status", ["ALL"] + sorted(df["Status"].unique()))
+    priority = st.selectbox("Priority", ["ALL"] + sorted(df["Priority"].unique()))
 
-st.sidebar.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-status = st.sidebar.selectbox("Status", status_list)
-priority = st.sidebar.selectbox("Priority", priority_list)
-st.sidebar.markdown('</div>', unsafe_allow_html=True)
+# ================= MAIN =================
+keyword = st.text_input("🔎 Search")
 
-if status != "ALL":
-    filtered = filtered[filtered["Status"] == status]
+filtered = apply_filters(df, status, priority, keyword)
 
-if priority != "ALL":
-    filtered = filtered[filtered["Priority"] == priority]
+filtered = filtered[filtered["Source"].isin(sources)]
 
-# ================= SEARCH =================
-col1, col2 = st.columns([10,1])
+# ================= PAGINATION RESET =================
+if "page" not in st.session_state:
+    st.session_state.page = 1
 
-with col1:
-    keyword = st.text_input("🔎 Search", key="search")
+if st.session_state.get("prev") != (status, priority, tuple(sources), keyword):
+    st.session_state.page = 1
 
-with col2:
-    if st.button("❌"):
-        st.session_state.search = ""
-        st.rerun()
+st.session_state.prev = (status, priority, tuple(sources), keyword)
 
-if keyword:
-    filtered = filtered[
-        filtered.apply(lambda r: keyword.lower() in str(r).lower(), axis=1)
-    ]
-
-# ================= KPI =================
-status_col = filtered["Status"].str.lower()
+# ================= HEADER =================
+col1, col2, col3 = st.columns([6,2,2])
 
 total = len(filtered)
-open_count = status_col.str.contains("open|new|progress").sum()
-closed = status_col.str.contains("closed|resolved").sum()
-cancelled = status_col.str.contains("cancel").sum()
+total_pages = max((total // 10) + 1, 1)
 
-# ✅ 2 COLUMN KPI
-st.sidebar.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-st.sidebar.markdown("### 📊 KPI")
-
-col1, col2 = st.sidebar.columns(2)
-col1.write(f"Total: {total}")
-col2.write(f"Open: {open_count}")
-
-col1.write(f"Closed: {closed}")
-col2.write(f"Cancelled: {cancelled}")
-
-st.sidebar.markdown('</div>', unsafe_allow_html=True)
-
-# ================= RESULT HEADER =================
-c1, c2 = st.columns([6,2])
-
-with c1:
+with col1:
     st.markdown(f"### Results: {total}")
 
     counts = filtered["Source"].value_counts()
@@ -121,44 +74,39 @@ with c1:
         f"PTC: {counts.get('PTC',0)}"
     )
 
-# ================= PAGINATION INLINE =================
-with c2:
-    page_size = st.selectbox("", [10,20,50], index=0)
+with col2:
+    page_size = st.selectbox("", [5,10,20], index=1)
 
-total_pages = max((total // page_size) + 1, 1)
-
-p1, p2, p3 = st.columns([1,2,1])
-
-with p1:
+with col3:
     prev = st.button("◀")
-
-with p2:
-    page = st.session_state.get("page", 1)
-    st.markdown(f"**Page {page} / {total_pages}**")
-
-with p3:
     next_ = st.button("▶")
 
-if prev and page > 1:
-    page -= 1
-if next_ and page < total_pages:
-    page += 1
+if prev and st.session_state.page > 1:
+    st.session_state.page -= 1
 
-st.session_state.page = page
+if next_ and st.session_state.page < total_pages:
+    st.session_state.page += 1
 
-start = (page - 1) * page_size
-end = start + page_size
+st.markdown(f"**Page {st.session_state.page} / {total_pages}**")
 
 # ================= TABLE =================
-show_df = filtered.iloc[start:end].copy()
+show_table(filtered, st.session_state.page, page_size)
 
-# ✅ CLICKABLE LINK
-show_df["Link"] = show_df.apply(
-    lambda x: f"[Open]({x['Link']})" if x["Link"] else "",
-    axis=1
-)
+# ================= KPI =================
+with st.sidebar:
 
-st.dataframe(show_df, use_container_width=True, hide_index=True)
+    st.markdown("### 📊 KPI")
+
+    total = len(filtered)
+    open_ = len(filtered[filtered["Status"].str.lower().str.contains("open")])
+    closed = len(filtered[filtered["Status"].str.lower().str.contains("closed")])
+    cancelled = len(filtered[filtered["Status"].str.lower().str.contains("cancel")])
+
+    col1, col2 = st.columns(2)
+    col1.write(f"Total: {total}")
+    col2.write(f"Open: {open_}")
+    col1.write(f"Closed: {closed}")
+    col2.write(f"Cancelled: {cancelled}")
 
 # ================= FOOTER =================
-st.caption(f"Last refreshed: {refresh_time}")
+st.caption(f"Last refreshed: {info}")
