@@ -104,22 +104,37 @@ def build_ptc(df):
     if df.empty:
         return df
 
-    # -------------------------------
-    # NORMALIZE COLUMN NAMES
-    # -------------------------------
-    df.columns = (
-        df.columns.astype(str)
-        .str.strip()
-        .str.upper()
-    )
+    # Normalize columns
+    df.columns = df.columns.astype(str).str.strip().str.upper()
 
-    # -------------------------------
-    # DEBUG (REMOVE AFTER TEST)
-    # -------------------------------
+    # DEBUG (keep for now)
     st.write("PTC Columns:", df.columns.tolist())
 
     # -------------------------------
-    # SIMPLE DIRECT MAPPING (LIKE SNOW)
+    # FIX MISALIGNED DATA (POSITION BASED)
+    # -------------------------------
+    cols = df.columns.tolist()
+
+    # If CASE NUMBER column contains names → shift mapping
+    sample_val = str(df.iloc[0][cols[0]])
+
+    if " " in sample_val:  # crude check → name detected
+        # SHIFTED DATA FIX
+        return pd.DataFrame({
+            "Number": df.iloc[:, 1],          # actual case number
+            "Description": df.iloc[:, 4],     # SUBJECT
+            "Priority": df.iloc[:, 22],       # SEVERITY
+            "Status": df.iloc[:, 3],          # STATUS
+            "Created By": df.iloc[:, 0],      # NAME
+            "Created Date": df.iloc[:, 6],    # CREATED DATE
+            "Assigned To": df.iloc[:, 14],    # CASE ASSIGNEE
+            "Resolved Date": df.iloc[:, 7],   # RESOLVED DATE
+            "Release": df.iloc[:, 11] if len(df.columns) > 11 else None,
+            "Source": "PTC"
+        })
+
+    # -------------------------------
+    # NORMAL CASE (IF CORRECT)
     # -------------------------------
     return pd.DataFrame({
         "Number": df.get("CASE NUMBER"),
@@ -130,7 +145,7 @@ def build_ptc(df):
         "Created Date": df.get("CREATED DATE"),
         "Assigned To": df.get("CASE ASSIGNEE"),
         "Resolved Date": df.get("RESOLVED DATE"),
-        "Release": None,
+        "Release": df.get("RELEASE NAME"),
         "Source": "PTC"
     })
 
