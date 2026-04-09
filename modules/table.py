@@ -25,42 +25,49 @@ def build_link(row):
     return ""
 
 
-def show_table(df):
+def show_table(df, page, page_size):
 
     if df.empty:
         st.warning("No data")
         return
 
     df = df.copy().reset_index(drop=True)
+
+    # SL NO
     df.insert(0, "SL No", df.index + 1)
 
-    # Clean names
+    # CLEAN NAMES
     for col in ["Created By", "Assigned To"]:
         if col in df.columns:
             df[col] = df[col].apply(clean_name)
 
-    # Format dates
+    # DATE FORMAT
     for col in ["Created Date", "Resolved Date"]:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
-    # Remove .0 issue
+    # REMOVE .0
     if "Assigned To" in df.columns:
         df["Assigned To"] = df["Assigned To"].astype(str).str.replace(".0", "", regex=False)
 
-    # Link column
+    # LINK
     df["Open"] = df.apply(build_link, axis=1)
 
-    # Column order
+    # PAGINATION
+    start = (page - 1) * page_size
+    end = start + page_size
+    df_page = df.iloc[start:end]
+
     cols = [
         "SL No", "Number", "Description", "Priority", "Status",
         "Created By", "Created Date", "Assigned To",
         "Resolved Date", "Source", "Open"
     ]
-    df = df[[c for c in cols if c in df.columns]]
+
+    df_page = df_page[[c for c in cols if c in df_page.columns]]
 
     st.dataframe(
-        df,
+        df_page,
         use_container_width=True,
         hide_index=True,
         column_config={
