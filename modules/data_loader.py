@@ -87,15 +87,18 @@ def load_data():
             ptc = pd.read_csv(
                 "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Ptc.csv",
                 sep=",",
+                index_col=False,
                 engine="python"
             )
         except:
             ptc = pd.read_csv(
                 "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Ptc.csv",
                 sep=";",
+                index_col=False,
                 engine="python"
             )
 
+)
     except Exception as e:
         import streamlit as st
         st.error(f"❌ Data load failed: {e}")
