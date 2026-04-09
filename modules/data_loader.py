@@ -124,13 +124,15 @@ def build_ptc(df):
 
     df_safe = df.fillna("").astype(str)
 
-    # FIND HEADER
+    # -------------------------------
+    # FIND HEADER ROW
+    # -------------------------------
     header_row = None
 
     for i in range(len(df_safe)):
-        row = " ".join([str(x).lower() for x in df_safe.iloc[i]])
+        row = " ".join(df_safe.iloc[i].str.lower())
 
-        if "case" in row and ("subject" in row or "description" in row):
+        if "case number" in row and "subject" in row:
             header_row = i
             break
 
@@ -139,34 +141,38 @@ def build_ptc(df):
         st.write(df.head(5))
         return pd.DataFrame()
 
+    # -------------------------------
     # APPLY HEADER
+    # -------------------------------
     df.columns = df.iloc[header_row]
     df = df[(header_row + 1):]
 
-    # CLEAN
+    # -------------------------------
+    # CLEAN COLUMN NAMES
+    # -------------------------------
     df.columns = (
         df.columns.astype(str)
-        .str.lower()
-        .str.replace(r"[^a-z0-9 ]", "", regex=True)
         .str.strip()
+        .str.upper()
     )
 
     df = df.dropna(how="all")
 
-    # BUILD
+    # -------------------------------
+    # EXACT COLUMN MAP (FINAL FIX)
+    # -------------------------------
     return pd.DataFrame({
-        "Number": find_col(df, ["case", "number"]),
-        "Description": find_col(df, ["subject"]),
-        "Priority": find_col(df, ["severity"]),
-        "Status": find_col(df, ["status"]),
-        "Created By": find_col(df, ["contact"]),
-        "Created Date": find_col(df, ["created"]),
-        "Assigned To": find_col(df, ["assignee"]),
-        "Resolved Date": find_col(df, ["resolved"]),
-        "Release": pd.Series([None]*len(df)),
-        "Source": pd.Series(["PTC"]*len(df))
+        "Number": df.get("CASE NUMBER"),
+        "Description": df.get("SUBJECT"),
+        "Priority": df.get("SEVERITY"),
+        "Status": df.get("STATUS"),
+        "Created By": df.get("CASE CONTACT"),
+        "Created Date": df.get("CREATED DATE"),
+        "Assigned To": df.get("CASE ASSIGNEE"),
+        "Resolved Date": df.get("RESOLVED DATE"),
+        "Release": None,
+        "Source": "PTC"
     })
-
 
 # ---------------------------------
 # LOAD DATA
