@@ -1,21 +1,25 @@
-import streamlit as st
+def calculate_kpi(df):
+    if df.empty:
+        return {
+            "total": 0,
+            "open": 0,
+            "closed": 0,
+            "cancelled": 0
+        }
 
-def show_kpi(df):
+    status_col = "Status"
+
     total = len(df)
-    open_ = len(df[df["Status"] == "Open"])
-    closed = len(df[df["Status"] == "Closed"])
-    cancelled = len(df[df["Status"] == "Cancelled"])
 
-    st.markdown("""
-    <style>
-    .kpi-box {font-size:13px;}
-    .kpi-value {font-size:18px; font-weight:600;}
-    </style>
-    """, unsafe_allow_html=True)
+    open_count = df[df[status_col].str.contains("open", case=False, na=False)].shape[0]
 
-    col1, col2, = st.columns(2)
+    closed_count = df[df[status_col].str.contains("closed", case=False, na=False)].shape[0]
 
-    col1.markdown(f"<div class='kpi-box'>Total<br><span class='kpi-value'>{total}</span></div>", unsafe_allow_html=True)
-    col2.markdown(f"<div class='kpi-box'>Open<br><span class='kpi-value'>{open_}</span></div>", unsafe_allow_html=True)
-    col1.markdown(f"<div class='kpi-box'>Closed<br><span class='kpi-value'>{closed}</span></div>", unsafe_allow_html=True)
-    col2.markdown(f"<div class='kpi-box'>Cancelled<br><span class='kpi-value'>{cancelled}</span></div>", unsafe_allow_html=True)
+    cancelled_count = df[df[status_col].str.contains("cancel", case=False, na=False)].shape[0]
+
+    return {
+        "total": total,
+        "open": open_count,
+        "closed": closed_count,
+        "cancelled": cancelled_count
+    }
