@@ -107,70 +107,50 @@ def build_ptc(df):
     df = df.reset_index(drop=True)
 
     # -------------------------------
-    # TRY TO FIND HEADER ROW
+    # TRY EACH ROW AS HEADER
     # -------------------------------
-    header_found = False
+    header_row = None
 
     for i in range(min(10, len(df))):
-        row = df.iloc[i].astype(str).str.lower().tolist()
+        temp_cols = df.iloc[i].astype(str).str.strip().str.upper().tolist()
 
-        if any("case" in x for x in row) and any("subject" in x for x in row):
-            df.columns = df.iloc[i]
-            df = df[(i + 1):]
-            header_found = True
+        if "CASE NUMBER" in temp_cols and "SUBJECT" in temp_cols:
+            header_row = i
             break
 
+    if header_row is None:
+        st.error("❌ PTC header not found")
+        st.dataframe(df.head(5))
+        return pd.DataFrame()
+
     # -------------------------------
-    # CLEAN COLUMN NAMES
+    # APPLY HEADER
     # -------------------------------
-    df.columns = (
-        df.columns.astype(str)
-        .str.replace("\n", " ")
-        .str.strip()
-        .str.upper()
-    )
+    df.columns = df.iloc[header_row].astype(str).str.strip().str.upper()
+    df = df[(header_row + 1):]
 
     df = df.dropna(how="all")
 
     # -------------------------------
-    # IF HEADER FOUND → USE NAME MAP
+    # DEBUG (REMOVE LATER)
     # -------------------------------
-    if header_found:
-
-        return pd.DataFrame({
-            "Number": df.get("CASE NUMBER"),
-            "Description": df.get("SUBJECT"),
-            "Priority": df.get("SEVERITY"),
-            "Status": df.get("STATUS"),
-            "Created By": df.get("CASE CONTACT"),
-            "Created Date": df.get("CREATED DATE"),
-            "Assigned To": df.get("CASE ASSIGNEE"),
-            "Resolved Date": df.get("RESOLVED DATE"),
-            "Release": None,
-            "Source": "PTC"
-        })
+    st.write("PTC Columns Detected:", df.columns.tolist())
 
     # -------------------------------
-    # FALLBACK → POSITION BASED
+    # EXACT COLUMN MAP (MATCHES YOUR FILE)
     # -------------------------------
-    cols = list(df.columns)
-
-    def col(idx):
-        return df[cols[idx]] if idx < len(cols) else pd.Series([None]*len(df))
-
     return pd.DataFrame({
-        "Number": col(0),
-        "Description": col(1),
-        "Priority": col(2),
-        "Status": col(3),
-        "Created By": col(4),
-        "Created Date": col(5),
-        "Assigned To": col(6),
-        "Resolved Date": col(7),
-        "Release": None,
+        "Number": df.get("CASE NUMBER"),
+        "Description": df.get("SUBJECT"),
+        "Priority": df.get("SEVERITY"),
+        "Status": df.get("STATUS"),
+        "Created By": df.get("CASE CONTACT"),
+        "Created Date": df.get("CREATED DATE"),
+        "Assigned To": df.get("CASE ASSIGNEE"),
+        "Resolved Date": df.get("RESOLVED DATE"),
+        "Release": df.get("RELEASE NAME"),
         "Source": "PTC"
     })
-
 
 # ---------------------------------
 # LOAD DATA
