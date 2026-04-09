@@ -103,9 +103,14 @@ def build_snow(df):
 # ---------------------------------
 def find_col(df, keywords):
     for col in df.columns:
-        col_str = str(col).lower()  # 🔥 FIX
-        if all(k in col_str for k in keywords):
-            return df[col]
+        col_str = str(col).lower()  # ✅ FORCE STRING HERE
+
+        try:
+            if all(k in col_str for k in keywords):
+                return df[col]
+        except Exception:
+            continue  # extra safety
+
     return pd.Series([None] * len(df))
 
 
