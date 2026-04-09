@@ -1,18 +1,13 @@
-import streamlit as st
+import pandas as pd
 
-def clear_search():
-    st.session_state.search_text = ""
+def apply_search(df, keyword):
+    if not keyword:
+        return df
 
-def search_box():
-    if "search_text" not in st.session_state:
-        st.session_state.search_text = ""
+    keyword = keyword.lower()
 
-    col1, col2 = st.columns([10,1])
-
-    with col1:
-        keyword = st.text_input("🔍 Search", key="search_text")
-
-    with col2:
-        st.button("❌", on_click=clear_search)
-
-    return keyword
+    return df[
+        df.astype(str)
+        .apply(lambda row: row.str.lower().str.contains(keyword))
+        .any(axis=1)
+    ]
