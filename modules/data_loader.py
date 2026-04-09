@@ -93,29 +93,28 @@ def build_snow(df):
 
 def build_ptc(df):
 
-    # -------------------------------
-    # NORMALIZE RAW
-    # -------------------------------
     df = df.copy()
 
-    # convert all to string for detection
-    df_str = df.astype(str)
+    # -------------------------------
+    # SAFE STRING CONVERSION
+    # -------------------------------
+    df_safe = df.fillna("").astype(str)
 
     # -------------------------------
-    # FIND HEADER ROW (FUZZY MATCH)
+    # FIND HEADER ROW (SAFE)
     # -------------------------------
     header_row = None
 
-    for i in range(len(df_str)):
-        row = " ".join(df_str.iloc[i].str.lower().tolist())
+    for i in range(len(df_safe)):
+        row = " ".join([str(x).lower() for x in df_safe.iloc[i].tolist()])
 
         if "case" in row and "subject" in row:
             header_row = i
             break
 
     if header_row is None:
-        st.error("❌ PTC header not found (fuzzy match failed)")
-        st.write("Preview rows:", df.head(5))
+        st.error("❌ PTC header not found")
+        st.write("Preview:", df.head(5))
         return pd.DataFrame()
 
     # -------------------------------
@@ -134,19 +133,21 @@ def build_ptc(df):
         .str.strip()
     )
 
+    df = df.dropna(how="all")
+
     # -------------------------------
-    # HELPER: FIND COLUMN BY KEYWORD
+    # SAFE COLUMN FINDER
     # -------------------------------
     def find_col(keywords):
         for col in df.columns:
             if all(k in col for k in keywords):
                 return df[col]
-        return pd.Series([None]*len(df))
+        return pd.Series([None] * len(df))
 
     # -------------------------------
-    # BUILD FINAL TABLE
+    # BUILD FINAL DATA
     # -------------------------------
-    return pd.DataFrame({
+    result = pd.DataFrame({
         "Number": find_col(["case", "number"]),
         "Description": find_col(["subject"]),
         "Priority": find_col(["severity"]),
@@ -155,9 +156,11 @@ def build_ptc(df):
         "Created Date": find_col(["created"]),
         "Assigned To": find_col(["assignee"]),
         "Resolved Date": find_col(["resolved"]),
-        "Release": pd.Series([None]*len(df)),
-        "Source": pd.Series(["PTC"]*len(df))
+        "Release": pd.Series([None] * len(df)),
+        "Source": pd.Series(["PTC"] * len(df))
     })
+
+    return result
 
     return pd.DataFrame({
         "Number": col("case number"),
