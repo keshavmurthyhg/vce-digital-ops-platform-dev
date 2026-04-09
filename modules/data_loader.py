@@ -35,18 +35,16 @@ def read_file(content, url):
         else:
             return pd.read_excel(BytesIO(content))
     except Exception:
-        try:
-            return pd.read_csv(BytesIO(content))
-        except:
-            return pd.DataFrame()
+        return pd.DataFrame()
 
 
 # ---------------------------------
-# NORMALIZE COLUMNS
+# NORMALIZE
 # ---------------------------------
 def normalize_columns(df):
     df.columns = (
         df.columns.astype(str)
+        .fillna("")
         .str.replace("\n", " ")
         .str.strip()
         .str.lower()
@@ -101,27 +99,31 @@ def build_snow(df):
 
 
 # ---------------------------------
-# PTC (FINAL SAFE VERSION)
+# SAFE COLUMN FINDER
+# ---------------------------------
+def find_col(df, keywords):
+    for col in df.columns:
+        col_str = str(col).lower()  # 🔥 FIX
+        if all(k in col_str for k in keywords):
+            return df[col]
+    return pd.Series([None] * len(df))
+
+
+# ---------------------------------
+# PTC (FINAL SAFE)
 # ---------------------------------
 def build_ptc(df):
-
-    df = df.copy()
 
     if df.empty:
         return df
 
-    # -------------------------------
-    # SAFE STRING CONVERSION
-    # -------------------------------
     df_safe = df.fillna("").astype(str)
 
-    # -------------------------------
-    # FIND HEADER ROW (ROBUST)
-    # -------------------------------
+    # FIND HEADER
     header_row = None
 
     for i in range(len(df_safe)):
-        row = " ".join([str(x).lower() for x in df_safe.iloc[i].tolist()])
+        row = " ".join([str(x).lower() for x in df_safe.iloc[i]])
 
         if "case" in row and ("subject" in row or "description" in row):
             header_row = i
@@ -129,18 +131,14 @@ def build_ptc(df):
 
     if header_row is None:
         st.error("❌ PTC header not found")
-        st.write("Preview of PTC file:", df.head(5))
+        st.write(df.head(5))
         return pd.DataFrame()
 
-    # -------------------------------
     # APPLY HEADER
-    # -------------------------------
     df.columns = df.iloc[header_row]
     df = df[(header_row + 1):]
 
-    # -------------------------------
-    # CLEAN COLUMN NAMES
-    # -------------------------------
+    # CLEAN
     df.columns = (
         df.columns.astype(str)
         .str.lower()
@@ -150,27 +148,16 @@ def build_ptc(df):
 
     df = df.dropna(how="all")
 
-    # -------------------------------
-    # FLEXIBLE COLUMN FINDER
-    # -------------------------------
-    def find_col(keywords):
-        for col in df.columns:
-            if all(k in col for k in keywords):
-                return df[col]
-        return pd.Series([None] * len(df))
-
-    # -------------------------------
-    # BUILD FINAL STRUCTURE
-    # -------------------------------
+    # BUILD
     return pd.DataFrame({
-        "Number": find_col(["case", "number"]),
-        "Description": find_col(["subject"]),
-        "Priority": find_col(["severity"]),
-        "Status": find_col(["status"]),
-        "Created By": find_col(["contact"]),
-        "Created Date": find_col(["created"]),
-        "Assigned To": find_col(["assignee"]),
-        "Resolved Date": find_col(["resolved"]),
+        "Number": find_col(df, ["case", "number"]),
+        "Description": find_col(df, ["subject"]),
+        "Priority": find_col(df, ["severity"]),
+        "Status": find_col(df, ["status"]),
+        "Created By": find_col(df, ["contact"]),
+        "Created Date": find_col(df, ["created"]),
+        "Assigned To": find_col(df, ["assignee"]),
+        "Resolved Date": find_col(df, ["resolved"]),
         "Release": pd.Series([None]*len(df)),
         "Source": pd.Series(["PTC"]*len(df))
     })
@@ -184,19 +171,14 @@ def load_data():
 
     urls = CONFIG[ENV]
 
-    # SNOW
-    snow_content = fetch_file(urls["SNOW_URL"])
-    df_snow = build_snow(read_file(snow_content, urls["SNOW_URL"])) if snow_content else pd.DataFrame()
+    snow = fetch_file(urls["SNOW_URL"])
+    ptc = fetch_file(urls["PTC_URL"])
+    azure = fetch_file(urls["AZURE_URL"])
 
-    # PTC
-    ptc_content = fetch_file(urls["PTC_URL"])
-    df_ptc = build_ptc(read_file(ptc_content, urls["PTC_URL"])) if ptc_content else pd.DataFrame()
+    df_snow = build_snow(read_file(snow, urls["SNOW_URL"])) if snow else pd.DataFrame()
+    df_ptc = build_ptc(read_file(ptc, urls["PTC_URL"])) if ptc else pd.DataFrame()
+    df_azure = build_azure(read_file(azure, urls["AZURE_URL"])) if azure else pd.DataFrame()
 
-    # AZURE
-    azure_content = fetch_file(urls["AZURE_URL"])
-    df_azure = build_azure(read_file(azure_content, urls["AZURE_URL"])) if azure_content else pd.DataFrame()
-
-    # COMBINE
     df = pd.concat([df_snow, df_ptc, df_azure], ignore_index=True)
 
     return df, {}
