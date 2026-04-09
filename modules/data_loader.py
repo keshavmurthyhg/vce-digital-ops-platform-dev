@@ -73,16 +73,16 @@ def build_ptc(df):
 def load_data():
 
     azure = pd.read_csv(
-        "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/All-VCE-Bugs.csv"
+        "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Azure.csv"
     )
 
     snow = pd.read_excel(
-        "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Snow-incident.xlsx",
+        "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Snow.xlsx",
         engine="openpyxl"
     )
 
     ptc = pd.read_csv(
-        "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/PTC-Cases-Report.csv"
+        "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Ptc.csv"
     )
 
     # normalize
