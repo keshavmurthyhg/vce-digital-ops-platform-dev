@@ -1,11 +1,12 @@
 import pandas as pd
 
 # -------------------------------
-# NORMALIZE
+# NORMALIZE COLUMN NAMES
 # -------------------------------
 def norm(df):
     df.columns = df.columns.astype(str).str.strip().str.lower()
     return df
+
 
 # -------------------------------
 # SAFE COLUMN FETCH
@@ -15,6 +16,7 @@ def col(df, *names):
         if n in df.columns:
             return df[n]
     return None
+
 
 # -------------------------------
 # AZURE
@@ -33,6 +35,7 @@ def build_azure(df):
         "Source": "AZURE"
     })
 
+
 # -------------------------------
 # SNOW
 # -------------------------------
@@ -50,8 +53,9 @@ def build_snow(df):
         "Source": "SNOW"
     })
 
+
 # -------------------------------
-# PTC
+# PTC (FINAL FIXED VERSION)
 # -------------------------------
 def build_ptc(df):
     return pd.DataFrame({
@@ -67,57 +71,62 @@ def build_ptc(df):
         "Source": "PTC"
     })
 
+
 # -------------------------------
 # LOAD DATA
 # -------------------------------
 def load_data():
 
     try:
+        # --- AZURE ---
         azure = pd.read_csv(
-            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Azure.csv"
+            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/All-VCE-Bugs.csv"
         )
 
+        # --- SNOW ---
         snow = pd.read_excel(
-            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Snow.xlsx",
+            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Snow-incident.xlsx",
             engine="openpyxl"
         )
 
-        # TRY BOTH SEPARATORS (AUTO FIX)
-        try:
-            ptc = pd.read_csv(
-                "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Ptc.csv",
-                sep=",",
-                index_col=False,
-                engine="python"
-            )
-        except:
-            ptc = pd.read_csv(
-                "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/Ptc.csv",
-                sep=";",
-                index_col=False,
-                engine="python"
-            )
+        # --- PTC (FIXED INDEX ISSUE) ---
+        ptc = pd.read_csv(
+            "https://raw.githubusercontent.com/keshavmurthyhg/vce-digital-ops-platform-dev/main/data/PTC-Cases-Report.csv",
+            index_col=False,
+            engine="python"
+        )
 
-)
+        # 🔥 IMPORTANT FIX
+        ptc = ptc.reset_index(drop=True)
+
     except Exception as e:
         import streamlit as st
         st.error(f"❌ Data load failed: {e}")
         return pd.DataFrame(), {}
 
-    # Normalize
+    # -------------------------------
+    # NORMALIZE
+    # -------------------------------
     azure = norm(azure)
     snow = norm(snow)
     ptc = norm(ptc)
 
-    # Combine
+    # -------------------------------
+    # COMBINE
+    # -------------------------------
     df = pd.concat([
         build_azure(azure),
         build_snow(snow),
         build_ptc(ptc)
     ], ignore_index=True)
 
-    return df, {
+    # -------------------------------
+    # INFO
+    # -------------------------------
+    info = {
         "AZURE": "Updated",
         "SNOW": "Updated",
         "PTC": "Updated"
     }
+
+    return df, info
