@@ -23,28 +23,31 @@ def load_data():
 
     df_snow = pd.DataFrame({
         "Number": snow.get("Number"),
-        "Description": snow.get("Short description"),  # ✅ FIXED
+        "Description": snow.get("Short description"),
         "Priority": snow.get("Priority"),
-        "Status": snow.get("State"),  # ✅ FIXED (not Incident State)
-        "Created By": snow.get("Opened by"),  # ✅ FIXED
-        "Created Date": snow.get("Opened"),   # ✅ FIXED
+        "Status": snow.get("State"),
+        "Created By": snow.get("Opened by"),
+        "Created Date": snow.get("Opened"),
         "Assigned To": snow.get("Assigned to"),
         "Resolved Date": snow.get("Resolved"),
         "Source": "SNOW"
     })
 
     # ================= PTC =================
-    ptc = pd.read_csv("data/Ptc.csv")  # ✅ USE XLSX (your actual file)
+    ptc = pd.read_csv("data/Ptc.csv")
+
+    # 🔥 NORMALIZE COLUMN NAMES
+    ptc.columns = [c.strip().upper() for c in ptc.columns]
 
     df_ptc = pd.DataFrame({
-        "Number": ptc.get("Case Number"),         # ✅ FIXED
-        "Description": ptc.get("Subject"),        # ✅ FIXED
-        "Priority": ptc.get("Severity"),          # ✅ FIXED
-        "Status": ptc.get("Status"),              # ✅ FIXED
-        "Created By": ptc.get("Contact"),         # ✅ FIXED
-        "Created Date": ptc.get("Created"),       # ✅ FIXED
-        "Assigned To": ptc.get("Assignee"),       # ✅ FIXED
-        "Resolved Date": ptc.get("Resolved"),     # ✅ FIXED
+        "Number": ptc.get("CASE NUMBER"),
+        "Description": ptc.get("SUBJECT"),
+        "Priority": ptc.get("SEVERITY"),
+        "Status": ptc.get("STATUS"),
+        "Created By": ptc.get("CASE CONTACT"),
+        "Created Date": ptc.get("CREATED DATE"),
+        "Assigned To": ptc.get("CASE ASSIGNEE"),
+        "Resolved Date": ptc.get("RESOLVED DATE"),
         "Source": "PTC"
     })
 
