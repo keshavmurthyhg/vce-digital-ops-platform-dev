@@ -1,25 +1,17 @@
 def calculate_kpi(df):
+
     if df.empty:
-        return {
-            "total": 0,
-            "open": 0,
-            "closed": 0,
-            "cancelled": 0
-        }
+        return {"total":0,"open":0,"closed":0,"cancelled":0}
 
-    status_col = "Status"
+    status = df["Status"].astype(str).str.lower()
 
-    total = len(df)
-
-    open_count = df[df[status_col].str.contains("open", case=False, na=False)].shape[0]
-
-    closed_count = df[df[status_col].str.contains("closed", case=False, na=False)].shape[0]
-
-    cancelled_count = df[df[status_col].str.contains("cancel", case=False, na=False)].shape[0]
+    open_count = status.str.contains("open|new|progress|hold", na=False).sum()
+    closed_count = status.str.contains("closed", na=False).sum()
+    cancelled_count = status.str.contains("cancel", na=False).sum()
 
     return {
-        "total": total,
-        "open": open_count,
-        "closed": closed_count,
-        "cancelled": cancelled_count
+        "total": len(df),
+        "open": int(open_count),
+        "closed": int(closed_count),
+        "cancelled": int(cancelled_count)
     }
