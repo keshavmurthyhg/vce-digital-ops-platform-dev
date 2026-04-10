@@ -49,7 +49,7 @@ status = st.sidebar.selectbox("Status", ["ALL"] + sorted(df["Status"].dropna().u
 priority = st.sidebar.selectbox("Priority", ["ALL"] + sorted(df["Priority"].dropna().unique()))
 
 # ================= SEARCH =================
-col1, col2 = st.columns([12,1])
+col1, col2, col3 = st.columns([4,1,7])
 
 with col1:
     keyword = st.text_input("🔎 Search", key="search")
@@ -83,10 +83,10 @@ page_size = st.selectbox("", [5, 10, 20], index=1)
 total_pages = max((total + page_size - 1) // page_size, 1)
 
 # ================= HEADER =================
-col1, col2, col3, col4 = st.columns([6,1,2,1])
+col1, col2, col3, col4 = st.columns([5,1,2,2])
 
 with col1:
-    st.markdown(f"### Results: {total}")
+    st.markdown(f"<h5>Results: {total}</h5>", unsafe_allow_html=True)
 
     counts = filtered["Source"].value_counts()
     st.caption(
@@ -100,12 +100,13 @@ with col2:
 
 with col3:
     st.markdown(
-        f"<div style='text-align:center;margin-top:8px;'>Page {st.session_state.page} / {total_pages}</div>",
+        f"<div style='text-align:center;margin-top:6px;'>Page {st.session_state.page} / {total_pages}</div>",
         unsafe_allow_html=True
     )
 
 with col4:
     next_btn = st.button("▶")
+    page_size = st.selectbox("", [5,10,20], index=1)
 
 # ================= PAGE NAVIGATION =================
 if prev_btn and st.session_state.page > 1:
@@ -136,7 +137,7 @@ if "Number" in page_df.columns:
     )
 
 # ================= DISPLAY =================
-st.dataframe(page_df, use_container_width=True)
+st.dataframe(page_df, use_container_width=True, hide_index=True)
 
 # ================= KPI =================
 st.sidebar.markdown("### 📊 KPI")
