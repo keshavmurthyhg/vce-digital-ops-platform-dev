@@ -23,35 +23,35 @@ def load_data():
 
     df_snow = pd.DataFrame({
         "Number": snow.get("Number"),
-        "Description": snow.get("Short Description"),
+        "Description": snow.get("Short description"),  # ✅ FIXED
         "Priority": snow.get("Priority"),
-        "Status": snow.get("Incident State"),
-        "Created By": snow.get("Opened By"),
-        "Created Date": snow.get("Opened"),
+        "Status": snow.get("State"),  # ✅ FIXED (not Incident State)
+        "Created By": snow.get("Opened by"),  # ✅ FIXED
+        "Created Date": snow.get("Opened"),   # ✅ FIXED
         "Assigned To": snow.get("Assigned to"),
         "Resolved Date": snow.get("Resolved"),
         "Source": "SNOW"
     })
 
     # ================= PTC =================
-    ptc = pd.read_csv("data/Ptc.csv")
+    ptc = pd.read_excel("data/Ptc.xlsx")  # ✅ USE XLSX (your actual file)
 
     df_ptc = pd.DataFrame({
-        "Number": ptc.get("CASE NUMBER"),
-        "Description": ptc.get("SUBJECT"),
-        "Priority": ptc.get("SEVERITY"),
-        "Status": ptc.get("STATUS"),
-        "Created By": ptc.get("CASE CONTACT"),
-        "Created Date": ptc.get("CREATED DATE"),
-        "Assigned To": ptc.get("CASE ASSIGNEE"),
-        "Resolved Date": ptc.get("RESOLVED DATE"),
+        "Number": ptc.get("Case Number"),         # ✅ FIXED
+        "Description": ptc.get("Subject"),        # ✅ FIXED
+        "Priority": ptc.get("Severity"),          # ✅ FIXED
+        "Status": ptc.get("Status"),              # ✅ FIXED
+        "Created By": ptc.get("Contact"),         # ✅ FIXED
+        "Created Date": ptc.get("Created"),       # ✅ FIXED
+        "Assigned To": ptc.get("Assignee"),       # ✅ FIXED
+        "Resolved Date": ptc.get("Resolved"),     # ✅ FIXED
         "Source": "PTC"
     })
 
     # ================= COMBINE =================
     df = pd.concat([df_azure, df_snow, df_ptc], ignore_index=True)
 
-    # ✅ REMOVE NaN
+    # ================= CLEAN =================
     df = df.fillna("")
 
     return df, datetime.now().strftime("%d-%b-%Y %H:%M")
