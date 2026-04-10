@@ -3,7 +3,7 @@ from datetime import datetime
 
 def load_data():
 
-    # -------- AZURE --------
+    # ================= AZURE =================
     azure = pd.read_csv("data/Azure.csv")
 
     df_azure = pd.DataFrame({
@@ -18,7 +18,7 @@ def load_data():
         "Source": "AZURE"
     })
 
-    # -------- SNOW --------
+    # ================= SNOW =================
     snow = pd.read_excel("data/Snow.xlsx")
 
     df_snow = pd.DataFrame({
@@ -26,14 +26,14 @@ def load_data():
         "Description": snow.get("Short Description"),
         "Priority": snow.get("Priority"),
         "Status": snow.get("Incident State"),
-        "Created By": snow.get("Created"),
-        "Created Date": snow.get("Date"),
+        "Created By": snow.get("Opened By"),
+        "Created Date": snow.get("Opened"),
         "Assigned To": snow.get("Assigned to"),
         "Resolved Date": snow.get("Resolved"),
         "Source": "SNOW"
     })
 
-    # -------- PTC --------
+    # ================= PTC =================
     ptc = pd.read_csv("data/Ptc.csv")
 
     df_ptc = pd.DataFrame({
@@ -48,6 +48,10 @@ def load_data():
         "Source": "PTC"
     })
 
+    # ================= COMBINE =================
     df = pd.concat([df_azure, df_snow, df_ptc], ignore_index=True)
+
+    # ✅ REMOVE NaN
+    df = df.fillna("")
 
     return df, datetime.now().strftime("%d-%b-%Y %H:%M")
