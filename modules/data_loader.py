@@ -34,7 +34,7 @@ def load_data():
     })
 
     # ================= PTC =================
-    ptc = pd.read_excel("data/Ptc.xlsx")  # ✅ USE XLSX (your actual file)
+    ptc = pd.read_csv("data/Ptc.csv")  # ✅ USE XLSX (your actual file)
 
     df_ptc = pd.DataFrame({
         "Number": ptc.get("Case Number"),         # ✅ FIXED
