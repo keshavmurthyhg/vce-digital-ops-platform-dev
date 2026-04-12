@@ -142,6 +142,9 @@ with c1:
 with c2:
     prev = st.button("◀")
 
+with c3:
+    next = st.button("▶")
+    
 # CENTER PAGE NUMBER
 st.markdown(
     f"<div style='text-align:center;'>Page {st.session_state.page} / {total_pages}</div>",
@@ -154,8 +157,7 @@ if prev and st.session_state.page > 1:
 if next and st.session_state.page < total_pages:
     st.session_state.page += 1
 
-with c3:
-    next = st.button("▶")
+
 # ================= DATA =================
 start = (st.session_state.page-1)*page_size
 end = start+page_size
