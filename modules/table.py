@@ -51,7 +51,10 @@ def show_table(df, page, page_size):
         df["Assigned To"] = df["Assigned To"].astype(str).str.replace(".0", "", regex=False)
 
     # LINK
-    df["Open"] = df.apply(build_link, axis=1)
+    page_df["Link"] = page_df.apply(
+    lambda row: f'<a href="{build_link(row)}" target="_blank">Open</a>' if build_link(row) else "",
+    axis=1
+)
 
     # PAGINATION
     start = (page - 1) * page_size
