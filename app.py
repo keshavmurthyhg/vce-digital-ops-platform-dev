@@ -509,12 +509,36 @@ with colC:
 
 # =========== COLOR STATUS IN TABLE =============
 
-styled_df = page_df.style.applymap(
-    color_status,
-    subset=["Status"]
-)
+#styled_df = page_df.style.applymap(
+#    color_status,
+#    subset=["Status"]
+#)
 
-st.write(styled_df.to_html(escape=False), unsafe_allow_html=True)
+#st.write(styled_df.to_html(escape=False), unsafe_allow_html=True)
+
+# ================= TABLE =================
+
+if not page_df.empty and "Status" in page_df.columns:
+
+    def color_status(val):
+        val = str(val).lower()
+
+        if "open" in val or "active" in val:
+            return "color:red; font-weight:600;"
+        elif "closed" in val:
+            return "color:green; font-weight:600;"
+        elif "cancel" in val:
+            return "color:gray; font-weight:600;"
+        else:
+            return ""
+
+    styled_df = page_df.style.map(color_status, subset=["Status"])
+
+    st.write(styled_df.to_html(escape=False), unsafe_allow_html=True)
+
+else:
+    st.warning("No data available")
+
 
 # ================= KPI =================
 with st.sidebar.expander("📈 KPI", expanded=True):
