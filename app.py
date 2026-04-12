@@ -95,11 +95,10 @@ with col1:
     keyword = st.text_input("🔎 Search", key="search")
 
 with col2:
-    if st.button("❌"):
-        st.session_state.search = ""
+    if st.button("❌", help="Clear search"):
+        # SAFE RESET
+        st.session_state.pop("search", None)
         st.rerun()
-
-filtered = apply_search(filtered, keyword)
 
 # ================= PAGINATION =================
 total = len(filtered)
