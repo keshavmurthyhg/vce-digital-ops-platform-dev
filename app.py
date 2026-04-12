@@ -3,25 +3,46 @@ import pandas as pd
 import re
 
 from modules.data_loader import load_data
-from modules.filters import apply_filters
 from modules.search import apply_search
 from modules.kpi import calculate_kpi
 
 st.set_page_config(layout="wide")
 
-# ================= CSS =================
+# ================= GLOBAL UI FIX =================
 st.markdown("""
 <style>
+
+/* GLOBAL FONT REDUCTION */
+html, body, [class*="css"]  {
+    font-size: 12px !important;
+}
+
+/* TABLE FONT */
+table {
+    font-size: 11px !important;
+}
+
+/* SIDEBAR COMPACT */
 section[data-testid="stSidebar"] > div {
-    padding-top: 10px;
+    padding-top: 5px;
 }
 
-[data-testid="stMetricValue"] {font-size:18px;}
-[data-testid="stMetricLabel"] {font-size:12px;}
+/* REDUCE GAP */
+.block-container {
+    padding-top: 1rem;
+    padding-bottom: 0rem;
+}
 
+/* SEARCH BAR WIDTH */
 div[data-testid="stTextInput"] > div {
-    width: 50%;
+    width: 80%;
 }
+
+/* KPI */
+[data-testid="stMetricValue"] {
+    font-size: 16px;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -35,12 +56,14 @@ if "page" not in st.session_state:
 # ================= SIDEBAR =================
 st.sidebar.title("Ops Insight Dashboard")
 
-# MENU
-st.sidebar.markdown("### Menu")
-st.sidebar.caption("Filters & Controls")
+# MENU DROPDOWN
+menu = st.sidebar.selectbox("Menu", ["Filters & Controls"])
+
+st.sidebar.markdown("---")
 
 # SOURCE
 st.sidebar.markdown("### Source")
+
 c1, c2 = st.sidebar.columns(2)
 
 with c1:
@@ -57,48 +80,60 @@ if snow: sources.append("SNOW")
 if ptc: sources.append("PTC")
 
 if not sources:
-    st.warning("⚠️ Select at least one source")
     st.stop()
 
-# ================= FILTERS =================
-filtered = df[df["Source"].isin(sources)]
+st.sidebar.markdown("---")
 
-# STATUS
+# ================= FILTER BASE =================
+filtered = df[df["Source"].isin(sources)].copy()
+
+# CLEAN PRIORITY (ALWAYS FIX)
+def clean_priority(x):
+    match = re.search(r"Severity\s*[1-4]", str(x))
+    return match.group(0) if match else ""
+
+filtered["Priority"] = filtered["Priority"].apply(clean_priority)
+
+# ================= STATUS =================
 st.sidebar.markdown("### Status")
+
 status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
-status = st.sidebar.selectbox("", status_list)
+status = st.sidebar.radio("", status_list)
 
-# PRIORITY
-st.sidebar.markdown("### Priority")
-
-if sources == ["PTC"]:
-    priority_list = ["ALL", "Severity 1", "Severity 2", "Severity 3"]
-else:
-    priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
-
-priority = st.sidebar.selectbox("", priority_list)
-
-# RELEASE (dynamic)
+# ================= DYNAMIC FILTER =================
 release = "ALL"
-if "AZURE" in sources and "Release" in filtered.columns:
+priority = "ALL"
+
+if "AZURE" in sources:
     st.sidebar.markdown("### Release")
-    release_list = ["ALL"] + sorted(filtered["Release"].dropna().unique())
-    release = st.sidebar.selectbox("", release_list)
+    if "Release" in filtered.columns:
+        rel_list = ["ALL"] + sorted(filtered["Release"].dropna().unique())
+        release = st.sidebar.selectbox("", rel_list)
+else:
+    st.sidebar.markdown("### Priority")
+    priority_list = ["ALL", "Severity 1", "Severity 2", "Severity 3", "Severity 4"]
+    priority = st.sidebar.selectbox("", priority_list)
 
-# APPLY FILTERS
-filtered = apply_filters(filtered, status, priority)
+st.sidebar.markdown("---")
 
-if release != "ALL" and "Release" in filtered.columns:
+# ================= APPLY FILTER =================
+if status != "ALL":
+    filtered = filtered[filtered["Status"] == status]
+
+if priority != "ALL":
+    filtered = filtered[filtered["Priority"] == priority]
+
+if release != "ALL":
     filtered = filtered[filtered["Release"] == release]
 
 # ================= SEARCH =================
-col1, col2 = st.columns([10,1])
+col1, col2 = st.columns([8,1])
 
 with col1:
     keyword = st.text_input("🔎 Search", key="search")
 
 with col2:
-    if st.button("❌", help="Clear search"):
+    if st.button("❌"):
         st.session_state.pop("search", None)
         st.rerun()
 
@@ -109,30 +144,29 @@ total = len(filtered)
 page_size = 10
 total_pages = max((total + page_size - 1)//page_size,1)
 
-col1, col2, col3 = st.columns([6,1,1])
+c1, c2, c3 = st.columns([6,1,1])
 
-with col1:
+with c1:
     st.markdown(f"### Results: {total}")
-
     c = filtered["Source"].value_counts()
-    st.caption(
-        f"AZURE: {c.get('AZURE',0)} | "
-        f"SNOW: {c.get('SNOW',0)} | "
-        f"PTC: {c.get('PTC',0)}"
-    )
+    st.caption(f"AZURE: {c.get('AZURE',0)} | SNOW: {c.get('SNOW',0)} | PTC: {c.get('PTC',0)}")
 
-with col2:
-    if st.button("◀") and st.session_state.page > 1:
-        st.session_state.page -= 1
+with c2:
+    prev = st.button("◀")
 
-with col3:
-    if st.button("▶") and st.session_state.page < total_pages:
-        st.session_state.page += 1
+with c3:
+    next = st.button("▶")
 
-st.markdown(
-    f"<div style='text-align:center;'>Page {st.session_state.page} / {total_pages}</div>",
-    unsafe_allow_html=True
-)
+# PAGE CENTER
+mid = st.columns([1,1,1])[1]
+with mid:
+    st.markdown(f"<center>Page {st.session_state.page}/{total_pages}</center>", unsafe_allow_html=True)
+
+if prev and st.session_state.page > 1:
+    st.session_state.page -= 1
+
+if next and st.session_state.page < total_pages:
+    st.session_state.page += 1
 
 # ================= DATA =================
 start = (st.session_state.page-1)*page_size
@@ -141,7 +175,7 @@ end = start+page_size
 page_df = filtered.iloc[start:end].copy().reset_index(drop=True)
 page_df.insert(0,"SL No", range(start+1,start+len(page_df)+1))
 
-# CLEAN
+# CLEAN TEXT
 def clean(x):
     return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
 
@@ -154,22 +188,13 @@ for col in ["Created Date","Resolved Date"]:
     if col in page_df:
         page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
-# REMOVE None
+# REMOVE NONE
 page_df = page_df.replace("None", "").fillna("")
-
-# CLEAN PRIORITY (PTC)
-def clean_priority(row):
-    if row["Source"] == "PTC":
-        match = re.search(r"Severity\s*[1-4]", str(row["Priority"]))
-        return match.group(0) if match else row["Priority"]
-    return row["Priority"]
-
-page_df["Priority"] = page_df.apply(clean_priority, axis=1)
 
 # LINK
 def build_link(row):
-    num = str(row.get("Number", ""))
-    src = row.get("Source", "")
+    num = str(row["Number"])
+    src = row["Source"]
 
     if src == "SNOW":
         return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
@@ -179,14 +204,7 @@ def build_link(row):
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
     return ""
 
-# OPEN COLUMN
-def make_open(row):
-    url = build_link(row)
-    if not url:
-        return ""
-    return f'<a href="{url}" target="_blank">Open</a>'
-
-page_df["Open"] = page_df.apply(make_open, axis=1)
+page_df["Open"] = page_df.apply(lambda r: f'<a href="{build_link(r)}" target="_blank">Open</a>', axis=1)
 
 # ================= DISPLAY =================
 st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
