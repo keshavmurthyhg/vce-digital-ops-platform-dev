@@ -99,12 +99,16 @@ if priority != "ALL":
 col1, col2 = st.columns([10,1])
 
 with col1:
-    keyword = st.text_input("🔎 Search", key="search")
+    keyword = st.text_input(
+    "🔎 Search",
+    value=st.session_state.get("search", ""),
+    key="search"
+)
 
 with col2:
     if st.button("❌"):
-        st.session_state["search"] = ""
-        st.rerun()
+    st.session_state.pop("search", None)
+    st.rerun()
 
 filtered = apply_search(filtered, keyword)
 
@@ -165,44 +169,78 @@ st.download_button(
     file_name="ops_data.xlsx"
 )
 
+# ================= Result Count =================
+st.markdown(f"### Results: {len(filtered)}")
+
+c = filtered["Source"].value_counts()
+st.caption(
+    f"AZURE: {c.get('AZURE',0)} | "
+    f"SNOW: {c.get('SNOW',0)} | "
+    f"PTC: {c.get('PTC',0)}"
+)
+
 # ================= AG GRID =================
+from st_aggrid import AgGrid, GridOptionsBuilder
+
+# REMOVE EXTRA COLUMN BUG
+if "__auto_unique_id__" in page_df.columns:
+    page_df = page_df.drop(columns=["__auto_unique_id__"])
+
+# GRID BUILDER
 gb = GridOptionsBuilder.from_dataframe(page_df)
 
 gb.configure_default_column(
     sortable=True,
     filter=True,
-    resizable=True,
-    wrapText=False
+    resizable=True
 )
 
-# REMOVE AUTO COLUMN BUG
-gb.configure_grid_options(domLayout='normal')
-
-# DESCRIPTION WIDTH FIX
+# DESCRIPTION WIDTH
 gb.configure_column("Description", width=400)
 
-# OPEN LINK COLUMN
+# OPEN LINK
 gb.configure_column(
     "Open",
     cellRenderer='''
     function(params) {
-        return `<a href="${params.value}" target="_blank">Open</a>`
+        if (params.value) {
+            return `<a href="${params.value}" target="_blank">Open</a>`
+        } else {
+            return ""
+        }
     }
     '''
 )
 
-# PAGINATION
-gb.configure_pagination(paginationPageSize=10)
+# ✅ IMPORTANT: ENABLE PAGINATION
+gb.configure_pagination(
+    enabled=True,
+    paginationAutoPageSize=False,
+    paginationPageSize=10
+)
 
 grid_options = gb.build()
 
 AgGrid(
     page_df,
     gridOptions=grid_options,
-    update_mode=GridUpdateMode.NO_UPDATE,
-    fit_columns_on_grid_load=False,
-    height=450,
+    height=500,  # 🔥 REQUIRED (without this grid disappears)
+    fit_columns_on_grid_load=True,
     theme="streamlit"
+)
+
+# ================= Download to excel =================
+
+def convert_to_excel(df):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False)
+    return output.getvalue()
+
+st.download_button(
+    "📥 Download Excel",
+    convert_to_excel(filtered),
+    "ops_data.xlsx"
 )
 
 # ================= KPI =================
