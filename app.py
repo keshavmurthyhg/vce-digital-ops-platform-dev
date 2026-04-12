@@ -24,14 +24,16 @@ section[data-testid="stSidebar"] > div {
     padding-top: 10px;
 }
 
-/* FULL WIDTH SEARCH */
-div[data-testid="stTextInput"] > div {
-    width: 100%;
+/* Description column no wrap */
+thead th:nth-child(3),
+tbody td:nth-child(3) {
+    max-width: 400px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* KPI FONT FIX*/
-st.markdown("""
-<style>
+/* KPI font */
 [data-testid="stMetricValue"] {
     font-size:14px !important;
 }
@@ -50,11 +52,7 @@ if "page" not in st.session_state:
 
 # ================= SIDEBAR =================
 st.sidebar.markdown("## Menu")
-
-menu = st.sidebar.selectbox(
-    "",
-    ["Search Tool", "Matrix Board (Coming)", "Dashboards (Coming)"]
-)
+menu = st.sidebar.selectbox("", ["Search Tool", "Matrix Board (Coming)", "Dashboards (Coming)"])
 
 st.sidebar.markdown("---")
 
@@ -71,6 +69,7 @@ with c2:
     snow = st.checkbox("SNOW", value=all_src)
     ptc = st.checkbox("PTC", value=all_src)
 
+# FIX ALL LOGIC
 if all_src:
     sources = ["AZURE", "SNOW", "PTC"]
 else:
@@ -95,22 +94,14 @@ status = st.sidebar.selectbox("", status_list)
 # ================= PRIORITY =================
 st.sidebar.markdown("### Priority")
 
-# FIXED PRIORITY CLEANING (DO NOT REMOVE FULL TEXT)
-def extract_severity(x):
-    match = re.search(r"Severity\s*[1-4]", str(x))
+def clean_priority(x):
+    match = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
     return match.group(0) if match else str(x)
 
-filtered["Priority"] = filtered["Priority"].apply(extract_severity)
+filtered["Priority"] = filtered["Priority"].apply(clean_priority)
 
 priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
 priority = st.sidebar.selectbox("", priority_list)
-
-# ================= RELEASE (OPTIONAL) =================
-release = "ALL"
-if "Release" in filtered.columns and "AZURE" in sources:
-    st.sidebar.markdown("### Release")
-    rel_list = ["ALL"] + sorted(filtered["Release"].dropna().unique())
-    release = st.sidebar.selectbox("", rel_list)
 
 st.sidebar.markdown("---")
 
@@ -121,19 +112,20 @@ if status != "ALL":
 if priority != "ALL":
     filtered = filtered[filtered["Priority"] == priority]
 
-if release != "ALL":
-    filtered = filtered[filtered["Release"] == release]
-
 # ================= SEARCH =================
-col1, col2 = st.columns([12,1])
+col1, col2 = st.columns([10,1])
 
 with col1:
-    keyword = st.text_input("🔎 Search", value=st.session_state.get("search",""), key="search")
+    keyword = st.text_input(
+        "🔎 Search",
+        value=st.session_state.get("search", ""),
+        key="search"
+    )
 
 with col2:
     if st.button("❌"):
-    st.session_state["search"] = ""
-    st.rerun()
+        st.session_state["search"] = ""
+        st.rerun()
 
 filtered = apply_search(filtered, keyword)
 
@@ -142,31 +134,25 @@ total = len(filtered)
 page_size = 10
 total_pages = max((total + page_size - 1)//page_size,1)
 
-c1, c2, c3 = st.columns([6,1,1])
+c1, c2, c3 = st.columns([1,2,1])
 
 with c1:
-    st.markdown(f"### Results: {total}")
-    c = filtered["Source"].value_counts()
-    st.caption(f"AZURE: {c.get('AZURE',0)} | SNOW: {c.get('SNOW',0)} | PTC: {c.get('PTC',0)}")
+    prev = st.button("◀")
 
 with c2:
-    prev = st.button("◀")
+    st.markdown(
+        f"<center><b>Page {st.session_state.page} / {total_pages}</b></center>",
+        unsafe_allow_html=True
+    )
 
 with c3:
     next = st.button("▶")
-    
-# CENTER PAGE NUMBER
-st.markdown(
-    f"<div style='text-align:center;'>Page {st.session_state.page} / {total_pages}</div>",
-    unsafe_allow_html=True
-)
 
 if prev and st.session_state.page > 1:
     st.session_state.page -= 1
 
 if next and st.session_state.page < total_pages:
     st.session_state.page += 1
-
 
 # ================= DATA =================
 start = (st.session_state.page-1)*page_size
@@ -205,11 +191,16 @@ def build_link(row):
     return ""
 
 page_df["Open"] = page_df.apply(
-    lambda r: f'<a href="{build_link(r)}" target="_blank">Open</a>', axis=1
+    lambda r: build_link(r),
+    axis=1
 )
 
 # ================= DISPLAY =================
-st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+st.dataframe(
+    page_df,
+    use_container_width=True,
+    hide_index=True
+)
 
 # ================= KPI =================
 st.sidebar.markdown("### KPI")
