@@ -8,43 +8,31 @@ from modules.kpi import calculate_kpi
 
 st.set_page_config(layout="wide")
 
-# ================= GLOBAL UI FIX =================
+# ================= UI =================
 st.markdown("""
 <style>
-
-/* GLOBAL FONT REDUCTION */
 html, body, [class*="css"]  {
-    font-size: 12px !important;
+    font-size: 13px !important;
 }
+table {font-size: 12px !important;}
 
-/* TABLE FONT */
-table {
-    font-size: 11px !important;
-}
-
-/* SIDEBAR COMPACT */
-section[data-testid="stSidebar"] > div {
-    padding-top: 5px;
-}
-
-/* REDUCE GAP */
 .block-container {
     padding-top: 1rem;
-    padding-bottom: 0rem;
 }
 
-/* SEARCH BAR WIDTH */
+section[data-testid="stSidebar"] > div {
+    padding-top: 10px;
+}
+
+/* FULL WIDTH SEARCH */
 div[data-testid="stTextInput"] > div {
-    width: 80%;
+    width: 100%;
 }
-
-/* KPI */
-[data-testid="stMetricValue"] {
-    font-size: 16px;
-}
-
 </style>
 """, unsafe_allow_html=True)
+
+# ================= TITLE =================
+st.title("Ops Insight Dashboard")
 
 # ================= LOAD =================
 df, last_refresh = load_data()
@@ -54,14 +42,16 @@ if "page" not in st.session_state:
     st.session_state.page = 1
 
 # ================= SIDEBAR =================
-st.sidebar.title("Ops Insight Dashboard")
+st.sidebar.markdown("## Menu")
 
-# MENU DROPDOWN
-menu = st.sidebar.selectbox("Menu", ["Filters & Controls"])
+menu = st.sidebar.selectbox(
+    "",
+    ["Search Tool", "Matrix Board (Coming)", "Dashboards (Coming)"]
+)
 
 st.sidebar.markdown("---")
 
-# SOURCE
+# ================= SOURCE =================
 st.sidebar.markdown("### Source")
 
 c1, c2 = st.sidebar.columns(2)
@@ -87,32 +77,30 @@ st.sidebar.markdown("---")
 # ================= FILTER BASE =================
 filtered = df[df["Source"].isin(sources)].copy()
 
-# CLEAN PRIORITY (ALWAYS FIX)
-def clean_priority(x):
-    match = re.search(r"Severity\s*[1-4]", str(x))
-    return match.group(0) if match else ""
-
-filtered["Priority"] = filtered["Priority"].apply(clean_priority)
-
 # ================= STATUS =================
 st.sidebar.markdown("### Status")
-
 status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
-status = st.sidebar.radio("", status_list)
+status = st.sidebar.selectbox("", status_list)
 
-# ================= DYNAMIC FILTER =================
+# ================= PRIORITY =================
+st.sidebar.markdown("### Priority")
+
+# FIXED PRIORITY CLEANING (DO NOT REMOVE FULL TEXT)
+def extract_severity(x):
+    match = re.search(r"Severity\s*[1-4]", str(x))
+    return match.group(0) if match else str(x)
+
+filtered["Priority"] = filtered["Priority"].apply(extract_severity)
+
+priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
+priority = st.sidebar.selectbox("", priority_list)
+
+# ================= RELEASE (OPTIONAL) =================
 release = "ALL"
-priority = "ALL"
-
-if "AZURE" in sources:
+if "Release" in filtered.columns and "AZURE" in sources:
     st.sidebar.markdown("### Release")
-    if "Release" in filtered.columns:
-        rel_list = ["ALL"] + sorted(filtered["Release"].dropna().unique())
-        release = st.sidebar.selectbox("", rel_list)
-else:
-    st.sidebar.markdown("### Priority")
-    priority_list = ["ALL", "Severity 1", "Severity 2", "Severity 3", "Severity 4"]
-    priority = st.sidebar.selectbox("", priority_list)
+    rel_list = ["ALL"] + sorted(filtered["Release"].dropna().unique())
+    release = st.sidebar.selectbox("", rel_list)
 
 st.sidebar.markdown("---")
 
@@ -127,7 +115,7 @@ if release != "ALL":
     filtered = filtered[filtered["Release"] == release]
 
 # ================= SEARCH =================
-col1, col2 = st.columns([8,1])
+col1, col2 = st.columns([12,1])
 
 with col1:
     keyword = st.text_input("🔎 Search", key="search")
@@ -157,10 +145,11 @@ with c2:
 with c3:
     next = st.button("▶")
 
-# PAGE CENTER
-mid = st.columns([1,1,1])[1]
-with mid:
-    st.markdown(f"<center>Page {st.session_state.page}/{total_pages}</center>", unsafe_allow_html=True)
+# CENTER PAGE NUMBER
+st.markdown(
+    f"<div style='text-align:center;'>Page {st.session_state.page} / {total_pages}</div>",
+    unsafe_allow_html=True
+)
 
 if prev and st.session_state.page > 1:
     st.session_state.page -= 1
@@ -191,7 +180,7 @@ for col in ["Created Date","Resolved Date"]:
 # REMOVE NONE
 page_df = page_df.replace("None", "").fillna("")
 
-# LINK
+# ================= LINK =================
 def build_link(row):
     num = str(row["Number"])
     src = row["Source"]
@@ -204,7 +193,9 @@ def build_link(row):
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
     return ""
 
-page_df["Open"] = page_df.apply(lambda r: f'<a href="{build_link(r)}" target="_blank">Open</a>', axis=1)
+page_df["Open"] = page_df.apply(
+    lambda r: f'<a href="{build_link(r)}" target="_blank">Open</a>', axis=1
+)
 
 # ================= DISPLAY =================
 st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
