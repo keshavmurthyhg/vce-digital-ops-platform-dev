@@ -12,6 +12,75 @@ st.set_page_config(layout="wide")
 # ================= CSS =================
 st.markdown("""
 <style>
+
+/* GLOBAL */
+.block-container {padding-top: 1rem;}
+
+html, body, [class*="css"] {
+    font-size: 13px !important;
+}
+
+/* KPI */
+[data-testid="stMetricValue"] {
+    font-size:14px !important;
+}
+
+/* TABLE */
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th {
+    text-align: center !important;
+    background-color: #f5f5f5;
+    font-weight: 600;
+}
+
+td {
+    text-align: left;
+    padding: 6px;
+    white-space: nowrap;
+}
+
+tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* DESCRIPTION COLUMN */
+td:nth-child(3), th:nth-child(3) {
+    max-width: 400px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* LINKS */
+a {
+    text-decoration: none;
+    color: #1f77b4;
+    font-weight: 500;
+}
+
+/* SIDEBAR COMPACT */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
+    gap: 0.3rem !important;
+}
+
+section[data-testid="stSidebar"] label {
+    margin-bottom: 2px !important;
+}
+
+section[data-testid="stSidebar"] .stSelectbox,
+section[data-testid="stSidebar"] .stCheckbox {
+    margin-bottom: 4px !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+st.markdown("""
+<style>
 .block-container {padding-top: 1rem;}
 
 html, body, [class*="css"] {
