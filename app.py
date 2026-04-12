@@ -177,7 +177,7 @@ with c1:
         f"PTC: {filtered['Source'].value_counts().get('PTC',0)}"
     )
 
-with c2:
+#with c2:
    # st.caption(
      #   f"AZURE: {filtered['Source'].value_counts().get('AZURE',0)} | "
      #   f"SNOW: {filtered['Source'].value_counts().get('SNOW',0)} | "
