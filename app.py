@@ -145,7 +145,7 @@ total = len(filtered)
 page_size = 10
 total_pages = max((total + page_size - 1)//page_size,1)
 
-c1, c2, c3 = st.columns([30,20,30])
+c1, c2, c3 = st.columns([20,20,30])
 
 with c1:
     prev = st.button("◀")
