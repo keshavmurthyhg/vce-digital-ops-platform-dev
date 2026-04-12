@@ -3,6 +3,7 @@ import pandas as pd
 import re
 import io
 
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 from modules.data_loader import load_data
 from modules.search import apply_search
 from modules.kpi import calculate_kpi
@@ -12,29 +13,14 @@ st.set_page_config(layout="wide")
 # ================= UI =================
 st.markdown("""
 <style>
-html, body, [class*="css"]  {
-    font-size: 13px !important;
-}
-table {font-size: 12px !important;}
-
 .block-container {
     padding-top: 1rem;
 }
 
-section[data-testid="stSidebar"] > div {
-    padding-top: 10px;
+html, body, [class*="css"]  {
+    font-size: 13px !important;
 }
 
-/* Description column no wrap */
-thead th:nth-child(3),
-tbody td:nth-child(3) {
-    max-width: 400px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* KPI font */
 [data-testid="stMetricValue"] {
     font-size:14px !important;
 }
@@ -46,10 +32,6 @@ st.title("Ops Insight Dashboard")
 
 # ================= LOAD =================
 df, last_refresh = load_data()
-
-# ================= SESSION =================
-if "page" not in st.session_state:
-    st.session_state.page = 1
 
 # ================= SIDEBAR =================
 st.sidebar.markdown("## Menu")
@@ -70,7 +52,7 @@ with c2:
     snow = st.checkbox("SNOW", value=all_src)
     ptc = st.checkbox("PTC", value=all_src)
 
-# FIX ALL LOGIC
+# FIX ALL
 if all_src:
     sources = ["AZURE", "SNOW", "PTC"]
 else:
@@ -117,11 +99,7 @@ if priority != "ALL":
 col1, col2 = st.columns([10,1])
 
 with col1:
-    keyword = st.text_input(
-        "🔎 Search",
-        value=st.session_state.get("search", ""),
-        key="search"
-    )
+    keyword = st.text_input("🔎 Search", key="search")
 
 with col2:
     if st.button("❌"):
@@ -140,37 +118,9 @@ st.caption(
     f"PTC: {c.get('PTC',0)}"
 )
 
-# ================= PAGINATION =================
-total = len(filtered)
-page_size = 10
-total_pages = max((total + page_size - 1)//page_size,1)
-
-c1, c2, c3 = st.columns([10,20,30])
-
-with c1:
-    prev = st.button("◀")
-
-with c2:
-    st.markdown(
-        f"<center><b>Page {st.session_state.page} / {total_pages}</b></center>",
-        unsafe_allow_html=True
-    )
-
-with c3:
-    next = st.button("▶")
-
-if prev and st.session_state.page > 1:
-    st.session_state.page -= 1
-
-if next and st.session_state.page < total_pages:
-    st.session_state.page += 1
-
-# ================= DATA =================
-start = (st.session_state.page-1)*page_size
-end = start+page_size
-
-page_df = filtered.iloc[start:end].copy().reset_index(drop=True)
-page_df.insert(0,"SL No", range(start+1,start+len(page_df)+1))
+# ================= DATA CLEAN =================
+page_df = filtered.copy().reset_index(drop=True)
+page_df.insert(0, "SL No", range(1, len(page_df)+1))
 
 # CLEAN TEXT
 def clean(x):
@@ -185,7 +135,6 @@ for col in ["Created Date","Resolved Date"]:
     if col in page_df:
         page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
-# REMOVE NONE
 page_df = page_df.replace("None", "").fillna("")
 
 # ================= LINK =================
@@ -201,44 +150,60 @@ def build_link(row):
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
     return ""
 
-#page_df["Open"] = page_df.apply(
-    #lambda r: build_link(r),
-    axis=1
-#)
+page_df["Open"] = page_df.apply(build_link, axis=1)
 
-def make_open_link(row):
-    url = build_link(row)
-    if not url:
-        return ""
-    return f'<a href="{url}" target="_blank">Open</a>'
-
-page_df["Open"] = page_df.apply(make_open_link, axis=1)
-
+# ================= EXPORT =================
 def convert_to_excel(df):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False, sheet_name='Data')
+        df.to_excel(writer, index=False)
     return output.getvalue()
 
-excel_data = convert_to_excel(page_df)
-
 st.download_button(
-    label="📥 Download Excel",
-    data=excel_data,
-    file_name="ops_insight_data.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    "📥 Download Excel",
+    data=convert_to_excel(filtered),
+    file_name="ops_data.xlsx"
 )
 
+# ================= AG GRID =================
+gb = GridOptionsBuilder.from_dataframe(page_df)
 
+gb.configure_default_column(
+    sortable=True,
+    filter=True,
+    resizable=True,
+    wrapText=False
+)
 
-# ================= DISPLAY =================
-st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+# REMOVE AUTO COLUMN BUG
+gb.configure_grid_options(domLayout='normal')
 
-#st.dataframe(
-    #page_df,
-    #use_container_width=True,
-  #  hide_index=True
-#)
+# DESCRIPTION WIDTH FIX
+gb.configure_column("Description", width=400)
+
+# OPEN LINK COLUMN
+gb.configure_column(
+    "Open",
+    cellRenderer='''
+    function(params) {
+        return `<a href="${params.value}" target="_blank">Open</a>`
+    }
+    '''
+)
+
+# PAGINATION
+gb.configure_pagination(paginationPageSize=10)
+
+grid_options = gb.build()
+
+AgGrid(
+    page_df,
+    gridOptions=grid_options,
+    update_mode=GridUpdateMode.NO_UPDATE,
+    fit_columns_on_grid_load=False,
+    height=450,
+    theme="streamlit"
+)
 
 # ================= KPI =================
 st.sidebar.markdown("### KPI")
