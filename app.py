@@ -13,99 +13,128 @@ st.set_page_config(layout="wide")
 st.markdown("""
 <style>
 
-/* SIDEBAR FULL COMPACT FIX */
-section[data-testid="stSidebar"] * {
-    line-height: 1.1 !important;
+/* ================= GLOBAL ================= */
+.block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
 }
 
-/* Reduce vertical spacing between ALL sidebar elements */
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
-    padding-top: 2px !important;
-    padding-bottom: 2px !important;
-    margin-bottom: 2px !important;
+html, body, [class*="css"] {
+    font-size: 13px !important;
 }
 
-/* Remove extra gap from checkbox + selectbox containers */
-section[data-testid="stSidebar"] .stCheckbox,
-section[data-testid="stSidebar"] .stSelectbox {
-    margin-bottom: 2px !important;
-    padding-bottom: 0px !important;
+/* ================= RESULTS TEXT ================= */
+h3, h4 {
+    margin-bottom: 4px !important;
 }
 
-/* Reduce label spacing */
-section[data-testid="stSidebar"] label {
-    margin-bottom: 1px !important;
-}
-
-/* Reduce expander/header spacing if any */
-section[data-testid="stSidebar"] .stMarkdown {
-    margin-bottom: 2px !important;
-}
-
-/* Optional: tighten section gaps */
-section[data-testid="stSidebar"] hr {
-    margin: 6px 0 !important;
-}
-
-/* KPI */
+/* ================= KPI ================= */
 [data-testid="stMetricValue"] {
-    font-size:14px !important;
+    font-size: 14px !important;
 }
 
-/* TABLE */
+/* ================= TABLE ================= */
 table {
     border-collapse: collapse;
     width: 100%;
 }
 
+/* Header */
 th {
     text-align: center !important;
     background-color: #f5f5f5;
     font-weight: 600;
+    padding: 6px !important;
 }
 
+/* Cells */
 td {
     text-align: left;
-    padding: 6px;
+    padding: 6px !important;
     white-space: nowrap;
 }
 
+/* Hover */
 tr:hover {
     background-color: #f9f9f9;
 }
 
-/* DESCRIPTION COLUMN */
+/* Description column wider */
 td:nth-child(3), th:nth-child(3) {
-    max-width: 400px;
+    max-width: 420px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* LINKS */
+/* Auto fit other columns */
+td:not(:nth-child(3)), th:not(:nth-child(3)) {
+    width: 1%;
+}
+
+/* Links */
 a {
     text-decoration: none;
     color: #1f77b4;
     font-weight: 500;
 }
 
-/* SIDEBAR COMPACT */
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
-    gap: 0.3rem !important;
+/* ================= SIDEBAR COMPACT ================= */
+
+/* Reduce overall spacing */
+section[data-testid="stSidebar"] * {
+    line-height: 1.1 !important;
 }
 
-section[data-testid="stSidebar"] label {
+/* Reduce block spacing */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
     margin-bottom: 2px !important;
 }
 
-section[data-testid="stSidebar"] .stSelectbox,
-section[data-testid="stSidebar"] .stCheckbox {
-    margin-bottom: 4px !important;
+/* Remove extra spacing in widgets */
+section[data-testid="stSidebar"] .stCheckbox,
+section[data-testid="stSidebar"] .stSelectbox {
+    margin-bottom: 2px !important;
+    padding-bottom: 0px !important;
+}
+
+/* Tight labels */
+section[data-testid="stSidebar"] label {
+    margin-bottom: 1px !important;
+    font-size: 13px !important;
+}
+
+/* Section titles (Source, Status, Priority) */
+section[data-testid="stSidebar"] .stMarkdown {
+    margin-bottom: 2px !important;
+    font-weight: 600;
+}
+
+/* Reduce divider spacing */
+section[data-testid="stSidebar"] hr {
+    margin: 6px 0 !important;
+}
+
+/* Optional: tighter checkboxes */
+section[data-testid="stSidebar"] .stCheckbox > label {
+    font-size: 13px !important;
+}
+
+/* ================= SEARCH BAR ================= */
+input {
+    padding: 6px !important;
+}
+
+/* ================= BUTTON ================= */
+button {
+    padding: 4px 10px !important;
+    font-size: 13px !important;
 }
 
 </style>
 """, unsafe_allow_html=True)
-
 
 # ================= TITLE =================
 st.title("Ops Insight Dashboard")
