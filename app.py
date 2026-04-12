@@ -259,7 +259,7 @@ filtered = df[df["Source"].isin(sources)].copy()
  #   # STATUS (INLINE)
   #  col1, col2 = st.columns([1,3])
    # with col1:
-        st.markdown("**Status**")
+   #     st.markdown("**Status**")
   #  with col2:
    #     status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
    #     status = st.selectbox("", status_list, key="status")
