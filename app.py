@@ -31,8 +31,6 @@ df, last_refresh = load_data()
 # ================= SESSION =================
 if "page" not in st.session_state:
     st.session_state.page = 1
-if "search" not in st.session_state:
-    st.session_state.search = ""
 
 # ================= SIDEBAR =================
 st.sidebar.title("Ops Insight Dashboard")
@@ -72,7 +70,12 @@ status = st.sidebar.selectbox("", status_list)
 
 # PRIORITY
 st.sidebar.markdown("### Priority")
-priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
+
+if sources == ["PTC"]:
+    priority_list = ["ALL", "Severity 1", "Severity 2", "Severity 3", "Severity 4"]
+else:
+    priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
+
 priority = st.sidebar.selectbox("", priority_list)
 
 # RELEASE (dynamic)
@@ -89,16 +92,17 @@ if release != "ALL" and "Release" in filtered.columns:
     filtered = filtered[filtered["Release"] == release]
 
 # ================= SEARCH =================
-col1, col2 = st.columns([5,1])
+col1, col2 = st.columns([10,1])
 
 with col1:
     keyword = st.text_input("🔎 Search", key="search")
 
 with col2:
     if st.button("❌", help="Clear search"):
-        # SAFE RESET
         st.session_state.pop("search", None)
         st.rerun()
+
+filtered = apply_search(filtered, keyword)
 
 # ================= PAGINATION =================
 total = len(filtered)
@@ -109,6 +113,13 @@ col1, col2, col3 = st.columns([6,1,1])
 
 with col1:
     st.markdown(f"### Results: {total}")
+
+    c = filtered["Source"].value_counts()
+    st.caption(
+        f"AZURE: {c.get('AZURE',0)} | "
+        f"SNOW: {c.get('SNOW',0)} | "
+        f"PTC: {c.get('PTC',0)}"
+    )
 
 with col2:
     if st.button("◀") and st.session_state.page > 1:
@@ -130,7 +141,7 @@ end = start+page_size
 page_df = filtered.iloc[start:end].copy().reset_index(drop=True)
 page_df.insert(0,"SL No", range(start+1,start+len(page_df)+1))
 
-# CLEAN NAMES
+# CLEAN
 def clean(x):
     return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
 
@@ -143,7 +154,10 @@ for col in ["Created Date","Resolved Date"]:
     if col in page_df:
         page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
-# CLEAN PRIORITY (PTC ONLY)
+# REMOVE None
+page_df = page_df.replace("None", "").fillna("")
+
+# CLEAN PRIORITY (PTC)
 def clean_priority(row):
     if row["Source"] == "PTC":
         match = re.search(r"Severity\s*[1-4]", str(row["Priority"]))
@@ -152,7 +166,7 @@ def clean_priority(row):
 
 page_df["Priority"] = page_df.apply(clean_priority, axis=1)
 
-# LINK BUILDER
+# LINK
 def build_link(row):
     num = str(row.get("Number", ""))
     src = row.get("Source", "")
@@ -165,25 +179,17 @@ def build_link(row):
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
     return ""
 
-# ================= DISPLAY =================
-event = st.dataframe(
-    page_df,
-    use_container_width=True,
-    hide_index=True,
-    selection_mode="single-row",
-    on_select="rerun",
-    column_config={
-        "Description": st.column_config.TextColumn(width="large"),
-    }
-)
-
-# ================= ROW ACTION =================
-if event.selection.rows:
-    row = page_df.iloc[event.selection.rows[0]]
+# OPEN COLUMN
+def make_open(row):
     url = build_link(row)
+    if not url:
+        return ""
+    return f'<a href="{url}" target="_blank">Open</a>'
 
-    if url:
-        st.link_button("🔍 Open Ticket", url)
+page_df["Open"] = page_df.apply(make_open, axis=1)
+
+# ================= DISPLAY =================
+st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
 # ================= KPI =================
 st.sidebar.markdown("### KPI")
