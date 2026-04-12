@@ -13,23 +13,51 @@ st.set_page_config(layout="wide")
 st.markdown("""
 <style>
 .block-container {padding-top: 1rem;}
-html, body, [class*="css"] {font-size: 13px !important;}
 
-[data-testid="stMetricValue"] {font-size:14px !important;}
-
-.result-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+html, body, [class*="css"] {
+    font-size: 13px !important;
 }
 
-.pagination {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+/* KPI */
+[data-testid="stMetricValue"] {
+    font-size:14px !important;
 }
 
-a { text-decoration: none; color: #1f77b4; font-weight: 500; }
+/* TABLE */
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th {
+    text-align: center !important;
+    background-color: #f5f5f5;
+    font-weight: 600;
+}
+
+td {
+    text-align: left;
+    padding: 6px;
+}
+
+tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* FIX COLUMN WIDTH */
+td:nth-child(3), th:nth-child(3) {
+    max-width: 400px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* LINKS */
+a {
+    text-decoration: none;
+    color: #1f77b4;
+    font-weight: 500;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -101,22 +129,6 @@ if priority != "ALL":
     filtered = filtered[filtered["Priority"] == priority]
 
 # ================= SEARCH =================
-#(col1, col2 = st.columns([10,1])
-
-#if "search" not in st.session_state:
-  #  st.session_state.search = ""
-
-#with col1:
-   # keyword = st.text_input("🔎 Search", key="search")
-
-#with col2:
-  #  if st.button("❌"):
-   #     st.session_state.search = ""
-   #     st.rerun()
-
-#filtered = apply_search(filtered, keyword)
-
-# INIT
 if "search" not in st.session_state:
     st.session_state.search = ""
 
@@ -129,7 +141,7 @@ with col1:
         key="search_box"
     )
 
-# sync manually
+# sync
 st.session_state.search = keyword
 
 with col2:
@@ -137,6 +149,7 @@ with col2:
         st.session_state.search = ""
         st.rerun()
 
+filtered = apply_search(filtered, keyword)
 
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
@@ -150,7 +163,7 @@ for col in ["Created By","Assigned To"]:
     if col in df_display:
         df_display[col] = df_display[col].apply(clean)
 
-# DATE
+# DATE FORMAT
 for col in ["Created Date","Resolved Date"]:
     if col in df_display:
         df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%b-%y")
@@ -185,39 +198,37 @@ total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size el
 
 start = (st.session_state.page - 1) * page_size
 end = start + page_size
-
 page_df = df_display.iloc[start:end]
 
-# ================= HEADER (RESULT + PAGINATION) =================
-c1, c2, c3 = st.columns([4,3,2])
+# ================= HEADER + PAGINATION =================
+colA, colB, colC = st.columns([4,4,3])
 
-with c1:
+with colA:
     st.markdown(f"### Results: {total_rows}")
+
+with colB:
+    vc = filtered["Source"].value_counts()
     st.caption(
-        f"AZURE: {filtered['Source'].value_counts().get('AZURE',0)} | "
-        f"SNOW: {filtered['Source'].value_counts().get('SNOW',0)} | "
-        f"PTC: {filtered['Source'].value_counts().get('PTC',0)}"
+        f"AZURE: {vc.get('AZURE',0)} | "
+        f"SNOW: {vc.get('SNOW',0)} | "
+        f"PTC: {vc.get('PTC',0)}"
     )
 
-#with c2:
-   # st.caption(
-     #   f"AZURE: {filtered['Source'].value_counts().get('AZURE',0)} | "
-     #   f"SNOW: {filtered['Source'].value_counts().get('SNOW',0)} | "
-     #   f"PTC: {filtered['Source'].value_counts().get('PTC',0)}"
-  #  )
+with colC:
+    c1, c2, c3 = st.columns([1,2,1])
 
-with c3:
-    col_prev, col_mid, col_next = st.columns([1,2,1])
-
-    with col_prev:
+    with c1:
         if st.button("◀"):
             if st.session_state.page > 1:
                 st.session_state.page -= 1
 
-    with col_mid:
-        st.markdown(f"<center>Page {st.session_state.page}/{total_pages}</center>", unsafe_allow_html=True)
+    with c2:
+        st.markdown(
+            f"<center>Page {st.session_state.page}/{total_pages}</center>",
+            unsafe_allow_html=True
+        )
 
-    with col_next:
+    with c3:
         if st.button("▶"):
             if st.session_state.page < total_pages:
                 st.session_state.page += 1
@@ -236,6 +247,7 @@ st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
 # ================= KPI =================
 st.sidebar.markdown("### KPI")
+
 kpi = calculate_kpi(filtered)
 
 c1,c2 = st.sidebar.columns(2)
