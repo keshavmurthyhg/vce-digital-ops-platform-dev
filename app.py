@@ -157,6 +157,10 @@ col1, col2, col3 = st.columns([6,2,2])
 
 with col1:
     st.markdown(f"### Results: {total_rows}")
+    c = filtered["Source"].value_counts()
+st.caption(
+    f"AZURE: {c.get('AZURE',0)} | SNOW: {c.get('SNOW',0)} | PTC: {c.get('PTC',0)}"
+)
 
 with col2:
     if st.button("◀"):
@@ -164,18 +168,13 @@ with col2:
             st.session_state.page -= 1
             st.rerun()
 
+st.caption(f"Page {st.session_state.page} / {total_pages}")
+
 with col3:
     if st.button("▶"):
         if st.session_state.page < total_pages:
             st.session_state.page += 1
             st.rerun()
-
-st.caption(f"Page {st.session_state.page} / {total_pages}")
-
-c = filtered["Source"].value_counts()
-st.caption(
-    f"AZURE: {c.get('AZURE',0)} | SNOW: {c.get('SNOW',0)} | PTC: {c.get('PTC',0)}"
-)
 
 # ================= EXPORT =================
 def convert_to_excel(df):
