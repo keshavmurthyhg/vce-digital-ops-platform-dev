@@ -171,13 +171,18 @@ c1, c2, c3 = st.columns([4,3,2])
 
 with c1:
     st.markdown(f"### Results: {total_rows}")
-
-with c2:
     st.caption(
         f"AZURE: {filtered['Source'].value_counts().get('AZURE',0)} | "
         f"SNOW: {filtered['Source'].value_counts().get('SNOW',0)} | "
         f"PTC: {filtered['Source'].value_counts().get('PTC',0)}"
     )
+
+with c2:
+   # st.caption(
+     #   f"AZURE: {filtered['Source'].value_counts().get('AZURE',0)} | "
+     #   f"SNOW: {filtered['Source'].value_counts().get('SNOW',0)} | "
+     #   f"PTC: {filtered['Source'].value_counts().get('PTC',0)}"
+  #  )
 
 with c3:
     col_prev, col_mid, col_next = st.columns([1,2,1])
