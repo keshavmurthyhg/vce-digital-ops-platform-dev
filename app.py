@@ -187,6 +187,10 @@ st.title("Ops Insight Dashboard")
 # ================= LOAD =================
 df, last_refresh = load_data()
 
+# ================= DEFAULT FILTER VALUES =================
+status = []
+priority = []
+
 # ================= SIDEBAR =================
 st.sidebar.markdown("## 📊 Menu")
 st.sidebar.selectbox("", ["Search Tool"])
@@ -295,11 +299,21 @@ filtered = df[df["Source"].isin(sources)].copy()
 
 # ---------- APPLY FILTERS ----------
 
-if len(status) > 0:
+#if len(status) > 0:
+  #  filtered = filtered[filtered["Status"].isin(status)]
+
+#if len(priority) > 0:
+ #   filtered = filtered[filtered["Priority"].isin(priority)]
+
+# ================= APPLY FILTER =================
+
+if status is not None and len(status) > 0:
     filtered = filtered[filtered["Status"].isin(status)]
 
-if len(priority) > 0:
+if priority is not None and len(priority) > 0:
     filtered = filtered[filtered["Priority"].isin(priority)]
+
+
 
 #================= Multi-selection filters ==========================
 #with st.sidebar.expander("🎯 Filters", expanded=True):
@@ -328,9 +342,36 @@ if len(priority) > 0:
     #    placeholder="All"
   #  )
 
-with st.sidebar.expander("🎯 Filters", expanded=True):
+#with st.sidebar.expander("🎯 Filters", expanded=True):
 
     # ---------- STATUS ----------
+  #  status_options = sorted(filtered["Status"].dropna().unique())
+
+  #  status = st.multiselect(
+  #      "Status",
+  #      options=status_options,
+  3      default=[]
+  #  )
+
+    # ---------- PRIORITY ----------
+  #  def clean_priority(x):
+   #     m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
+  #      return m.group(0) if m else str(x)
+
+#    filtered["Priority"] = filtered["Priority"].apply(clean_priority)
+
+  #  priority_options = sorted(filtered["Priority"].dropna().unique())
+
+  #  priority = st.multiselect(
+  #      "Priority",
+  #      options=priority_options,
+ #       default=[]
+#    )
+
+filtered = df[df["Source"].isin(sources)].copy()
+
+with st.sidebar.expander("🎯 Filters", expanded=True):
+
     status_options = sorted(filtered["Status"].dropna().unique())
 
     status = st.multiselect(
@@ -339,13 +380,6 @@ with st.sidebar.expander("🎯 Filters", expanded=True):
         default=[]
     )
 
-    # ---------- PRIORITY ----------
-    def clean_priority(x):
-        m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
-        return m.group(0) if m else str(x)
-
-    filtered["Priority"] = filtered["Priority"].apply(clean_priority)
-
     priority_options = sorted(filtered["Priority"].dropna().unique())
 
     priority = st.multiselect(
@@ -353,6 +387,9 @@ with st.sidebar.expander("🎯 Filters", expanded=True):
         options=priority_options,
         default=[]
     )
+
+status = st.session_state.get("status", [])
+priority = st.session_state.get("priority", [])
 
 # ================= SEARCH =================
 def clear_search():
