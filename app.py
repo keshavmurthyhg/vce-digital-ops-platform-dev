@@ -79,58 +79,6 @@ section[data-testid="stSidebar"] .stCheckbox {
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-.block-container {padding-top: 1rem;}
-
-html, body, [class*="css"] {
-    font-size: 13px !important;
-}
-
-/* KPI */
-[data-testid="stMetricValue"] {
-    font-size:14px !important;
-}
-
-/* TABLE */
-table {
-    border-collapse: collapse;
-    width: 100%;
-}
-
-th {
-    text-align: center !important;
-    background-color: #f5f5f5;
-    font-weight: 600;
-}
-
-td {
-    text-align: left;
-    padding: 6px;
-    white-space: nowrap;
-}
-
-tr:hover {
-    background-color: #f9f9f9;
-}
-
-/* DESCRIPTION COLUMN */
-td:nth-child(3), th:nth-child(3) {
-    max-width: 400px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* LINKS */
-a {
-    text-decoration: none;
-    color: #1f77b4;
-    font-weight: 500;
-}
-</style>
-""", unsafe_allow_html=True)
-
 # ================= TITLE =================
 st.title("Ops Insight Dashboard")
 
