@@ -13,124 +13,69 @@ st.set_page_config(layout="wide")
 st.markdown("""
 <style>
 
-/* ================= GLOBAL ================= */
-.block-container {
-    padding-top: 1rem !important;
-    padding-bottom: 1rem !important;
+/* ===== REMOVE TOP EMPTY SPACE (Menu gap) ===== */
+section[data-testid="stSidebar"] > div:first-child {
+    padding-top: 0.5rem !important;
 }
 
-html, body, [class*="css"] {
+/* ===== REMOVE EXTRA BLOCK SPACING ===== */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] {
+    gap: 0rem !important;
+}
+
+/* ===== REMOVE EMPTY DIV HEIGHT ===== */
+section[data-testid="stSidebar"] div:empty {
+    display: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 0 !important;
+}
+
+/* ===== TIGHTEN EACH ELEMENT ===== */
+section[data-testid="stSidebar"] .element-container {
+    margin-bottom: 2px !important;
+    padding: 0 !important;
+}
+
+/* ===== CHECKBOX GROUP FIX ===== */
+section[data-testid="stSidebar"] .stCheckbox {
+    margin: 0px !important;
+    padding: 0px !important;
+}
+
+/* Reduce gap between checkbox items */
+section[data-testid="stSidebar"] .stCheckbox > label {
+    margin: 0px !important;
+    padding: 2px 0px !important;
     font-size: 13px !important;
 }
 
-/* ================= RESULTS TEXT ================= */
-h3, h4 {
+/* ===== SELECTBOX FIX ===== */
+section[data-testid="stSidebar"] .stSelectbox {
+    margin-top: 2px !important;
     margin-bottom: 4px !important;
 }
 
-/* ================= KPI ================= */
-[data-testid="stMetricValue"] {
-    font-size: 14px !important;
-}
-
-/* ================= TABLE ================= */
-table {
-    border-collapse: collapse;
-    width: 100%;
-}
-
-/* Header */
-th {
-    text-align: center !important;
-    background-color: #f5f5f5;
-    font-weight: 600;
-    padding: 6px !important;
-}
-
-/* Cells */
-td {
-    text-align: left;
-    padding: 6px !important;
-    white-space: nowrap;
-}
-
-/* Hover */
-tr:hover {
-    background-color: #f9f9f9;
-}
-
-/* Description column wider */
-td:nth-child(3), th:nth-child(3) {
-    max-width: 420px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Auto fit other columns */
-td:not(:nth-child(3)), th:not(:nth-child(3)) {
-    width: 1%;
-}
-
-/* Links */
-a {
-    text-decoration: none;
-    color: #1f77b4;
-    font-weight: 500;
-}
-
-/* ================= SIDEBAR COMPACT ================= */
-
-/* Reduce overall spacing */
-section[data-testid="stSidebar"] * {
-    line-height: 1.1 !important;
-}
-
-/* Reduce block spacing */
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
-    padding-top: 2px !important;
-    padding-bottom: 2px !important;
-    margin-bottom: 2px !important;
-}
-
-/* Remove extra spacing in widgets */
-section[data-testid="stSidebar"] .stCheckbox,
-section[data-testid="stSidebar"] .stSelectbox {
-    margin-bottom: 2px !important;
-    padding-bottom: 0px !important;
-}
-
-/* Tight labels */
-section[data-testid="stSidebar"] label {
-    margin-bottom: 1px !important;
-    font-size: 13px !important;
-}
-
-/* Section titles (Source, Status, Priority) */
+/* ===== HEADINGS (Source, Status, Priority) ===== */
 section[data-testid="stSidebar"] .stMarkdown {
+    margin-top: 6px !important;
     margin-bottom: 2px !important;
     font-weight: 600;
 }
 
-/* Reduce divider spacing */
+/* ===== REMOVE EXTRA HR SPACE ===== */
 section[data-testid="stSidebar"] hr {
-    margin: 6px 0 !important;
+    margin: 4px 0 !important;
 }
 
-/* Optional: tighter checkboxes */
-section[data-testid="stSidebar"] .stCheckbox > label {
-    font-size: 13px !important;
+/* ===== REMOVE RANDOM BIG GAPS (KEY FIX) ===== */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
+    margin-bottom: 2px !important;
 }
 
-/* ================= SEARCH BAR ================= */
-input {
-    padding: 6px !important;
-}
-
-/* ================= BUTTON ================= */
-button {
-    padding: 4px 10px !important;
-    font-size: 13px !important;
+/* ===== KPI SECTION TIGHT ===== */
+section[data-testid="stSidebar"] [data-testid="stMetric"] {
+    margin-bottom: 2px !important;
 }
 
 </style>
