@@ -158,13 +158,9 @@ for col in ["Created Date","Resolved Date"]:
         page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
 # LINK
-#def build_link(row):
-    #num = str(row.get("Number", ""))
-   # src = row.get("Source", "")
-if event.selection.rows:
-    row = page_df.iloc[event.selection.rows[0]]
-    url = build_link(row)
-
+def build_link(row):
+    num = str(row.get("Number", ""))
+    src = row.get("Source", "")
 
     if src == "SNOW":
         return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
@@ -174,8 +170,8 @@ if event.selection.rows:
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
     return ""
 
-    if url:
-        st.link_button("🔍 Open Ticket", url)
+   if url:
+       st.link_button("🔍 Open Ticket", url)
 
 # ================= DISPLAY =================
 event = st.dataframe(
