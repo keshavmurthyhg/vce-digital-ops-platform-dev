@@ -107,8 +107,8 @@ with col1:
 
 with col2:
     if st.button("❌"):
-    st.session_state.pop("search", None)
-    st.rerun()
+        st.session_state.pop("search", None)
+        st.rerun()
 
 filtered = apply_search(filtered, keyword)
 
