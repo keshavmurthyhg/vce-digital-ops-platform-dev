@@ -9,38 +9,18 @@ from modules.kpi import calculate_kpi
 
 st.set_page_config(layout="wide")
 
-# ================= CSS (UI CONTROL) =================
+# ================= CSS =================
 st.markdown("""
 <style>
-/* Reduce sidebar spacing */
 section[data-testid="stSidebar"] > div {
     padding-top: 10px;
 }
 
-/* Smaller KPI font */
-[data-testid="stMetricValue"] {
-    font-size: 18px;
-}
-[data-testid="stMetricLabel"] {
-    font-size: 12px;
-}
+[data-testid="stMetricValue"] {font-size:18px;}
+[data-testid="stMetricLabel"] {font-size:12px;}
 
-/* Reduce search width */
 div[data-testid="stTextInput"] > div {
     width: 50%;
-}
-
-/* Sticky header */
-thead tr th {
-    position: sticky;
-    top: 0;
-    background: white;
-    z-index: 1;
-}
-
-/* Table font */
-table {
-    font-size: 13px !important;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -57,19 +37,18 @@ if "search" not in st.session_state:
 # ================= SIDEBAR =================
 st.sidebar.title("Ops Insight Dashboard")
 
-# ================= MENU =================
+# MENU
 st.sidebar.markdown("### Menu")
 st.sidebar.caption("Filters & Controls")
 
-# ================= SOURCE =================
+# SOURCE
 st.sidebar.markdown("### Source")
+c1, c2 = st.sidebar.columns(2)
 
-col1, col2 = st.sidebar.columns(2)
-
-with col1:
+with c1:
     all_src = st.checkbox("ALL", value=True)
 
-with col2:
+with c2:
     azure = st.checkbox("AZURE", value=all_src)
     snow = st.checkbox("SNOW", value=all_src)
     ptc = st.checkbox("PTC", value=all_src)
@@ -78,6 +57,10 @@ sources = []
 if azure: sources.append("AZURE")
 if snow: sources.append("SNOW")
 if ptc: sources.append("PTC")
+
+if not sources:
+    st.warning("⚠️ Select at least one source")
+    st.stop()
 
 # ================= FILTERS =================
 filtered = df[df["Source"].isin(sources)]
@@ -92,15 +75,18 @@ st.sidebar.markdown("### Priority")
 priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
 priority = st.sidebar.selectbox("", priority_list)
 
-# RELEASE (ONLY WHEN AZURE OR MIXED)
+# RELEASE (dynamic)
 release = "ALL"
-
-if "AZURE" in sources:
+if "AZURE" in sources and "Release" in filtered.columns:
     st.sidebar.markdown("### Release")
-    
-    if "Release" in filtered.columns:
-        release_list = ["ALL"] + sorted(filtered["Release"].dropna().unique())
-        release = st.sidebar.selectbox("", release_list)
+    release_list = ["ALL"] + sorted(filtered["Release"].dropna().unique())
+    release = st.sidebar.selectbox("", release_list)
+
+# APPLY FILTERS
+filtered = apply_filters(filtered, status, priority)
+
+if release != "ALL" and "Release" in filtered.columns:
+    filtered = filtered[filtered["Release"] == release]
 
 # ================= SEARCH =================
 col1, col2 = st.columns([5,1])
@@ -109,7 +95,7 @@ with col1:
     keyword = st.text_input("🔎 Search", key="search")
 
 with col2:
-    if st.button("❌ Clear"):
+    if st.button("❌"):
         st.session_state.search = ""
         st.rerun()
 
@@ -120,7 +106,7 @@ total = len(filtered)
 page_size = 10
 total_pages = max((total + page_size - 1)//page_size,1)
 
-col1, col2, col3 = st.columns([6,1,2])
+col1, col2, col3 = st.columns([6,1,1])
 
 with col1:
     st.markdown(f"### Results: {total}")
@@ -145,7 +131,7 @@ end = start+page_size
 page_df = filtered.iloc[start:end].copy().reset_index(drop=True)
 page_df.insert(0,"SL No", range(start+1,start+len(page_df)+1))
 
-# CLEAN
+# CLEAN NAMES
 def clean(x):
     return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
 
@@ -153,11 +139,21 @@ for col in ["Created By","Assigned To"]:
     if col in page_df:
         page_df[col] = page_df[col].apply(clean)
 
+# DATE FORMAT
 for col in ["Created Date","Resolved Date"]:
     if col in page_df:
         page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
-# LINK
+# CLEAN PRIORITY (PTC ONLY)
+def clean_priority(row):
+    if row["Source"] == "PTC":
+        match = re.search(r"Severity\s*[1-4]", str(row["Priority"]))
+        return match.group(0) if match else row["Priority"]
+    return row["Priority"]
+
+page_df["Priority"] = page_df.apply(clean_priority, axis=1)
+
+# LINK BUILDER
 def build_link(row):
     num = str(row.get("Number", ""))
     src = row.get("Source", "")
@@ -170,26 +166,25 @@ def build_link(row):
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
     return ""
 
-   if url:
-       st.link_button("🔍 Open Ticket", url)
-
 # ================= DISPLAY =================
 event = st.dataframe(
     page_df,
     use_container_width=True,
     hide_index=True,
-    on_select="rerun",
     selection_mode="single-row",
+    on_select="rerun",
     column_config={
         "Description": st.column_config.TextColumn(width="large"),
     }
 )
 
-# ================= CLICKABLE ROW =================
+# ================= ROW ACTION =================
 if event.selection.rows:
     row = page_df.iloc[event.selection.rows[0]]
-    if row["URL"]:
-        st.link_button("🔍 Open Ticket", row["URL"])
+    url = build_link(row)
+
+    if url:
+        st.link_button("🔍 Open Ticket", url)
 
 # ================= KPI =================
 st.sidebar.markdown("### KPI")
