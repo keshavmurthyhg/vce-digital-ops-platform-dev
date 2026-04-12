@@ -62,6 +62,21 @@ a {
 </style>
 """, unsafe_allow_html=True)
 
+/* SIDEBAR COMPACT */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
+    gap: 0.3rem !important;
+}
+
+section[data-testid="stSidebar"] label {
+    margin-bottom: 2px !important;
+}
+
+section[data-testid="stSidebar"] .stSelectbox,
+section[data-testid="stSidebar"] .stCheckbox {
+    margin-bottom: 4px !important;
+}
+
+
 # ================= TITLE =================
 st.title("Ops Insight Dashboard")
 
@@ -130,8 +145,32 @@ if priority != "ALL":
     filtered = filtered[filtered["Priority"] == priority]
 
 # ================= SEARCH =================
+#if "search_box" not in st.session_state:
+  #  st.session_state.search_box = ""
+
+#col1, col2 = st.columns([10,1])
+#
+#with col1:
+#    keyword = st.text_input(
+ #       "🔎 Search",
+  #      key="search_box"
+#    )
+
+#with col2:
+   # if st.button("❌"):
+  #     st.session_state.search_box = ""
+   #     st.session_state.page = 1
+   #     st.rerun()
+
+#filtered = apply_search(filtered, st.session_state.search_box)
+
+# ================= SEARCH =================
+def clear_search():
+    st.session_state["search_box"] = ""
+    st.session_state["page"] = 1
+
 if "search_box" not in st.session_state:
-    st.session_state.search_box = ""
+    st.session_state["search_box"] = ""
 
 col1, col2 = st.columns([10,1])
 
@@ -142,12 +181,10 @@ with col1:
     )
 
 with col2:
-    if st.button("❌"):
-        st.session_state.search_box = ""
-        st.session_state.page = 1
-        st.rerun()
+    st.button("❌", on_click=clear_search)
 
-filtered = apply_search(filtered, st.session_state.search_box)
+filtered = apply_search(filtered, st.session_state["search_box"])
+
 
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
