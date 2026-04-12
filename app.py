@@ -1,16 +1,12 @@
 import streamlit as st
 import pandas as pd
+from modules.data_loader import load_data
 
 st.set_page_config(layout="wide")
 
 # -------------------------------
 # LOAD DATA
 # -------------------------------
-@st.cache_data
-def load_data():
-    df = pd.read_csv("data.csv")  # change if needed
-    return df
-
 df = load_data()
 
 # -------------------------------
@@ -54,8 +50,9 @@ if "search_box" not in st.session_state:
 col1, col2 = st.columns([20, 1])
 
 with col1:
+    st.markdown("### 🔎 Search")
     search = st.text_input(
-        "🔎 Search",
+        "",
         key="search_box",
         placeholder="Type keyword..."
     )
@@ -63,6 +60,7 @@ with col1:
 with col2:
     if st.button("❌"):
         st.session_state.search_box = ""
+        st.session_state.page = 1
         st.rerun()
 
 # -------------------------------
@@ -96,6 +94,7 @@ ptc_count = len(filtered[filtered["Source"] == "PTC"])
 # PAGINATION
 # -------------------------------
 page_size = 10
+
 if "page" not in st.session_state:
     st.session_state.page = 1
 
@@ -106,7 +105,7 @@ end = start + page_size
 page_df = filtered.iloc[start:end]
 
 # -------------------------------
-# HEADER ROW (RESULT + DOWNLOAD + PAGINATION)
+# HEADER ROW
 # -------------------------------
 col1, col2, col3 = st.columns([4, 2, 3])
 
@@ -127,28 +126,31 @@ with col2:
     st.markdown("</div>", unsafe_allow_html=True)
 
 with col3:
-    col_prev, col_page, col_next = st.columns([1, 2, 1])
+    c1, c2, c3 = st.columns([1, 2, 1])
 
-    with col_prev:
+    with c1:
         if st.button("◀") and st.session_state.page > 1:
             st.session_state.page -= 1
             st.rerun()
 
-    with col_page:
-        st.markdown(f"<div style='text-align:center;'>Page {st.session_state.page}/{total_pages}</div>", unsafe_allow_html=True)
+    with c2:
+        st.markdown(
+            f"<div style='text-align:center;'>Page {st.session_state.page}/{total_pages}</div>",
+            unsafe_allow_html=True
+        )
 
-    with col_next:
+    with c3:
         if st.button("▶") and st.session_state.page < total_pages:
             st.session_state.page += 1
             st.rerun()
 
 # -------------------------------
-# TABLE STYLING
+# TABLE STYLE
 # -------------------------------
 def style_table(df):
     return df.style.set_table_styles([
         {"selector": "th", "props": [("text-align", "center"), ("font-size", "12px")]},
-        {"selector": "td", "props": [("font-size", "12px")]},
+        {"selector": "td", "props": [("font-size", "12px")]}
     ]).set_properties(subset=["Description"], **{
         "width": "400px",
         "white-space": "nowrap",
@@ -156,7 +158,6 @@ def style_table(df):
         "text-overflow": "ellipsis"
     })
 
-# Auto fit other columns
 st.markdown("""
 <style>
 td {
