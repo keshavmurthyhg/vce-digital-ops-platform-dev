@@ -1,23 +1,25 @@
-def apply_filters(df, status="ALL", priority="ALL", keyword=""):
+import streamlit as st
+
+def create_filter(data, col):
+    vals = data[col].dropna().astype(str).unique().tolist()
+    return st.sidebar.selectbox(col, ["ALL"] + sorted(vals)) if vals else "ALL"
+
+def apply_filters(df, state, priority, release, keyword):
 
     filtered = df.copy()
 
-    # --- Status filter ---
-    if status != "ALL":
-        filtered = filtered[filtered["Status"] == status]
+    if state != "ALL":
+        filtered = filtered[filtered["Status"] == state]
 
-    # --- Priority filter ---
     if priority != "ALL":
         filtered = filtered[filtered["Priority"] == priority]
 
-    # --- Keyword search ---
+    if release != "ALL":
+        filtered = filtered[filtered["Release"] == release]
+
     if keyword:
-        keyword = keyword.lower()
         filtered = filtered[
-            filtered.astype(str).apply(
-                lambda row: row.str.lower().str.contains(keyword).any(),
-                axis=1
-            )
+            filtered.apply(lambda r: r.astype(str).str.contains(keyword, case=False).any(), axis=1)
         ]
 
-    return filtered
+    return filtered.reset_index(drop=True)
