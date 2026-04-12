@@ -131,21 +131,6 @@ a {
 </style>
 """, unsafe_allow_html=True)
 
-/* SIDEBAR COMPACT */
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
-    gap: 0.3rem !important;
-}
-
-section[data-testid="stSidebar"] label {
-    margin-bottom: 2px !important;
-}
-
-section[data-testid="stSidebar"] .stSelectbox,
-section[data-testid="stSidebar"] .stCheckbox {
-    margin-bottom: 4px !important;
-}
-
-
 # ================= TITLE =================
 st.title("Ops Insight Dashboard")
 
