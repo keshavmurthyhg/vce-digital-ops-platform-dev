@@ -12,24 +12,24 @@ st.set_page_config(layout="wide")
 # ================= CSS =================
 st.markdown("""
 <style>
-html, body, [class*="css"]  {
-    font-size: 13px !important;
+.block-container {padding-top: 1rem;}
+html, body, [class*="css"] {font-size: 13px !important;}
+
+[data-testid="stMetricValue"] {font-size:14px !important;}
+
+.result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-[data-testid="stMetricValue"] {
-    font-size:14px !important;
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
-th, td {
-    white-space: nowrap !important;
-}
-
-thead th:nth-child(3),
-tbody td:nth-child(3) {
-    max-width: 400px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+a { text-decoration: none; color: #1f77b4; font-weight: 500; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -69,24 +69,31 @@ else:
 if not sources:
     st.stop()
 
+st.sidebar.markdown("---")
+
+# ================= FILTER =================
 filtered = df[df["Source"].isin(sources)].copy()
 
-# ================= STATUS =================
+# STATUS
 st.sidebar.markdown("### Status")
-status = st.sidebar.selectbox("", ["ALL"] + sorted(filtered["Status"].dropna().unique()))
+status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
+status = st.sidebar.selectbox("", status_list)
 
-# ================= PRIORITY =================
+# PRIORITY
 st.sidebar.markdown("### Priority")
 
 def clean_priority(x):
-    match = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
-    return match.group(0) if match else str(x)
+    m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
+    return m.group(0) if m else str(x)
 
 filtered["Priority"] = filtered["Priority"].apply(clean_priority)
 
-priority = st.sidebar.selectbox("", ["ALL"] + sorted(filtered["Priority"].dropna().unique()))
+priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
+priority = st.sidebar.selectbox("", priority_list)
 
-# ================= APPLY FILTER =================
+st.sidebar.markdown("---")
+
+# APPLY FILTER
 if status != "ALL":
     filtered = filtered[filtered["Status"] == status]
 
@@ -94,10 +101,10 @@ if priority != "ALL":
     filtered = filtered[filtered["Priority"] == priority]
 
 # ================= SEARCH =================
+col1, col2 = st.columns([10,1])
+
 if "search" not in st.session_state:
     st.session_state.search = ""
-
-col1, col2 = st.columns([10,1])
 
 with col1:
     keyword = st.text_input("🔎 Search", key="search")
@@ -109,90 +116,99 @@ with col2:
 
 filtered = apply_search(filtered, keyword)
 
+# ================= DATA =================
+df_display = filtered.copy().reset_index(drop=True)
+df_display.insert(0, "SL No", range(1, len(df_display)+1))
+
+# CLEAN TEXT
+def clean(x):
+    return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
+
+for col in ["Created By","Assigned To"]:
+    if col in df_display:
+        df_display[col] = df_display[col].apply(clean)
+
+# DATE
+for col in ["Created Date","Resolved Date"]:
+    if col in df_display:
+        df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%b-%y")
+
+df_display = df_display.fillna("")
+
+# ================= LINK =================
+def make_link(row):
+    num = str(row["Number"])
+    src = row["Source"]
+
+    if src == "SNOW":
+        url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
+    elif src == "PTC":
+        url = f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
+    elif src == "AZURE":
+        url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
+    else:
+        url = ""
+
+    return f'<a href="{url}" target="_blank">Open</a>' if url else ""
+
+df_display["Open"] = df_display.apply(make_link, axis=1)
+
 # ================= PAGINATION =================
 if "page" not in st.session_state:
     st.session_state.page = 1
 
 page_size = 10
-total_rows = len(filtered)
+total_rows = len(df_display)
 total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
 
 start = (st.session_state.page - 1) * page_size
 end = start + page_size
-page_df = filtered.iloc[start:end].copy()
 
-page_df.insert(0, "SL No", range(start+1, end+1))
+page_df = df_display.iloc[start:end]
 
-# ================= CLEAN =================
-def clean(x):
-    return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
+# ================= HEADER (RESULT + PAGINATION) =================
+c1, c2, c3 = st.columns([4,3,2])
 
-for col in ["Created By","Assigned To"]:
-    if col in page_df:
-        page_df[col] = page_df[col].apply(clean)
-
-for col in ["Created Date","Resolved Date"]:
-    if col in page_df:
-        page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%y")
-
-page_df = page_df.fillna("")
-
-# ================= LINK =================
-def build_link(row):
-    num = str(row["Number"])
-    src = row["Source"]
-
-    if src == "SNOW":
-        return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
-    elif src == "PTC":
-        return f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
-    elif src == "AZURE":
-        return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
-    return ""
-
-page_df["Open"] = page_df.apply(lambda r: f'<a href="{build_link(r)}" target="_blank">Open</a>', axis=1)
-
-# ================= RESULTS + PAGINATION (SAME LINE) =================
-col1, col2, col3 = st.columns([6,2,2])
-
-with col1:
+with c1:
     st.markdown(f"### Results: {total_rows}")
-    c = filtered["Source"].value_counts()
-    st.caption(f"AZURE: {c.get('AZURE',0)} | SNOW: {c.get('SNOW',0)} | PTC: {c.get('PTC',0)}"
-)
 
-with col2:
-    if st.button("◀"):
-        if st.session_state.page > 1:
-            st.session_state.page -= 1
-            st.rerun()
-
-    st.markdown(
-        f"<center><b>Page {st.session_state.page} / {total_pages}</b></center>",
-        unsafe_allow_html=True
+with c2:
+    st.caption(
+        f"AZURE: {filtered['Source'].value_counts().get('AZURE',0)} | "
+        f"SNOW: {filtered['Source'].value_counts().get('SNOW',0)} | "
+        f"PTC: {filtered['Source'].value_counts().get('PTC',0)}"
     )
 
-with col3:
-    if st.button("▶"):
-        if st.session_state.page < total_pages:
-            st.session_state.page += 1
-            st.rerun()
+with c3:
+    col_prev, col_mid, col_next = st.columns([1,2,1])
 
-# ================= EXPORT =================
-def convert_to_excel(df):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+    with col_prev:
+        if st.button("◀"):
+            if st.session_state.page > 1:
+                st.session_state.page -= 1
+
+    with col_mid:
+        st.markdown(f"<center>Page {st.session_state.page}/{total_pages}</center>", unsafe_allow_html=True)
+
+    with col_next:
+        if st.button("▶"):
+            if st.session_state.page < total_pages:
+                st.session_state.page += 1
+
+# ================= DOWNLOAD =================
+def to_excel(df):
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
         df.to_excel(writer, index=False)
-    return output.getvalue()
+    return buffer.getvalue()
 
-st.download_button("📥 Download Excel", convert_to_excel(filtered), "ops_data.xlsx")
+st.download_button("📥 Download Excel", to_excel(filtered), "ops_data.xlsx")
 
 # ================= TABLE =================
 st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
 # ================= KPI =================
 st.sidebar.markdown("### KPI")
-
 kpi = calculate_kpi(filtered)
 
 c1,c2 = st.sidebar.columns(2)
