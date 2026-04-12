@@ -28,6 +28,13 @@ section[data-testid="stSidebar"] > div {
 div[data-testid="stTextInput"] > div {
     width: 100%;
 }
+
+/* KPI FONT FIX*/
+st.markdown("""
+<style>
+[data-testid="stMetricValue"] {
+    font-size:14px !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
@@ -64,10 +71,13 @@ with c2:
     snow = st.checkbox("SNOW", value=all_src)
     ptc = st.checkbox("PTC", value=all_src)
 
-sources = []
-if azure: sources.append("AZURE")
-if snow: sources.append("SNOW")
-if ptc: sources.append("PTC")
+if all_src:
+    sources = ["AZURE", "SNOW", "PTC"]
+else:
+    sources = []
+    if azure: sources.append("AZURE")
+    if snow: sources.append("SNOW")
+    if ptc: sources.append("PTC")
 
 if not sources:
     st.stop()
@@ -118,12 +128,12 @@ if release != "ALL":
 col1, col2 = st.columns([12,1])
 
 with col1:
-    keyword = st.text_input("🔎 Search", key="search")
+    keyword = st.text_input("🔎 Search", value=st.session_state.get("search",""), key="search")
 
 with col2:
     if st.button("❌"):
-        st.session_state.pop("search", None)
-        st.rerun()
+    st.session_state["search"] = ""
+    st.rerun()
 
 filtered = apply_search(filtered, keyword)
 
