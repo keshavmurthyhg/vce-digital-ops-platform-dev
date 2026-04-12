@@ -134,16 +134,13 @@ total_pages = max((total + page_size - 1)//page_size,1)
 
 c1, c2, c3 = st.columns([6,1,1])
 
-with c2:
+with c1:
     st.markdown(f"### Results: {total}")
     c = filtered["Source"].value_counts()
     st.caption(f"AZURE: {c.get('AZURE',0)} | SNOW: {c.get('SNOW',0)} | PTC: {c.get('PTC',0)}")
 
-with c1:
+with c2:
     prev = st.button("◀")
-
-with c3:
-    next = st.button("▶")
 
 # CENTER PAGE NUMBER
 st.markdown(
@@ -157,6 +154,8 @@ if prev and st.session_state.page > 1:
 if next and st.session_state.page < total_pages:
     st.session_state.page += 1
 
+with c3:
+    next = st.button("▶")
 # ================= DATA =================
 start = (st.session_state.page-1)*page_size
 end = start+page_size
