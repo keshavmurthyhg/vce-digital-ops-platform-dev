@@ -72,7 +72,7 @@ status = st.sidebar.selectbox("", status_list)
 st.sidebar.markdown("### Priority")
 
 if sources == ["PTC"]:
-    priority_list = ["ALL", "Severity 1", "Severity 2", "Severity 3", "Severity 4"]
+    priority_list = ["ALL", "Severity 1", "Severity 2", "Severity 3"]
 else:
     priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
 
