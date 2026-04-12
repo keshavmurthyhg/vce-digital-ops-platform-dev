@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import re
+import io
 
 from modules.data_loader import load_data
 from modules.search import apply_search
@@ -190,17 +191,42 @@ def build_link(row):
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
     return ""
 
-page_df["Open"] = page_df.apply(
-    lambda r: build_link(r),
+#page_df["Open"] = page_df.apply(
+    #lambda r: build_link(r),
     axis=1
+#)
+
+def make_open_link(row):
+    url = build_link(row)
+    if not url:
+        return ""
+    return f'<a href="{url}" target="_blank">Open</a>'
+
+page_df["Open"] = page_df.apply(make_open_link, axis=1)
+
+def convert_to_excel(df):
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        df.to_excel(writer, index=False, sheet_name='Data')
+    return output.getvalue()
+
+excel_data = convert_to_excel(page_df)
+
+st.download_button(
+    label="📥 Download Excel",
+    data=excel_data,
+    file_name="ops_insight_data.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
 # ================= DISPLAY =================
-st.dataframe(
-    page_df,
-    use_container_width=True,
-    hide_index=True
-)
+st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+#st.dataframe(
+    #page_df,
+    #use_container_width=True,
+  #  hide_index=True
+#)
 
 # ================= KPI =================
 st.sidebar.markdown("### KPI")
