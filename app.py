@@ -219,20 +219,6 @@ AgGrid(
     theme="streamlit"
 )
 
-# ================= Download to excel =================
-
-def convert_to_excel(df):
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
-    return output.getvalue()
-
-st.download_button(
-    "📥 Download Excel",
-    convert_to_excel(filtered),
-    "ops_data.xlsx"
-)
-
 # ================= KPI =================
 st.sidebar.markdown("### KPI")
 
