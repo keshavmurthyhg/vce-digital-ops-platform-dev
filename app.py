@@ -142,7 +142,7 @@ st.caption(
 
 # ================= PAGINATION =================
 total = len(filtered)
-page_size = 10
+page_size = 5
 total_pages = max((total + page_size - 1)//page_size,1)
 
 c1, c2, c3 = st.columns([1,1,1])
