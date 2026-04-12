@@ -13,54 +13,124 @@ st.set_page_config(layout="wide")
 st.markdown("""
 <style>
 
-/* ===== FIX TOP GAP (Menu → dropdown) ===== */
-section[data-testid="stSidebar"] > div:first-child {
-    padding-top: 0.8rem !important;
+/* ================= GLOBAL ================= */
+.block-container {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
 }
 
-/* ===== REMOVE EXTRA SPACE BETWEEN ELEMENTS ===== */
-section[data-testid="stSidebar"] .element-container {
-    margin-bottom: 6px !important;
+html, body, [class*="css"] {
+    font-size: 13px !important;
 }
 
-/* ===== FIX CHECKBOX GROUP SPACING ===== */
-section[data-testid="stSidebar"] .stCheckbox {
-    margin-bottom: -4px !important;
-}
-
-/* Reduce gap inside checkbox rows */
-section[data-testid="stSidebar"] .stCheckbox > label {
-    padding: 0px !important;
-    margin: 0px !important;
-}
-
-/* ===== SECTION HEADINGS (Source, Status, Priority) ===== */
-section[data-testid="stSidebar"] .stMarkdown {
-    margin-top: 10px !important;
+/* ================= RESULTS TEXT ================= */
+h3, h4 {
     margin-bottom: 4px !important;
+}
+
+/* ================= KPI ================= */
+[data-testid="stMetricValue"] {
+    font-size: 14px !important;
+}
+
+/* ================= TABLE ================= */
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+/* Header */
+th {
+    text-align: center !important;
+    background-color: #f5f5f5;
+    font-weight: 600;
+    padding: 6px !important;
+}
+
+/* Cells */
+td {
+    text-align: left;
+    padding: 6px !important;
+    white-space: nowrap;
+}
+
+/* Hover */
+tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* Description column wider */
+td:nth-child(3), th:nth-child(3) {
+    max-width: 420px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Auto fit other columns */
+td:not(:nth-child(3)), th:not(:nth-child(3)) {
+    width: 1%;
+}
+
+/* Links */
+a {
+    text-decoration: none;
+    color: #1f77b4;
+    font-weight: 500;
+}
+
+/* ================= SIDEBAR COMPACT ================= */
+
+/* Reduce overall spacing */
+section[data-testid="stSidebar"] * {
+    line-height: 1.1 !important;
+}
+
+/* Reduce block spacing */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+    margin-bottom: 2px !important;
+}
+
+/* Remove extra spacing in widgets */
+section[data-testid="stSidebar"] .stCheckbox,
+section[data-testid="stSidebar"] .stSelectbox {
+    margin-bottom: 2px !important;
+    padding-bottom: 0px !important;
+}
+
+/* Tight labels */
+section[data-testid="stSidebar"] label {
+    margin-bottom: 1px !important;
+    font-size: 13px !important;
+}
+
+/* Section titles (Source, Status, Priority) */
+section[data-testid="stSidebar"] .stMarkdown {
+    margin-bottom: 2px !important;
     font-weight: 600;
 }
 
-/* ===== SELECTBOX SPACING ===== */
-section[data-testid="stSidebar"] .stSelectbox {
-    margin-top: 0px !important;
-    margin-bottom: 8px !important;
-}
-
-/* ===== HR LINE (divider) ===== */
+/* Reduce divider spacing */
 section[data-testid="stSidebar"] hr {
-    margin: 8px 0 !important;
+    margin: 6px 0 !important;
 }
 
-/* ===== KPI SECTION ===== */
-section[data-testid="stSidebar"] [data-testid="stMetric"] {
-    margin-bottom: 6px !important;
+/* Optional: tighter checkboxes */
+section[data-testid="stSidebar"] .stCheckbox > label {
+    font-size: 13px !important;
 }
 
-/* ===== REMOVE RANDOM EXTRA HEIGHT (SAFE VERSION) ===== */
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
-    padding-top: 0px !important;
-    padding-bottom: 0px !important;
+/* ================= SEARCH BAR ================= */
+input {
+    padding: 6px !important;
+}
+
+/* ================= BUTTON ================= */
+button {
+    padding: 4px 10px !important;
+    font-size: 13px !important;
 }
 
 </style>
