@@ -138,6 +138,46 @@ section[data-testid="stSidebar"] label {
     margin-bottom: 0px !important;
 }
 
+/* ===== ULTRA COMPACT SIDEBAR ===== */
+
+/* Remove almost all vertical spacing */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
+    margin-bottom: 1px !important;
+    padding-bottom: 0px !important;
+}
+
+/* Inline label + dropdown */
+.inline-filter {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 2px;
+}
+
+/* Label styling */
+.inline-filter label {
+    min-width: 55px;
+    font-size: 12px !important;
+    font-weight: 500;
+    margin: 0 !important;
+}
+
+/* Dropdown tight */
+section[data-testid="stSidebar"] div[data-baseweb="select"] {
+    margin: 0 !important;
+}
+
+/* Expander tighter */
+section[data-testid="stSidebar"] div[role="region"] {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+}
+
+/* Checkbox tighter */
+section[data-testid="stSidebar"] .stCheckbox {
+    margin-bottom: 1px !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -152,17 +192,35 @@ st.sidebar.markdown("## 📊 Menu")
 st.sidebar.selectbox("", ["Search Tool"])
 
 # ================= SOURCE =================
+#with st.sidebar.expander("📂 Source", expanded=True):
+
+ #   c1, c2 = st.columns(2)
+
+   # with c1:
+   #     all_src = st.checkbox("ALL", value=True)
+
+   # with c2:
+    #    azure = st.checkbox("AZURE", value=all_src)
+    #    snow = st.checkbox("SNOW", value=all_src)
+     #   ptc = st.checkbox("PTC", value=all_src)
+
+   # if all_src:
+    #    sources = ["AZURE", "SNOW", "PTC"]
+  #  else:
+    #    sources = []
+    #    if azure: sources.append("AZURE")
+    #    if snow: sources.append("SNOW")
+    #    if ptc: sources.append("PTC")
+
 with st.sidebar.expander("📂 Source", expanded=True):
 
-    c1, c2 = st.columns(2)
+    cols = st.columns(2)
 
-    with c1:
-        all_src = st.checkbox("ALL", value=True)
+    all_src = cols[0].checkbox("ALL", value=True)
+    azure = cols[1].checkbox("AZURE", value=all_src)
 
-    with c2:
-        azure = st.checkbox("AZURE", value=all_src)
-        snow = st.checkbox("SNOW", value=all_src)
-        ptc = st.checkbox("PTC", value=all_src)
+    snow = cols[0].checkbox("SNOW", value=all_src)
+    ptc = cols[1].checkbox("PTC", value=all_src)
 
     if all_src:
         sources = ["AZURE", "SNOW", "PTC"]
@@ -174,26 +232,48 @@ with st.sidebar.expander("📂 Source", expanded=True):
 
 if not sources:
     st.stop()
-
 # ================= FILTER =================
-filtered = df[df["Source"].isin(sources)].copy()
+#filtered = df[df["Source"].isin(sources)].copy()
 
+#with st.sidebar.expander("🎯 Filters", expanded=True):
+
+   # st.markdown("**Status**")
+  #  status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
+  #  status = st.selectbox("", status_list)
+
+ #   st.markdown("**Priority**")
+
+ #   def clean_priority(x):
+  #      m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
+   #     return m.group(0) if m else str(x)
+
+  #  filtered["Priority"] = filtered["Priority"].apply(clean_priority)
+#
+   # priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
+  #  priority = st.selectbox("", priority_list)
 with st.sidebar.expander("🎯 Filters", expanded=True):
 
-    st.markdown("**Status**")
-    status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
-    status = st.selectbox("", status_list)
+    # STATUS (INLINE)
+    col1, col2 = st.columns([1,3])
+    with col1:
+        st.markdown("**Status**")
+    with col2:
+        status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
+        status = st.selectbox("", status_list, key="status")
 
-    st.markdown("**Priority**")
+    # PRIORITY (INLINE)
+    col1, col2 = st.columns([1,3])
+    with col1:
+        st.markdown("**Priority**")
+    with col2:
+        def clean_priority(x):
+            m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
+            return m.group(0) if m else str(x)
 
-    def clean_priority(x):
-        m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
-        return m.group(0) if m else str(x)
+        filtered["Priority"] = filtered["Priority"].apply(clean_priority)
 
-    filtered["Priority"] = filtered["Priority"].apply(clean_priority)
-
-    priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
-    priority = st.selectbox("", priority_list)
+        priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
+        priority = st.selectbox("", priority_list, key="priority")
 
 # APPLY FILTER
 if status != "ALL":
