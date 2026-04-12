@@ -230,8 +230,8 @@ with st.sidebar.expander("📂 Source", expanded=True):
         if snow: sources.append("SNOW")
         if ptc: sources.append("PTC")
 
-if not sources:
-    st.stop()
+    if not sources:
+        st.stop()
 # ================= FILTER =================
 #filtered = df[df["Source"].isin(sources)].copy()
 
