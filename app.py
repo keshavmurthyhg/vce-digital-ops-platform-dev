@@ -134,12 +134,12 @@ total_pages = max((total + page_size - 1)//page_size,1)
 
 c1, c2, c3 = st.columns([6,1,1])
 
-with c1:
+with c2:
     st.markdown(f"### Results: {total}")
     c = filtered["Source"].value_counts()
     st.caption(f"AZURE: {c.get('AZURE',0)} | SNOW: {c.get('SNOW',0)} | PTC: {c.get('PTC',0)}")
 
-with c2:
+with c1:
     prev = st.button("◀")
 
 with c3:
