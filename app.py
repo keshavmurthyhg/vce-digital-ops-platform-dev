@@ -287,25 +287,59 @@ filtered = df[df["Source"].isin(sources)].copy()
 
 # ---------- APPLY FILTERS ----------
 
-if status:
+#if status:
+  #  filtered = filtered[filtered["Status"].isin(status)]
+
+#if priority:
+ #   filtered = filtered[filtered["Priority"].isin(priority)]
+
+# ---------- APPLY FILTERS ----------
+
+if len(status) > 0:
     filtered = filtered[filtered["Status"].isin(status)]
 
-if priority:
+if len(priority) > 0:
     filtered = filtered[filtered["Priority"].isin(priority)]
 
 #================= Multi-selection filters ==========================
-with st.sidebar.expander("🎯 Filters", expanded=True):
+#with st.sidebar.expander("🎯 Filters", expanded=True):
 
     # ---------- STATUS (MULTI SELECT) ----------
+   # status_options = sorted(filtered["Status"].dropna().unique())
+  #  status = st.multiselect(
+   #     "Status",
+    #    options=status_options,
+    #    default=[],
+   #     placeholder="All"
+  #  )
+
+    # ---------- PRIORITY (MULTI SELECT) ----------
+  #  def clean_priority(x):
+   #     m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
+   #     return m.group(0) if m else str(x)
+
+   # filtered["Priority"] = filtered["Priority"].apply(clean_priority)
+
+   # priority_options = sorted(filtered["Priority"].dropna().unique())
+   # priority = st.multiselect(
+    #    "Priority",
+    #    options=priority_options,
+    #    default=[],
+    #    placeholder="All"
+  #  )
+
+with st.sidebar.expander("🎯 Filters", expanded=True):
+
+    # ---------- STATUS ----------
     status_options = sorted(filtered["Status"].dropna().unique())
+
     status = st.multiselect(
         "Status",
         options=status_options,
-        default=[],
-        placeholder="All"
+        default=[]
     )
 
-    # ---------- PRIORITY (MULTI SELECT) ----------
+    # ---------- PRIORITY ----------
     def clean_priority(x):
         m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
         return m.group(0) if m else str(x)
@@ -313,13 +347,12 @@ with st.sidebar.expander("🎯 Filters", expanded=True):
     filtered["Priority"] = filtered["Priority"].apply(clean_priority)
 
     priority_options = sorted(filtered["Priority"].dropna().unique())
+
     priority = st.multiselect(
         "Priority",
         options=priority_options,
-        default=[],
-        placeholder="All"
+        default=[]
     )
-
 
 # ================= SEARCH =================
 def clear_search():
