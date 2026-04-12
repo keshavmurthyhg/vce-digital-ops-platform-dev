@@ -130,6 +130,16 @@ with col2:
 
 filtered = apply_search(filtered, keyword)
 
+# ================= RESULTS =================
+st.markdown(f"### Results: {len(filtered)}")
+
+c = filtered["Source"].value_counts()
+st.caption(
+    f"AZURE: {c.get('AZURE',0)} | "
+    f"SNOW: {c.get('SNOW',0)} | "
+    f"PTC: {c.get('PTC',0)}"
+)
+
 # ================= PAGINATION =================
 total = len(filtered)
 page_size = 10
