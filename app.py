@@ -101,20 +101,42 @@ if priority != "ALL":
     filtered = filtered[filtered["Priority"] == priority]
 
 # ================= SEARCH =================
-col1, col2 = st.columns([10,1])
+#(col1, col2 = st.columns([10,1])
 
+#if "search" not in st.session_state:
+  #  st.session_state.search = ""
+
+#with col1:
+   # keyword = st.text_input("🔎 Search", key="search")
+
+#with col2:
+  #  if st.button("❌"):
+   #     st.session_state.search = ""
+   #     st.rerun()
+
+#filtered = apply_search(filtered, keyword)
+
+# INIT
 if "search" not in st.session_state:
     st.session_state.search = ""
 
+col1, col2 = st.columns([10,1])
+
 with col1:
-    keyword = st.text_input("🔎 Search", key="search")
+    keyword = st.text_input(
+        "🔎 Search",
+        value=st.session_state.search,
+        key="search_box"
+    )
+
+# sync manually
+st.session_state.search = keyword
 
 with col2:
     if st.button("❌"):
         st.session_state.search = ""
         st.rerun()
 
-filtered = apply_search(filtered, keyword)
 
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
