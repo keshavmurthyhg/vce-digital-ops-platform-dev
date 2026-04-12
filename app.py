@@ -57,6 +57,11 @@ if "search" not in st.session_state:
 # ================= SIDEBAR =================
 st.sidebar.title("Ops Insight Dashboard")
 
+# ================= MENU =================
+st.sidebar.markdown("### Menu")
+st.sidebar.caption("Filters & Controls")
+
+# ================= SOURCE =================
 st.sidebar.markdown("### Source")
 
 col1, col2 = st.sidebar.columns(2)
@@ -74,25 +79,28 @@ if azure: sources.append("AZURE")
 if snow: sources.append("SNOW")
 if ptc: sources.append("PTC")
 
-if not sources:
-    st.warning("⚠️ Select at least one source")
-    st.stop()
-
 # ================= FILTERS =================
 filtered = df[df["Source"].isin(sources)]
 
-# Dynamic label
-priority_label = "Release" if sources == ["AZURE"] else "Priority"
-
+# STATUS
 st.sidebar.markdown("### Status")
 status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
 status = st.sidebar.selectbox("", status_list)
 
-st.sidebar.markdown(f"### {priority_label}")
+# PRIORITY
+st.sidebar.markdown("### Priority")
 priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
 priority = st.sidebar.selectbox("", priority_list)
 
-filtered = apply_filters(filtered, status, priority)
+# RELEASE (ONLY WHEN AZURE OR MIXED)
+release = "ALL"
+
+if "AZURE" in sources:
+    st.sidebar.markdown("### Release")
+    
+    if "Release" in filtered.columns:
+        release_list = ["ALL"] + sorted(filtered["Release"].dropna().unique())
+        release = st.sidebar.selectbox("", release_list)
 
 # ================= SEARCH =================
 col1, col2 = st.columns([5,1])
@@ -150,9 +158,13 @@ for col in ["Created Date","Resolved Date"]:
         page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
 # LINK
-def build_link(row):
-    num = str(row.get("Number", ""))
-    src = row.get("Source", "")
+#def build_link(row):
+    #num = str(row.get("Number", ""))
+   # src = row.get("Source", "")
+if event.selection.rows:
+    row = page_df.iloc[event.selection.rows[0]]
+    url = build_link(row)
+
 
     if src == "SNOW":
         return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
@@ -162,7 +174,8 @@ def build_link(row):
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
     return ""
 
-page_df["URL"] = page_df.apply(build_link, axis=1)
+    if url:
+        st.link_button("🔍 Open Ticket", url)
 
 # ================= DISPLAY =================
 event = st.dataframe(
