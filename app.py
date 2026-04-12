@@ -23,23 +23,12 @@ html, body, [class*="css"] {
     font-size: 13px !important;
 }
 
-/* ================= RESULTS TEXT ================= */
-h3, h4 {
-    margin-bottom: 4px !important;
-}
-
-/* ================= KPI ================= */
-[data-testid="stMetricValue"] {
-    font-size: 14px !important;
-}
-
 /* ================= TABLE ================= */
 table {
     border-collapse: collapse;
     width: 100%;
 }
 
-/* Header */
 th {
     text-align: center !important;
     background-color: #f5f5f5;
@@ -47,19 +36,16 @@ th {
     padding: 6px !important;
 }
 
-/* Cells */
 td {
     text-align: left;
     padding: 6px !important;
     white-space: nowrap;
 }
 
-/* Hover */
 tr:hover {
     background-color: #f9f9f9;
 }
 
-/* Description column wider */
 td:nth-child(3), th:nth-child(3) {
     max-width: 420px;
     white-space: nowrap;
@@ -67,67 +53,51 @@ td:nth-child(3), th:nth-child(3) {
     text-overflow: ellipsis;
 }
 
-/* Auto fit other columns */
 td:not(:nth-child(3)), th:not(:nth-child(3)) {
     width: 1%;
 }
 
-/* Links */
 a {
     text-decoration: none;
     color: #1f77b4;
     font-weight: 500;
 }
 
-/* ================= SIDEBAR COMPACT ================= */
-
-/* Reduce overall spacing */
-section[data-testid="stSidebar"] * {
-    line-height: 1.1 !important;
+/* ================= STICKY SIDEBAR ================= */
+section[data-testid="stSidebar"] {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
 }
 
-/* Reduce block spacing */
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
-    padding-top: 2px !important;
-    padding-bottom: 2px !important;
-    margin-bottom: 2px !important;
-}
-
-/* Remove extra spacing in widgets */
-section[data-testid="stSidebar"] .stCheckbox,
-section[data-testid="stSidebar"] .stSelectbox {
-    margin-bottom: 2px !important;
-    padding-bottom: 0px !important;
-}
-
-/* Tight labels */
-section[data-testid="stSidebar"] label {
-    margin-bottom: 1px !important;
-    font-size: 13px !important;
-}
-
-/* Section titles (Source, Status, Priority) */
+/* ================= CLEAN SPACING ================= */
 section[data-testid="stSidebar"] .stMarkdown {
-    margin-bottom: 2px !important;
-    font-weight: 600;
+    margin-bottom: 4px !important;
 }
 
-/* Reduce divider spacing */
+section[data-testid="stSidebar"] label {
+    font-size: 13px !important;
+    margin-bottom: 2px !important;
+}
+
+section[data-testid="stSidebar"] .stCheckbox {
+    margin-bottom: 2px !important;
+}
+
+section[data-testid="stSidebar"] .stSelectbox {
+    margin-bottom: 4px !important;
+}
+
 section[data-testid="stSidebar"] hr {
     margin: 6px 0 !important;
 }
 
-/* Optional: tighter checkboxes */
-section[data-testid="stSidebar"] .stCheckbox > label {
-    font-size: 13px !important;
-}
-
-/* ================= SEARCH BAR ================= */
+/* ================= SEARCH ================= */
 input {
     padding: 6px !important;
 }
 
-/* ================= BUTTON ================= */
 button {
     padding: 4px 10px !important;
     font-size: 13px !important;
@@ -143,58 +113,52 @@ st.title("Ops Insight Dashboard")
 df, last_refresh = load_data()
 
 # ================= SIDEBAR =================
-st.sidebar.markdown("## Menu")
+st.sidebar.markdown("## 📊 Menu")
 st.sidebar.selectbox("", ["Search Tool"])
 
-st.sidebar.markdown("---")
-
 # ================= SOURCE =================
-st.sidebar.markdown("### Source")
+with st.sidebar.expander("📂 Source", expanded=True):
 
-c1, c2 = st.sidebar.columns(2)
+    c1, c2 = st.columns(2)
 
-with c1:
-    all_src = st.checkbox("ALL", value=True)
+    with c1:
+        all_src = st.checkbox("ALL", value=True)
 
-with c2:
-    azure = st.checkbox("AZURE", value=all_src)
-    snow = st.checkbox("SNOW", value=all_src)
-    ptc = st.checkbox("PTC", value=all_src)
+    with c2:
+        azure = st.checkbox("AZURE", value=all_src)
+        snow = st.checkbox("SNOW", value=all_src)
+        ptc = st.checkbox("PTC", value=all_src)
 
-if all_src:
-    sources = ["AZURE", "SNOW", "PTC"]
-else:
-    sources = []
-    if azure: sources.append("AZURE")
-    if snow: sources.append("SNOW")
-    if ptc: sources.append("PTC")
+    if all_src:
+        sources = ["AZURE", "SNOW", "PTC"]
+    else:
+        sources = []
+        if azure: sources.append("AZURE")
+        if snow: sources.append("SNOW")
+        if ptc: sources.append("PTC")
 
 if not sources:
     st.stop()
 
-st.sidebar.markdown("---")
-
 # ================= FILTER =================
 filtered = df[df["Source"].isin(sources)].copy()
 
-# STATUS
-st.sidebar.markdown("### Status")
-status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
-status = st.sidebar.selectbox("", status_list)
+with st.sidebar.expander("🎯 Filters", expanded=True):
 
-# PRIORITY
-st.sidebar.markdown("### Priority")
+    st.markdown("**Status**")
+    status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
+    status = st.selectbox("", status_list)
 
-def clean_priority(x):
-    m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
-    return m.group(0) if m else str(x)
+    st.markdown("**Priority**")
 
-filtered["Priority"] = filtered["Priority"].apply(clean_priority)
+    def clean_priority(x):
+        m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
+        return m.group(0) if m else str(x)
 
-priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
-priority = st.sidebar.selectbox("", priority_list)
+    filtered["Priority"] = filtered["Priority"].apply(clean_priority)
 
-st.sidebar.markdown("---")
+    priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
+    priority = st.selectbox("", priority_list)
 
 # APPLY FILTER
 if status != "ALL":
@@ -202,26 +166,6 @@ if status != "ALL":
 
 if priority != "ALL":
     filtered = filtered[filtered["Priority"] == priority]
-
-# ================= SEARCH =================
-#if "search_box" not in st.session_state:
-  #  st.session_state.search_box = ""
-
-#col1, col2 = st.columns([10,1])
-#
-#with col1:
-#    keyword = st.text_input(
- #       "🔎 Search",
-  #      key="search_box"
-#    )
-
-#with col2:
-   # if st.button("❌"):
-  #     st.session_state.search_box = ""
-   #     st.session_state.page = 1
-   #     st.rerun()
-
-#filtered = apply_search(filtered, st.session_state.search_box)
 
 # ================= SEARCH =================
 def clear_search():
@@ -234,22 +178,17 @@ if "search_box" not in st.session_state:
 col1, col2 = st.columns([10,1])
 
 with col1:
-    keyword = st.text_input(
-        "🔎 Search",
-        key="search_box"
-    )
+    st.text_input("🔎 Search", key="search_box")
 
 with col2:
     st.button("❌", on_click=clear_search)
 
 filtered = apply_search(filtered, st.session_state["search_box"])
 
-
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
 df_display.insert(0, "SL No", range(1, len(df_display)+1))
 
-# CLEAN TEXT
 def clean(x):
     return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
 
@@ -257,7 +196,6 @@ for col in ["Created By","Assigned To"]:
     if col in df_display:
         df_display[col] = df_display[col].apply(clean)
 
-# DATE FORMAT
 for col in ["Created Date","Resolved Date"]:
     if col in df_display:
         df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%b-%y")
@@ -294,25 +232,15 @@ start = (st.session_state.page - 1) * page_size
 end = start + page_size
 page_df = df_display.iloc[start:end]
 
-# ================= HEADER ROW =================
+# ================= HEADER =================
 colA, colB, colC = st.columns([4,3,3])
 
 with colA:
-    st.markdown(
-        f"<div style='font-size:16px; font-weight:600;'>Results: {total_rows}</div>",
-        unsafe_allow_html=True
-    )
-
+    st.markdown(f"<div style='font-size:16px; font-weight:600;'>Results: {total_rows}</div>", unsafe_allow_html=True)
     vc = filtered["Source"].value_counts()
-    st.caption(
-        f"AZURE: {vc.get('AZURE',0)} | "
-        f"SNOW: {vc.get('SNOW',0)} | "
-        f"PTC: {vc.get('PTC',0)}"
-    )
+    st.caption(f"AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}")
 
 with colB:
-    st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
-
     def to_excel(df):
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
@@ -321,44 +249,37 @@ with colB:
 
     st.download_button("📥 Download Excel", to_excel(filtered), "ops_data.xlsx")
 
-    st.markdown("</div>", unsafe_allow_html=True)
-
 with colC:
     c1, c2, c3 = st.columns([1,2,1])
 
     with c1:
-        if st.button("◀"):
-            if st.session_state.page > 1:
-                st.session_state.page -= 1
-                st.rerun()
+        if st.button("◀") and st.session_state.page > 1:
+            st.session_state.page -= 1
+            st.rerun()
 
     with c2:
-        st.markdown(
-            f"<div style='text-align:center;'>Page {st.session_state.page}/{total_pages}</div>",
-            unsafe_allow_html=True
-        )
+        st.markdown(f"<div style='text-align:center;'>Page {st.session_state.page}/{total_pages}</div>", unsafe_allow_html=True)
 
     with c3:
-        if st.button("▶"):
-            if st.session_state.page < total_pages:
-                st.session_state.page += 1
-                st.rerun()
+        if st.button("▶") and st.session_state.page < total_pages:
+            st.session_state.page += 1
+            st.rerun()
 
 # ================= TABLE =================
 st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
 # ================= KPI =================
-st.sidebar.markdown("### KPI")
+with st.sidebar.expander("📈 KPI", expanded=True):
 
-kpi = calculate_kpi(filtered)
+    kpi = calculate_kpi(filtered)
 
-c1,c2 = st.sidebar.columns(2)
-c1.metric("Total", kpi["total"])
-c2.metric("Open", kpi["open"])
+    c1,c2 = st.columns(2)
+    c1.metric("Total", kpi["total"])
+    c2.metric("Open", kpi["open"])
 
-c3,c4 = st.sidebar.columns(2)
-c3.metric("Closed", kpi["closed"])
-c4.metric("Cancelled", kpi["cancelled"])
+    c3,c4 = st.columns(2)
+    c3.metric("Closed", kpi["closed"])
+    c4.metric("Cancelled", kpi["cancelled"])
 
 # ================= REFRESH =================
 st.caption(f"Last refreshed: {last_refresh}")
