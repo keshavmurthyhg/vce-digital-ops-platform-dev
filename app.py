@@ -251,36 +251,75 @@ filtered = df[df["Source"].isin(sources)].copy()
 #
    # priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
   #  priority = st.selectbox("", priority_list)
-with st.sidebar.expander("🎯 Filters", expanded=True):
 
-    # STATUS (INLINE)
-    col1, col2 = st.columns([1,3])
-    with col1:
+#========== Inline filters ======================
+
+#with st.sidebar.expander("🎯 Filters", expanded=True):
+
+ #   # STATUS (INLINE)
+  #  col1, col2 = st.columns([1,3])
+   # with col1:
         st.markdown("**Status**")
-    with col2:
-        status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
-        status = st.selectbox("", status_list, key="status")
+  #  with col2:
+   #     status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
+   #     status = st.selectbox("", status_list, key="status")
 
     # PRIORITY (INLINE)
-    col1, col2 = st.columns([1,3])
-    with col1:
-        st.markdown("**Priority**")
-    with col2:
-        def clean_priority(x):
-            m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
-            return m.group(0) if m else str(x)
+#    col1, col2 = st.columns([1,3])
+ #   with col1:
+  #      st.markdown("**Priority**")
+  #  with col2:
+     #   def clean_priority(x):
+     #      m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
+      #      return m.group(0) if m else str(x)
 
-        filtered["Priority"] = filtered["Priority"].apply(clean_priority)
+    #    filtered["Priority"] = filtered["Priority"].apply(clean_priority)
 
-        priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
-        priority = st.selectbox("", priority_list, key="priority")
+     #   priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
+     #   priority = st.selectbox("", priority_list, key="priority")
 
-# APPLY FILTER
-if status != "ALL":
-    filtered = filtered[filtered["Status"] == status]
+# ================ APPLY FILTER ==========================
+#if status != "ALL":
+ #   filtered = filtered[filtered["Status"] == status]
 
-if priority != "ALL":
-    filtered = filtered[filtered["Priority"] == priority]
+#if priority != "ALL":
+  #  filtered = filtered[filtered["Priority"] == priority]
+
+# ---------- APPLY FILTERS ----------
+
+if status:
+    filtered = filtered[filtered["Status"].isin(status)]
+
+if priority:
+    filtered = filtered[filtered["Priority"].isin(priority)]
+
+#================= Multi-selection filters ==========================
+with st.sidebar.expander("🎯 Filters", expanded=True):
+
+    # ---------- STATUS (MULTI SELECT) ----------
+    status_options = sorted(filtered["Status"].dropna().unique())
+    status = st.multiselect(
+        "Status",
+        options=status_options,
+        default=[],
+        placeholder="All"
+    )
+
+    # ---------- PRIORITY (MULTI SELECT) ----------
+    def clean_priority(x):
+        m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
+        return m.group(0) if m else str(x)
+
+    filtered["Priority"] = filtered["Priority"].apply(clean_priority)
+
+    priority_options = sorted(filtered["Priority"].dropna().unique())
+    priority = st.multiselect(
+        "Priority",
+        options=priority_options,
+        default=[],
+        placeholder="All"
+    )
+
 
 # ================= SEARCH =================
 def clear_search():
@@ -299,6 +338,21 @@ with col2:
     st.button("❌", on_click=clear_search)
 
 filtered = apply_search(filtered, st.session_state["search_box"])
+
+# ================= COLOR STATUS IN TABLE =================
+
+def color_status(val):
+    val = str(val).lower()
+
+    if "open" in val or "active" in val:
+        return "color:red; font-weight:600;"
+    elif "closed" in val:
+        return "color:green; font-weight:600;"
+    elif "cancel" in val:
+        return "color:gray; font-weight:600;"
+    else:
+        return ""
+
 
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
@@ -381,7 +435,16 @@ with colC:
             st.rerun()
 
 # ================= TABLE =================
-st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+#st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+# =========== COLOR STATUS IN TABLE =============
+
+styled_df = page_df.style.applymap(
+    color_status,
+    subset=["Status"]
+)
+
+st.write(styled_df.to_html(escape=False), unsafe_allow_html=True)
 
 # ================= KPI =================
 with st.sidebar.expander("📈 KPI", expanded=True):
