@@ -350,7 +350,7 @@ if priority is not None and len(priority) > 0:
   #  status = st.multiselect(
   #      "Status",
   #      options=status_options,
-  3      default=[]
+  #      default=[]
   #  )
 
     # ---------- PRIORITY ----------
