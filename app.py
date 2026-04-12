@@ -1,262 +1,176 @@
 import streamlit as st
 import pandas as pd
-import re
-import io
-
-from modules.data_loader import load_data
-from modules.search import apply_search
-from modules.kpi import calculate_kpi
 
 st.set_page_config(layout="wide")
 
-# ================= CSS =================
-st.markdown("""
-<style>
-.block-container {padding-top: 1rem;}
+# -------------------------------
+# LOAD DATA
+# -------------------------------
+@st.cache_data
+def load_data():
+    df = pd.read_csv("data.csv")  # change if needed
+    return df
 
-html, body, [class*="css"] {
-    font-size: 13px !important;
-}
+df = load_data()
 
-/* KPI */
-[data-testid="stMetricValue"] {
-    font-size:14px !important;
-}
+# -------------------------------
+# BUILD LINK
+# -------------------------------
+def build_link(row):
+    num = str(row.get("Number", ""))
+    src = row.get("Source", "")
 
-/* TABLE */
-table {
-    border-collapse: collapse;
-    width: 100%;
-}
+    if src == "SNOW":
+        return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
+    elif src == "PTC":
+        return f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
+    elif src == "AZURE":
+        return f"https://dev.azure.com/.../{num}"
+    return ""
 
-th {
-    text-align: center !important;
-    background-color: #f5f5f5;
-    font-weight: 600;
-}
+df["Open"] = df.apply(lambda x: f'<a href="{build_link(x)}" target="_blank">Open</a>', axis=1)
 
-td {
-    text-align: left;
-    padding: 6px;
-}
+# -------------------------------
+# SIDEBAR
+# -------------------------------
+st.sidebar.title("Menu")
+st.sidebar.selectbox("Search Tool", ["Search Tool"])
 
-tr:hover {
-    background-color: #f9f9f9;
-}
+sources = st.sidebar.multiselect(
+    "Source",
+    ["AZURE", "SNOW", "PTC"],
+    default=["AZURE", "SNOW", "PTC"]
+)
 
-/* FIX COLUMN WIDTH */
-td:nth-child(3), th:nth-child(3) {
-    max-width: 400px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+status = st.sidebar.selectbox("Status", ["ALL"] + sorted(df["Status"].dropna().unique()))
+priority = st.sidebar.selectbox("Priority", ["ALL"] + sorted(df["Priority"].dropna().unique()))
 
-/* LINKS */
-a {
-    text-decoration: none;
-    color: #1f77b4;
-    font-weight: 500;
-}
-</style>
-""", unsafe_allow_html=True)
+# -------------------------------
+# SEARCH + CLEAR
+# -------------------------------
+if "search_box" not in st.session_state:
+    st.session_state.search_box = ""
 
-# ================= TITLE =================
-st.title("Ops Insight Dashboard")
-
-# ================= LOAD =================
-df, last_refresh = load_data()
-
-# ================= SIDEBAR =================
-st.sidebar.markdown("## Menu")
-st.sidebar.selectbox("", ["Search Tool"])
-
-st.sidebar.markdown("---")
-
-# ================= SOURCE =================
-st.sidebar.markdown("### Source")
-
-c1, c2 = st.sidebar.columns(2)
-
-with c1:
-    all_src = st.checkbox("ALL", value=True)
-
-with c2:
-    azure = st.checkbox("AZURE", value=all_src)
-    snow = st.checkbox("SNOW", value=all_src)
-    ptc = st.checkbox("PTC", value=all_src)
-
-if all_src:
-    sources = ["AZURE", "SNOW", "PTC"]
-else:
-    sources = []
-    if azure: sources.append("AZURE")
-    if snow: sources.append("SNOW")
-    if ptc: sources.append("PTC")
-
-if not sources:
-    st.stop()
-
-st.sidebar.markdown("---")
-
-# ================= FILTER =================
-filtered = df[df["Source"].isin(sources)].copy()
-
-# STATUS
-st.sidebar.markdown("### Status")
-status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
-status = st.sidebar.selectbox("", status_list)
-
-# PRIORITY
-st.sidebar.markdown("### Priority")
-
-def clean_priority(x):
-    m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
-    return m.group(0) if m else str(x)
-
-filtered["Priority"] = filtered["Priority"].apply(clean_priority)
-
-priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
-priority = st.sidebar.selectbox("", priority_list)
-
-st.sidebar.markdown("---")
-
-# APPLY FILTER
-if status != "ALL":
-    filtered = filtered[filtered["Status"] == status]
-
-if priority != "ALL":
-    filtered = filtered[filtered["Priority"] == priority]
-
-# ================= SEARCH =================
-# Initialize session state
-if "search" not in st.session_state:
-    st.session_state.search = ""
-
-col1, col2 = st.columns([10, 1])
+col1, col2 = st.columns([20, 1])
 
 with col1:
     search = st.text_input(
         "🔎 Search",
-        value=st.session_state.search,
         key="search_box",
         placeholder="Type keyword..."
     )
 
 with col2:
     if st.button("❌"):
-        st.session_state.search = ""
         st.session_state.search_box = ""
         st.rerun()
 
-#filtered = apply_search(filtered, keyword)
+# -------------------------------
+# FILTERING
+# -------------------------------
+filtered = df.copy()
 
-# ================= DATA =================
-df_display = filtered.copy().reset_index(drop=True)
-df_display.insert(0, "SL No", range(1, len(df_display)+1))
+if sources:
+    filtered = filtered[filtered["Source"].isin(sources)]
 
-# CLEAN TEXT
-def clean(x):
-    return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
+if status != "ALL":
+    filtered = filtered[filtered["Status"] == status]
 
-for col in ["Created By","Assigned To"]:
-    if col in df_display:
-        df_display[col] = df_display[col].apply(clean)
+if priority != "ALL":
+    filtered = filtered[filtered["Priority"] == priority]
 
-# DATE FORMAT
-for col in ["Created Date","Resolved Date"]:
-    if col in df_display:
-        df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%b-%y")
+if search:
+    filtered = filtered[
+        filtered.astype(str).apply(lambda x: x.str.contains(search, case=False)).any(axis=1)
+    ]
 
-df_display = df_display.fillna("")
+# -------------------------------
+# COUNTS
+# -------------------------------
+total = len(filtered)
+azure_count = len(filtered[filtered["Source"] == "AZURE"])
+snow_count = len(filtered[filtered["Source"] == "SNOW"])
+ptc_count = len(filtered[filtered["Source"] == "PTC"])
 
-# ================= LINK =================
-def make_link(row):
-    num = str(row["Number"])
-    src = row["Source"]
-
-    if src == "SNOW":
-        url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
-    elif src == "PTC":
-        url = f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
-    elif src == "AZURE":
-        url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
-    else:
-        url = ""
-
-    return f'<a href="{url}" target="_blank">Open</a>' if url else ""
-
-df_display["Open"] = df_display.apply(make_link, axis=1)
-
-# ================= PAGINATION =================
+# -------------------------------
+# PAGINATION
+# -------------------------------
+page_size = 10
 if "page" not in st.session_state:
     st.session_state.page = 1
 
-page_size = 10
-total_rows = len(df_display)
-total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
+total_pages = max(1, (total - 1) // page_size + 1)
 
 start = (st.session_state.page - 1) * page_size
 end = start + page_size
-page_df = df_display.iloc[start:end]
+page_df = filtered.iloc[start:end]
 
-# ================= HEADER + PAGINATION =================
-colA, colB, colC = st.columns([4,4,3])
+# -------------------------------
+# HEADER ROW (RESULT + DOWNLOAD + PAGINATION)
+# -------------------------------
+col1, col2, col3 = st.columns([4, 2, 3])
 
-with colA:
-    st.markdown(f"### Results: {total_rows}")
-
-with colB:
-    vc = filtered["Source"].value_counts()
-    st.caption(
-        f"AZURE: {vc.get('AZURE',0)} | "
-        f"SNOW: {vc.get('SNOW',0)} | "
-        f"PTC: {vc.get('PTC',0)}"
+with col1:
+    st.markdown(
+        f"<h5 style='margin-bottom:0;'>Results: {total}</h5>",
+        unsafe_allow_html=True
     )
+    st.caption(f"AZURE: {azure_count} | SNOW: {snow_count} | PTC: {ptc_count}")
 
-with colC:
-    c1, c2, c3 = st.columns([1,2,1])
+with col2:
+    st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
+    st.download_button(
+        "📥 Download Excel",
+        data=filtered.to_csv(index=False),
+        file_name="ops_data.csv"
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    with c1:
-        if st.button("◀"):
-            if st.session_state.page > 1:
-                st.session_state.page -= 1
+with col3:
+    col_prev, col_page, col_next = st.columns([1, 2, 1])
 
-    with c2:
-        st.markdown(
-            f"<center>Page {st.session_state.page}/{total_pages}</center>",
-            unsafe_allow_html=True
-        )
+    with col_prev:
+        if st.button("◀") and st.session_state.page > 1:
+            st.session_state.page -= 1
+            st.rerun()
 
-    with c3:
-        if st.button("▶"):
-            if st.session_state.page < total_pages:
-                st.session_state.page += 1
+    with col_page:
+        st.markdown(f"<div style='text-align:center;'>Page {st.session_state.page}/{total_pages}</div>", unsafe_allow_html=True)
 
-# ================= DOWNLOAD =================
-def to_excel(df):
-    buffer = io.BytesIO()
-    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-        df.to_excel(writer, index=False)
-    return buffer.getvalue()
+    with col_next:
+        if st.button("▶") and st.session_state.page < total_pages:
+            st.session_state.page += 1
+            st.rerun()
 
-st.download_button("📥 Download Excel", to_excel(filtered), "ops_data.xlsx")
+# -------------------------------
+# TABLE STYLING
+# -------------------------------
+def style_table(df):
+    return df.style.set_table_styles([
+        {"selector": "th", "props": [("text-align", "center"), ("font-size", "12px")]},
+        {"selector": "td", "props": [("font-size", "12px")]},
+    ]).set_properties(subset=["Description"], **{
+        "width": "400px",
+        "white-space": "nowrap",
+        "overflow": "hidden",
+        "text-overflow": "ellipsis"
+    })
 
-# ================= TABLE =================
-st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+# Auto fit other columns
+st.markdown("""
+<style>
+td {
+    white-space: nowrap !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
-# ================= KPI =================
-st.sidebar.markdown("### KPI")
+# -------------------------------
+# DISPLAY TABLE
+# -------------------------------
+st.write(style_table(page_df).to_html(escape=False), unsafe_allow_html=True)
 
-kpi = calculate_kpi(filtered)
-
-c1,c2 = st.sidebar.columns(2)
-c1.metric("Total", kpi["total"])
-c2.metric("Open", kpi["open"])
-
-c3,c4 = st.sidebar.columns(2)
-c3.metric("Closed", kpi["closed"])
-c4.metric("Cancelled", kpi["cancelled"])
-
-# ================= REFRESH =================
-st.caption(f"Last refreshed: {last_refresh}")
+# -------------------------------
+# FOOTER
+# -------------------------------
+st.caption("Last refreshed: Just now")
