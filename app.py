@@ -103,6 +103,41 @@ button {
     font-size: 13px !important;
 }
 
+/* ===== FIX FILTER GAP (TARGETED) ===== */
+
+/* Reduce expander content padding */
+section[data-testid="stSidebar"] div[role="region"] {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+}
+
+/* Reduce spacing between elements inside expander */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
+    margin-bottom: 2px !important;
+    padding-bottom: 0px !important;
+}
+
+/* Tighten markdown labels like Status / Priority */
+section[data-testid="stSidebar"] .stMarkdown p {
+    margin-bottom: 2px !important;
+}
+
+/* Reduce selectbox spacing */
+section[data-testid="stSidebar"] .stSelectbox {
+    margin-bottom: 2px !important;
+}
+
+/* Reduce internal selectbox padding */
+section[data-testid="stSidebar"] div[data-baseweb="select"] {
+    margin-top: 0px !important;
+    margin-bottom: 2px !important;
+}
+
+/* Reduce gap between label and dropdown */
+section[data-testid="stSidebar"] label {
+    margin-bottom: 0px !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
