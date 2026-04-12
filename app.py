@@ -13,69 +13,54 @@ st.set_page_config(layout="wide")
 st.markdown("""
 <style>
 
-/* ===== REMOVE TOP EMPTY SPACE (Menu gap) ===== */
+/* ===== FIX TOP GAP (Menu → dropdown) ===== */
 section[data-testid="stSidebar"] > div:first-child {
-    padding-top: 0.5rem !important;
+    padding-top: 0.8rem !important;
 }
 
-/* ===== REMOVE EXTRA BLOCK SPACING ===== */
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] {
-    gap: 0rem !important;
-}
-
-/* ===== REMOVE EMPTY DIV HEIGHT ===== */
-section[data-testid="stSidebar"] div:empty {
-    display: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    height: 0 !important;
-}
-
-/* ===== TIGHTEN EACH ELEMENT ===== */
+/* ===== REMOVE EXTRA SPACE BETWEEN ELEMENTS ===== */
 section[data-testid="stSidebar"] .element-container {
-    margin-bottom: 2px !important;
-    padding: 0 !important;
+    margin-bottom: 6px !important;
 }
 
-/* ===== CHECKBOX GROUP FIX ===== */
+/* ===== FIX CHECKBOX GROUP SPACING ===== */
 section[data-testid="stSidebar"] .stCheckbox {
-    margin: 0px !important;
-    padding: 0px !important;
+    margin-bottom: -4px !important;
 }
 
-/* Reduce gap between checkbox items */
+/* Reduce gap inside checkbox rows */
 section[data-testid="stSidebar"] .stCheckbox > label {
+    padding: 0px !important;
     margin: 0px !important;
-    padding: 2px 0px !important;
-    font-size: 13px !important;
 }
 
-/* ===== SELECTBOX FIX ===== */
-section[data-testid="stSidebar"] .stSelectbox {
-    margin-top: 2px !important;
-    margin-bottom: 4px !important;
-}
-
-/* ===== HEADINGS (Source, Status, Priority) ===== */
+/* ===== SECTION HEADINGS (Source, Status, Priority) ===== */
 section[data-testid="stSidebar"] .stMarkdown {
-    margin-top: 6px !important;
-    margin-bottom: 2px !important;
+    margin-top: 10px !important;
+    margin-bottom: 4px !important;
     font-weight: 600;
 }
 
-/* ===== REMOVE EXTRA HR SPACE ===== */
+/* ===== SELECTBOX SPACING ===== */
+section[data-testid="stSidebar"] .stSelectbox {
+    margin-top: 0px !important;
+    margin-bottom: 8px !important;
+}
+
+/* ===== HR LINE (divider) ===== */
 section[data-testid="stSidebar"] hr {
-    margin: 4px 0 !important;
+    margin: 8px 0 !important;
 }
 
-/* ===== REMOVE RANDOM BIG GAPS (KEY FIX) ===== */
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
-    margin-bottom: 2px !important;
-}
-
-/* ===== KPI SECTION TIGHT ===== */
+/* ===== KPI SECTION ===== */
 section[data-testid="stSidebar"] [data-testid="stMetric"] {
-    margin-bottom: 2px !important;
+    margin-bottom: 6px !important;
+}
+
+/* ===== REMOVE RANDOM EXTRA HEIGHT (SAFE VERSION) ===== */
+section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
 }
 
 </style>
