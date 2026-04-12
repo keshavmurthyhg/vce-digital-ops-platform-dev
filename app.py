@@ -233,7 +233,7 @@ with st.sidebar.expander("📂 Source", expanded=True):
     if not sources:
         st.stop()
 # ================= FILTER =================
-#filtered = df[df["Source"].isin(sources)].copy()
+filtered = df[df["Source"].isin(sources)].copy()
 
 #with st.sidebar.expander("🎯 Filters", expanded=True):
 
