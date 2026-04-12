@@ -169,16 +169,6 @@ st.download_button(
     file_name="ops_data.xlsx"
 )
 
-# ================= Result Count =================
-st.markdown(f"### Results: {len(filtered)}")
-
-c = filtered["Source"].value_counts()
-st.caption(
-    f"AZURE: {c.get('AZURE',0)} | "
-    f"SNOW: {c.get('SNOW',0)} | "
-    f"PTC: {c.get('PTC',0)}"
-)
-
 # ================= AG GRID =================
 from st_aggrid import AgGrid, GridOptionsBuilder
 
