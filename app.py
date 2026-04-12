@@ -219,50 +219,7 @@ st.download_button(
     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 )
 
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
-# ================= AG GRID =================
-gb = GridOptionsBuilder.from_dataframe(page_df)
-
-# Enable features
-gb.configure_default_column(
-    sortable=True,
-    filter=True,
-    resizable=True,
-    wrapText=False,
-    autoHeight=False
-)
-
-# Fix Description column (no wrap + wider)
-gb.configure_column(
-    "Description",
-    width=400,
-    wrapText=False
-)
-
-# Hide URL if exists
-if "URL" in page_df.columns:
-    gb.configure_column("URL", hide=True)
-
-# Enable pagination
-gb.configure_pagination(
-    paginationAutoPageSize=False,
-    paginationPageSize=10
-)
-
-# Enable selection (optional)
-gb.configure_selection("single")
-
-grid_options = gb.build()
-
-AgGrid(
-    page_df,
-    gridOptions=grid_options,
-    update_mode=GridUpdateMode.SELECTION_CHANGED,
-    fit_columns_on_grid_load=False,
-    enable_enterprise_modules=True,
-    height=450,
-)
 
 # ================= DISPLAY =================
 st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
