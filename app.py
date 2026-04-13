@@ -12,67 +12,43 @@ st.set_page_config(layout="wide")
 # ================= CSS =================
 st.markdown("""
 <style>
+table { width:100%; border-collapse: collapse; }
+th { text-align:center !important; padding:6px !important; background:#f5f5f5; }
+td { padding:6px !important; white-space:nowrap !important; font-size:13px; }
 
-/* ===== GLOBAL ===== */
-.block-container {
-    padding-top: 1rem !important;
-}
-
-/* ===== TABLE ===== */
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-/* HEADER */
-th {
-    text-align: center !important;
-    padding: 6px !important;
-    font-size: 13px;
-    background-color: #f5f5f5;
-}
-
-/* CELLS */
-td {
-    padding: 6px !important;
-    font-size: 13px;
-    white-space: nowrap !important;   /* NO WRAP */
-}
-
-/* DESCRIPTION COLUMN */
+/* Description truncate */
 td:nth-child(3), th:nth-child(3) {
     max-width: 400px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* PRIORITY COLUMN */
+/* Priority width */
 td:nth-child(4), th:nth-child(4) {
-    width: 130px;
+    width:130px;
 }
 
-/* DATE COLUMNS */
+/* Date columns */
 td:nth-child(7), th:nth-child(7),
 td:nth-child(9), th:nth-child(9) {
-    min-width: 100px;
+    min-width:100px;
 }
 
-/* KPI FONT */
+/* KPI font */
 [data-testid="stMetricValue"] {
-    font-size: 13px !important;
+    font-size:13px !important;
 }
 
-/* STATUS COLORS */
-.status-open { color: red; font-weight: 600; }
-.status-closed { color: green; font-weight: 600; }
-.status-cancel { color: gray; font-weight: 600; }
-
-/* COMPACT DROPDOWNS */
+/* Compact dropdown */
 div[data-baseweb="select"] {
-    min-width: 80px !important;
-    max-width: 100px !important;
+    min-width:80px !important;
+    max-width:100px !important;
 }
 
+/* Status colors */
+.status-open {color:red;font-weight:600;}
+.status-closed {color:green;font-weight:600;}
+.status-cancel {color:gray;font-weight:600;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,15 +58,12 @@ st.title("Ops Insight Dashboard")
 # ================= LOAD =================
 df, last_refresh = load_data()
 
-# ================= PRIORITY FIX (ONLY PTC) =================
+# ================= PRIORITY FIX =================
 def clean_priority(row):
-    val = str(row["Priority"])
-    src = row["Source"]
-
-    if src == "PTC":
-        m = re.search(r"Severity\s*([1-3])", val)
+    if row["Source"] == "PTC":
+        m = re.search(r"Severity\s*([1-3])", str(row["Priority"]))
         return f"Severity {m.group(1)}" if m else ""
-    return val
+    return row["Priority"]
 
 df["Priority"] = df.apply(clean_priority, axis=1)
 
@@ -100,18 +73,14 @@ st.sidebar.selectbox("", ["Search Tool"])
 
 # SOURCE
 with st.sidebar.expander("📂 Source", True):
-
     cols = st.columns(2)
-
     all_src = cols[0].checkbox("ALL", True)
     azure = cols[1].checkbox("AZURE", all_src)
     snow = cols[0].checkbox("SNOW", all_src)
     ptc = cols[1].checkbox("PTC", all_src)
 
-    sources = []
-    if all_src:
-        sources = ["AZURE", "SNOW", "PTC"]
-    else:
+    sources = ["AZURE","SNOW","PTC"] if all_src else []
+    if not all_src:
         if azure: sources.append("AZURE")
         if snow: sources.append("SNOW")
         if ptc: sources.append("PTC")
@@ -122,68 +91,36 @@ with st.sidebar.expander("📂 Source", True):
 # ================= BASE FILTER =================
 filtered = df[df["Source"].isin(sources)].copy()
 
-# ================= FILTERS =================
+# ================= FILTER =================
 with st.sidebar.expander("🎯 Filters", True):
+    status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
+    priority = st.multiselect("Priority", sorted(filtered["Priority"].dropna().unique()))
 
-    status = st.multiselect(
-        "Status",
-        sorted(filtered["Status"].dropna().unique())
-    )
-
-    priority = st.multiselect(
-        "Priority",
-        sorted(filtered["Priority"].dropna().unique())
-    )
-
-# APPLY FILTER
 if status:
     filtered = filtered[filtered["Status"].isin(status)]
-
 if priority:
     filtered = filtered[filtered["Priority"].isin(priority)]
 
 # ================= SEARCH =================
-#def clear_search():
- #   st.session_state.search_box = ""
-#    st.session_state.page = 1
-
-#if "search_box" not in st.session_state:
- #   st.session_state.search_box = ""
-
-#col1, col2 = st.columns([10,1])
-
-#with col1:
- #   st.text_input("🔎 Search", key="search_box")
-
-#with col2:
- #   st.button("❌", on_click=clear_search)
-
-#filtered = apply_search(filtered, st.session_state.search_box)
-
-# ================= SEARCH =================
 def clear_search():
     st.session_state.search_box = ""
-    st.rerun()
 
 if "search_box" not in st.session_state:
     st.session_state.search_box = ""
 
 col1, col2 = st.columns([20,1])
-
 with col1:
     st.text_input("🔎 Search", key="search_box", label_visibility="collapsed")
-
 with col2:
-    st.markdown("<div style='margin-top:2px'></div>", unsafe_allow_html=True)
     st.button("❌", on_click=clear_search)
+
+filtered = apply_search(filtered, st.session_state.search_box)
 
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
-
-# SL NO COLUMN
 df_display.insert(0, "SL No", range(1, len(df_display)+1))
 
-# CLEAN TEXT
+# Clean text
 def clean(x):
     return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
 
@@ -191,150 +128,48 @@ for col in ["Created By","Assigned To"]:
     if col in df_display:
         df_display[col] = df_display[col].apply(clean)
 
-# DATE FORMAT (NO WRAP)
+# Date format
 for col in ["Created Date","Resolved Date"]:
     if col in df_display:
         df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%b-%Y")
 
-# TRUNCATE DESCRIPTION
-def truncate_text(x, length=80):
-    x = str(x)
-    return x[:length] + "..." if len(x) > length else x
+# Truncate description
+df_display["Description"] = df_display["Description"].apply(
+    lambda x: x[:80] + "..." if len(str(x)) > 80 else x
+)
 
-df_display["Description"] = df_display["Description"].apply(truncate_text)
-
-df_display = df_display.fillna("")
-
-# STATUS COLOR
-def format_status(val):
-    v = str(val).lower()
-    if "open" in v or "active" in v:
-        return f'<span class="status-open">{val}</span>'
-    elif "closed" in v:
-        return f'<span class="status-closed">{val}</span>'
-    elif "cancel" in v:
-        return f'<span class="status-cancel">{val}</span>'
-    return val
+# Status color
+def format_status(v):
+    v2 = str(v).lower()
+    if "open" in v2 or "active" in v2:
+        return f'<span class="status-open">{v}</span>'
+    if "closed" in v2:
+        return f'<span class="status-closed">{v}</span>'
+    if "cancel" in v2:
+        return f'<span class="status-cancel">{v}</span>'
+    return v
 
 df_display["Status"] = df_display["Status"].apply(format_status)
 
-# LINK
-def make_link(row):
-    num = str(row["Number"])
-    src = row["Source"]
+# ================= TOTAL ROWS (FIXED POSITION) =================
+total_rows = len(df_display)
 
-    if src == "SNOW":
-        url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
-    elif src == "PTC":
-        url = f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
-    elif src == "AZURE":
-        url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
-    else:
-        url = ""
-
-    return f'<a href="{url}" target="_blank">Open</a>' if url else ""
-
-df_display["Open"] = df_display.apply(make_link, axis=1)
-
-# ================= PAGINATION =================
-#if "page" not in st.session_state:
- #   st.session_state.page = 1
-
-#page_size = 10
-#total_rows = len(df_display)
-#total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
-
-#start = (st.session_state.page - 1) * page_size
-#end = start + page_size
-#page_df = df_display.iloc[start:end]
-
-# ================= PAGINATION (NEW) =================
-
-#col1, col2, col3 = st.columns([2,2,6])
-
-#with col1:
- #   page_size = st.selectbox(
-   #     "Rows",
-    #    [10, 20, 50, 100],
-    #    index=0
-   # )
-
-#total_rows = len(df_display)
-#total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
-
-#with col2:
- #   page = st.selectbox(
-  #      "Page",
- #       list(range(1, total_pages + 1))
-#    )
-
-#start = (page - 1) * page_size
-#end = start + page_size
-
-#page_df = df_display.iloc[start:end]
-
-# ================= HEADER =================
-#colA, colB, colC = st.columns([4,3,3])
-
-#with colA:
- #   st.markdown(f"**Results: {total_rows}**")
-  #  vc = filtered["Source"].value_counts()
-#    st.caption(f"AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}")
-
-#with colB:
-#    def to_excel(df):
- #       buffer = io.BytesIO()
-  #      with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-   #         df.to_excel(writer, index=False)
-   #     return buffer.getvalue()
-
-#    st.download_button("📥 Download Excel", to_excel(filtered), "ops_data.xlsx")
-
-#with colC:
- #   c1, c2, c3 = st.columns([1,2,1])
-
-  #  if c1.button("◀") and st.session_state.page > 1:
-  #      st.session_state.page -= 1
-  #      st.rerun()
-
-   # c2.markdown(f"<div style='text-align:center;'>Page {st.session_state.page}/{total_pages}</div>", unsafe_allow_html=True)
-
-  #  if c3.button("▶") and st.session_state.page < total_pages:
-    #    st.session_state.page += 1
-     #   st.rerun()
-
-# ================= HEADER =================
-# ================= PAGINATION (FIXED) =================
-
+# ================= HEADER + PAGINATION =================
 colA, colB, colC, colD = st.columns([3,2,2,3])
 
-# RESULTS
 with colA:
     st.markdown(f"**Results: {total_rows}**")
     vc = filtered["Source"].value_counts()
     st.caption(f"AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}")
 
-# ROWS (ADD KEY)
 with colB:
-    page_size = st.selectbox(
-        "Rows",
-        [10, 20, 50, 100],
-        index=0,
-        key="page_size"
-    )
+    page_size = st.selectbox("", [10,20,50,100], key="page_size")
 
-# PAGE (ADD KEY)
 total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
 
 with colC:
-    page = st.selectbox(
-        "Page",
-        list(range(1, total_pages + 1)),
-        index=0,
-        key="page_number"
-    )
+    page = st.selectbox("", list(range(1,total_pages+1)), key="page_number")
 
-# DOWNLOAD
 with colD:
     def to_excel(df):
         buffer = io.BytesIO()
@@ -344,25 +179,16 @@ with colD:
 
     st.download_button("📥 Download Excel", to_excel(filtered), "ops_data.xlsx")
 
-# APPLY PAGINATION
-start = (page - 1) * page_size
+# ================= PAGINATION =================
+start = (page-1)*page_size
 end = start + page_size
 page_df = df_display.iloc[start:end]
-
-#=========== Prevents reset when filters change ===========
-#page = st.selectbox(
- #   "Page",
-  #  list(range(1, total_pages + 1)),
-   # index=min(st.session_state.get("page_number", 1)-1, total_pages-1),
-   # key="page_number"
-#)
 
 # ================= TABLE =================
 st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
 # ================= KPI =================
 with st.sidebar.expander("📈 KPI", True):
-
     kpi = calculate_kpi(filtered)
 
     c1,c2 = st.columns(2)
