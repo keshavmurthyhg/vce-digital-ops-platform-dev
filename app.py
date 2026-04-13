@@ -18,7 +18,7 @@ td { padding:6px !important; font-size:13px; white-space:nowrap !important; }
 
 /* Description truncate */
 td:nth-child(3), th:nth-child(3) {
-    max-width: 400px;
+    max-width: 300px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
