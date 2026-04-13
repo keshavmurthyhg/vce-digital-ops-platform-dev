@@ -214,15 +214,40 @@ def make_link(row):
 df_display["Open"] = df_display.apply(make_link, axis=1)
 
 # ================= PAGINATION =================
-if "page" not in st.session_state:
-    st.session_state.page = 1
+#if "page" not in st.session_state:
+ #   st.session_state.page = 1
 
-page_size = 10
+#page_size = 10
+#total_rows = len(df_display)
+#total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
+
+#start = (st.session_state.page - 1) * page_size
+#end = start + page_size
+#page_df = df_display.iloc[start:end]
+
+# ================= PAGINATION (NEW) =================
+
+col1, col2, col3 = st.columns([2,2,6])
+
+with col1:
+    page_size = st.selectbox(
+        "Rows",
+        [10, 20, 50, 100],
+        index=0
+    )
+
 total_rows = len(df_display)
 total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
 
-start = (st.session_state.page - 1) * page_size
+with col2:
+    page = st.selectbox(
+        "Page",
+        list(range(1, total_pages + 1))
+    )
+
+start = (page - 1) * page_size
 end = start + page_size
+
 page_df = df_display.iloc[start:end]
 
 # ================= HEADER =================
@@ -242,18 +267,18 @@ with colB:
 
     st.download_button("📥 Download Excel", to_excel(filtered), "ops_data.xlsx")
 
-with colC:
-    c1, c2, c3 = st.columns([1,2,1])
+#with colC:
+ #   c1, c2, c3 = st.columns([1,2,1])
 
-    if c1.button("◀") and st.session_state.page > 1:
-        st.session_state.page -= 1
-        st.rerun()
+  #  if c1.button("◀") and st.session_state.page > 1:
+  #      st.session_state.page -= 1
+  #      st.rerun()
 
-    c2.markdown(f"<div style='text-align:center;'>Page {st.session_state.page}/{total_pages}</div>", unsafe_allow_html=True)
+   # c2.markdown(f"<div style='text-align:center;'>Page {st.session_state.page}/{total_pages}</div>", unsafe_allow_html=True)
 
-    if c3.button("▶") and st.session_state.page < total_pages:
-        st.session_state.page += 1
-        st.rerun()
+  #  if c3.button("▶") and st.session_state.page < total_pages:
+    #    st.session_state.page += 1
+     #   st.rerun()
 
 # ================= TABLE =================
 st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
