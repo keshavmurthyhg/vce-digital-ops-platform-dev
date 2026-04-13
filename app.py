@@ -13,170 +13,59 @@ st.set_page_config(layout="wide")
 st.markdown("""
 <style>
 
-/* ================= GLOBAL ================= */
+/* ===== GLOBAL ===== */
 .block-container {
     padding-top: 1rem !important;
-    padding-bottom: 1rem !important;
 }
 
-html, body, [class*="css"] {
-    font-size: 13px !important;
-}
-
-/* ================= TABLE ================= */
+/* ===== TABLE ===== */
 table {
-    border-collapse: collapse;
     width: 100%;
+    border-collapse: collapse;
 }
 
+/* HEADER */
 th {
     text-align: center !important;
+    padding: 6px !important;
+    font-size: 13px;
     background-color: #f5f5f5;
-    font-weight: 600;
-    padding: 6px !important;
 }
 
+/* CELLS */
 td {
-    text-align: left;
     padding: 6px !important;
-    white-space: nowrap;
+    font-size: 13px;
+    white-space: nowrap !important;   /* NO WRAP */
 }
 
-tr:hover {
-    background-color: #f9f9f9;
-}
-
+/* DESCRIPTION COLUMN */
 td:nth-child(3), th:nth-child(3) {
-    max-width: 420px;
-    white-space: nowrap;
+    max-width: 400px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-td:not(:nth-child(3)), th:not(:nth-child(3)) {
-    width: 1%;
+/* PRIORITY COLUMN */
+td:nth-child(4), th:nth-child(4) {
+    width: 130px;
 }
 
-a {
-    text-decoration: none;
-    color: #1f77b4;
-    font-weight: 500;
+/* DATE COLUMNS */
+td:nth-child(7), th:nth-child(7),
+td:nth-child(9), th:nth-child(9) {
+    min-width: 100px;
 }
 
-/* ================= STICKY SIDEBAR ================= */
-section[data-testid="stSidebar"] {
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    overflow-y: auto;
-}
-
-/* ================= CLEAN SPACING ================= */
-section[data-testid="stSidebar"] .stMarkdown {
-    margin-bottom: 4px !important;
-}
-
-section[data-testid="stSidebar"] label {
-    font-size: 13px !important;
-    margin-bottom: 2px !important;
-}
-
-section[data-testid="stSidebar"] .stCheckbox {
-    margin-bottom: 2px !important;
-}
-
-section[data-testid="stSidebar"] .stSelectbox {
-    margin-bottom: 4px !important;
-}
-
-section[data-testid="stSidebar"] hr {
-    margin: 6px 0 !important;
-}
-
-/* ================= SEARCH ================= */
-input {
-    padding: 6px !important;
-}
-
-button {
-    padding: 4px 10px !important;
+/* KPI FONT */
+[data-testid="stMetricValue"] {
     font-size: 13px !important;
 }
 
-/* ===== FIX FILTER GAP (TARGETED) ===== */
-
-/* Reduce expander content padding */
-section[data-testid="stSidebar"] div[role="region"] {
-    padding-top: 4px !important;
-    padding-bottom: 4px !important;
-}
-
-/* Reduce spacing between elements inside expander */
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
-    margin-bottom: 2px !important;
-    padding-bottom: 0px !important;
-}
-
-/* Tighten markdown labels like Status / Priority */
-section[data-testid="stSidebar"] .stMarkdown p {
-    margin-bottom: 2px !important;
-}
-
-/* Reduce selectbox spacing */
-section[data-testid="stSidebar"] .stSelectbox {
-    margin-bottom: 2px !important;
-}
-
-/* Reduce internal selectbox padding */
-section[data-testid="stSidebar"] div[data-baseweb="select"] {
-    margin-top: 0px !important;
-    margin-bottom: 2px !important;
-}
-
-/* Reduce gap between label and dropdown */
-section[data-testid="stSidebar"] label {
-    margin-bottom: 0px !important;
-}
-
-/* ===== ULTRA COMPACT SIDEBAR ===== */
-
-/* Remove almost all vertical spacing */
-section[data-testid="stSidebar"] div[data-testid="stVerticalBlock"] > div {
-    margin-bottom: 1px !important;
-    padding-bottom: 0px !important;
-}
-
-/* Inline label + dropdown */
-.inline-filter {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-bottom: 2px;
-}
-
-/* Label styling */
-.inline-filter label {
-    min-width: 55px;
-    font-size: 12px !important;
-    font-weight: 500;
-    margin: 0 !important;
-}
-
-/* Dropdown tight */
-section[data-testid="stSidebar"] div[data-baseweb="select"] {
-    margin: 0 !important;
-}
-
-/* Expander tighter */
-section[data-testid="stSidebar"] div[role="region"] {
-    padding-top: 2px !important;
-    padding-bottom: 2px !important;
-}
-
-/* Checkbox tighter */
-section[data-testid="stSidebar"] .stCheckbox {
-    margin-bottom: 1px !important;
-}
+/* STATUS COLORS */
+.status-open { color: red; font-weight: 600; }
+.status-closed { color: green; font-weight: 600; }
+.status-cancel { color: gray; font-weight: 600; }
 
 </style>
 """, unsafe_allow_html=True)
@@ -187,108 +76,73 @@ st.title("Ops Insight Dashboard")
 # ================= LOAD =================
 df, last_refresh = load_data()
 
+# ================= PRIORITY FIX (ONLY PTC) =================
+def clean_priority(row):
+    val = str(row["Priority"])
+    src = row["Source"]
+
+    if src == "PTC":
+        m = re.search(r"Severity\s*([1-3])", val)
+        return f"Severity {m.group(1)}" if m else ""
+    return val
+
+df["Priority"] = df.apply(clean_priority, axis=1)
+
 # ================= SIDEBAR =================
 st.sidebar.markdown("## 📊 Menu")
 st.sidebar.selectbox("", ["Search Tool"])
 
-# ================= SOURCE =================
-#with st.sidebar.expander("📂 Source", expanded=True):
-
- #   c1, c2 = st.columns(2)
-
-   # with c1:
-   #     all_src = st.checkbox("ALL", value=True)
-
-   # with c2:
-    #    azure = st.checkbox("AZURE", value=all_src)
-    #    snow = st.checkbox("SNOW", value=all_src)
-     #   ptc = st.checkbox("PTC", value=all_src)
-
-   # if all_src:
-    #    sources = ["AZURE", "SNOW", "PTC"]
-  #  else:
-    #    sources = []
-    #    if azure: sources.append("AZURE")
-    #    if snow: sources.append("SNOW")
-    #    if ptc: sources.append("PTC")
-
-with st.sidebar.expander("📂 Source", expanded=True):
+# SOURCE
+with st.sidebar.expander("📂 Source", True):
 
     cols = st.columns(2)
 
-    all_src = cols[0].checkbox("ALL", value=True)
-    azure = cols[1].checkbox("AZURE", value=all_src)
+    all_src = cols[0].checkbox("ALL", True)
+    azure = cols[1].checkbox("AZURE", all_src)
+    snow = cols[0].checkbox("SNOW", all_src)
+    ptc = cols[1].checkbox("PTC", all_src)
 
-    snow = cols[0].checkbox("SNOW", value=all_src)
-    ptc = cols[1].checkbox("PTC", value=all_src)
-
+    sources = []
     if all_src:
         sources = ["AZURE", "SNOW", "PTC"]
     else:
-        sources = []
         if azure: sources.append("AZURE")
         if snow: sources.append("SNOW")
         if ptc: sources.append("PTC")
 
     if not sources:
         st.stop()
-# ================= FILTER =================
+
+# ================= BASE FILTER =================
 filtered = df[df["Source"].isin(sources)].copy()
 
-#with st.sidebar.expander("🎯 Filters", expanded=True):
+# ================= FILTERS =================
+with st.sidebar.expander("🎯 Filters", True):
 
-   # st.markdown("**Status**")
-  #  status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
-  #  status = st.selectbox("", status_list)
+    status = st.multiselect(
+        "Status",
+        sorted(filtered["Status"].dropna().unique())
+    )
 
- #   st.markdown("**Priority**")
-
- #   def clean_priority(x):
-  #      m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
-   #     return m.group(0) if m else str(x)
-
-  #  filtered["Priority"] = filtered["Priority"].apply(clean_priority)
-#
-   # priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
-  #  priority = st.selectbox("", priority_list)
-with st.sidebar.expander("🎯 Filters", expanded=True):
-
-    # STATUS (INLINE)
-    col1, col2 = st.columns([1,3])
-    with col1:
-        st.markdown("**Status**")
-    with col2:
-        status_list = ["ALL"] + sorted(filtered["Status"].dropna().unique())
-        status = st.selectbox("", status_list, key="status")
-
-    # PRIORITY (INLINE)
-    col1, col2 = st.columns([1,3])
-    with col1:
-        st.markdown("**Priority**")
-    with col2:
-        def clean_priority(x):
-            m = re.search(r"(Severity\s*[1-4]|Priority\s*[1-4])", str(x))
-            return m.group(0) if m else str(x)
-
-        filtered["Priority"] = filtered["Priority"].apply(clean_priority)
-
-        priority_list = ["ALL"] + sorted(filtered["Priority"].dropna().unique())
-        priority = st.selectbox("", priority_list, key="priority")
+    priority = st.multiselect(
+        "Priority",
+        sorted(filtered["Priority"].dropna().unique())
+    )
 
 # APPLY FILTER
-if status != "ALL":
-    filtered = filtered[filtered["Status"] == status]
+if status:
+    filtered = filtered[filtered["Status"].isin(status)]
 
-if priority != "ALL":
-    filtered = filtered[filtered["Priority"] == priority]
+if priority:
+    filtered = filtered[filtered["Priority"].isin(priority)]
 
 # ================= SEARCH =================
 def clear_search():
-    st.session_state["search_box"] = ""
-    st.session_state["page"] = 1
+    st.session_state.search_box = ""
+    st.session_state.page = 1
 
 if "search_box" not in st.session_state:
-    st.session_state["search_box"] = ""
+    st.session_state.search_box = ""
 
 col1, col2 = st.columns([10,1])
 
@@ -298,12 +152,15 @@ with col1:
 with col2:
     st.button("❌", on_click=clear_search)
 
-filtered = apply_search(filtered, st.session_state["search_box"])
+filtered = apply_search(filtered, st.session_state.search_box)
 
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
+
+# SL NO COLUMN
 df_display.insert(0, "SL No", range(1, len(df_display)+1))
 
+# CLEAN TEXT
 def clean(x):
     return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
 
@@ -311,13 +168,34 @@ for col in ["Created By","Assigned To"]:
     if col in df_display:
         df_display[col] = df_display[col].apply(clean)
 
+# DATE FORMAT (NO WRAP)
 for col in ["Created Date","Resolved Date"]:
     if col in df_display:
-        df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%b-%y")
+        df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%b-%Y")
+
+# TRUNCATE DESCRIPTION
+def truncate_text(x, length=80):
+    x = str(x)
+    return x[:length] + "..." if len(x) > length else x
+
+df_display["Description"] = df_display["Description"].apply(truncate_text)
 
 df_display = df_display.fillna("")
 
-# ================= LINK =================
+# STATUS COLOR
+def format_status(val):
+    v = str(val).lower()
+    if "open" in v or "active" in v:
+        return f'<span class="status-open">{val}</span>'
+    elif "closed" in v:
+        return f'<span class="status-closed">{val}</span>'
+    elif "cancel" in v:
+        return f'<span class="status-cancel">{val}</span>'
+    return val
+
+df_display["Status"] = df_display["Status"].apply(format_status)
+
+# LINK
 def make_link(row):
     num = str(row["Number"])
     src = row["Source"]
@@ -351,7 +229,7 @@ page_df = df_display.iloc[start:end]
 colA, colB, colC = st.columns([4,3,3])
 
 with colA:
-    st.markdown(f"<div style='font-size:16px; font-weight:600;'>Results: {total_rows}</div>", unsafe_allow_html=True)
+    st.markdown(f"**Results: {total_rows}**")
     vc = filtered["Source"].value_counts()
     st.caption(f"AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}")
 
@@ -367,24 +245,21 @@ with colB:
 with colC:
     c1, c2, c3 = st.columns([1,2,1])
 
-    with c1:
-        if st.button("◀") and st.session_state.page > 1:
-            st.session_state.page -= 1
-            st.rerun()
+    if c1.button("◀") and st.session_state.page > 1:
+        st.session_state.page -= 1
+        st.rerun()
 
-    with c2:
-        st.markdown(f"<div style='text-align:center;'>Page {st.session_state.page}/{total_pages}</div>", unsafe_allow_html=True)
+    c2.markdown(f"<div style='text-align:center;'>Page {st.session_state.page}/{total_pages}</div>", unsafe_allow_html=True)
 
-    with c3:
-        if st.button("▶") and st.session_state.page < total_pages:
-            st.session_state.page += 1
-            st.rerun()
+    if c3.button("▶") and st.session_state.page < total_pages:
+        st.session_state.page += 1
+        st.rerun()
 
 # ================= TABLE =================
 st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
 # ================= KPI =================
-with st.sidebar.expander("📈 KPI", expanded=True):
+with st.sidebar.expander("📈 KPI", True):
 
     kpi = calculate_kpi(filtered)
 
