@@ -13,50 +13,53 @@ st.set_page_config(layout="wide")
 st.markdown("""
 <style>
 
-/* GLOBAL */
+/* ===== GLOBAL ===== */
 .block-container {
     padding-top: 1rem !important;
 }
 
-/* TABLE */
+/* ===== TABLE ===== */
 table {
     width: 100%;
     border-collapse: collapse;
 }
 
+/* HEADER */
 th {
-    background: #f5f5f5;
+    text-align: center !important;
     padding: 6px !important;
     font-size: 13px;
-    text-align: center;
+    background-color: #f5f5f5;
 }
 
+/* CELLS */
 td {
     padding: 6px !important;
     font-size: 13px;
-    white-space: normal !important;
-    word-wrap: break-word;
+    white-space: nowrap !important;   /* NO WRAP */
 }
 
-/* DESCRIPTION FULL WIDTH */
+/* DESCRIPTION COLUMN */
 td:nth-child(3), th:nth-child(3) {
-    width: 40%;
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-/* REMOVE AUTO SHRINK */
-td:not(:nth-child(3)) {
-    width: auto !important;
+/* PRIORITY COLUMN */
+td:nth-child(4), th:nth-child(4) {
+    width: 130px;
 }
 
-/* SIDEBAR */
-section[data-testid="stSidebar"] label {
-    font-size: 13px !important;
+/* DATE COLUMNS */
+td:nth-child(7), th:nth-child(7),
+td:nth-child(9), th:nth-child(9) {
+    min-width: 100px;
 }
 
-/* KPI FONT FIX */
+/* KPI FONT */
 [data-testid="stMetricValue"] {
     font-size: 13px !important;
-    font-weight: 500 !important;
 }
 
 /* STATUS COLORS */
@@ -73,12 +76,17 @@ st.title("Ops Insight Dashboard")
 # ================= LOAD =================
 df, last_refresh = load_data()
 
-# ================= CLEAN PRIORITY =================
-def clean_priority(x):
-    m = re.search(r"Severity\s*([1-3])", str(x))
-    return f"Severity {m.group(1)}" if m else None
+# ================= PRIORITY FIX (ONLY PTC) =================
+def clean_priority(row):
+    val = str(row["Priority"])
+    src = row["Source"]
 
-df["Priority"] = df["Priority"].apply(clean_priority)
+    if src == "PTC":
+        m = re.search(r"Severity\s*([1-3])", val)
+        return f"Severity {m.group(1)}" if m else ""
+    return val
+
+df["Priority"] = df.apply(clean_priority, axis=1)
 
 # ================= SIDEBAR =================
 st.sidebar.markdown("## 📊 Menu")
@@ -149,8 +157,8 @@ filtered = apply_search(filtered, st.session_state.search_box)
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
 
-# REMOVE EXTRA INDEX COLUMN ISSUE (FIX)
-df_display.index = df_display.index + 1
+# SL NO COLUMN
+df_display.insert(0, "SL No", range(1, len(df_display)+1))
 
 # CLEAN TEXT
 def clean(x):
@@ -160,10 +168,17 @@ for col in ["Created By","Assigned To"]:
     if col in df_display:
         df_display[col] = df_display[col].apply(clean)
 
-# DATE FORMAT
+# DATE FORMAT (NO WRAP)
 for col in ["Created Date","Resolved Date"]:
     if col in df_display:
-        df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%b-%y")
+        df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%b-%Y")
+
+# TRUNCATE DESCRIPTION
+def truncate_text(x, length=80):
+    x = str(x)
+    return x[:length] + "..." if len(x) > length else x
+
+df_display["Description"] = df_display["Description"].apply(truncate_text)
 
 df_display = df_display.fillna("")
 
