@@ -12,59 +12,47 @@ st.set_page_config(layout="wide")
 # ================= CSS =================
 st.markdown("""
 <style>
+
+/* GLOBAL */
+.block-container { padding-top: 1rem !important; }
+
+/* TABLE */
 table { width:100%; border-collapse: collapse; }
-th { text-align:center !important; padding:6px !important; background:#f5f5f5; }
+th { text-align:center !important; padding:6px !important; background:#f5f5f5; font-size:13px;}
 td { padding:6px !important; font-size:13px; white-space:nowrap !important; }
 
-/* Description truncate */
+/* DESCRIPTION */
 td:nth-child(3), th:nth-child(3) {
-    max-width: 300px;
+    max-width: 400px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
-/* Priority */
-td:nth-child(4), th:nth-child(4) {
-    width:130px;
-}
+/* PRIORITY */
+td:nth-child(4), th:nth-child(4) { width:130px; }
 
-/* Date */
+/* DATE */
 td:nth-child(7), th:nth-child(7),
-td:nth-child(9), th:nth-child(9) {
-    min-width:100px;
-}
+td:nth-child(9), th:nth-child(9) { min-width:100px; }
 
-/* KPI */
-[data-testid="stMetricValue"] {
-    font-size:13px !important;
-}
+/* KPI FONT */
+[data-testid="stMetricValue"] { font-size:13px !important; }
 
-/* Dropdown compact */
-div[data-baseweb="select"] {
-    min-width:100px !important;
-    max-width:100px !important;
-}
-
-/* ONLY PAGINATION DROPDOWNS */
-div[data-testid="column"]:nth-child(2) div[data-baseweb="select"],
-div[data-testid="column"]:nth-child(3) div[data-baseweb="select"] {
-    min-width: 70px !important;
-    max-width: 80px !important;
-}
-
-/* Status */
+/* STATUS COLORS */
 .status-open {color:red;font-weight:600;}
 .status-closed {color:green;font-weight:600;}
 .status-cancel {color:gray;font-weight:600;}
 
-/* ALIGN DOWNLOAD WITH SEARCH CLEAR */
-section.main > div {
-    padding-top: 1rem !important;
+/* ONLY PAGINATION DROPDOWN COMPACT */
+div[data-testid="column"]:nth-child(2) div[data-baseweb="select"],
+div[data-testid="column"]:nth-child(3) div[data-baseweb="select"] {
+    min-width:70px !important;
+    max-width:80px !important;
 }
 
-/* SOURCE CHECKBOX FONT */
+/* SIDEBAR FONT */
 section[data-testid="stSidebar"] label {
-    font-size: 12px !important;
+    font-size:12px !important;
 }
 
 </style>
@@ -121,21 +109,6 @@ if priority:
     filtered = filtered[filtered["Priority"].isin(priority)]
 
 # ================= SEARCH =================
-#def clear_search():
-#    st.session_state.search_box = ""
-
-#if "search_box" not in st.session_state:
- #   st.session_state.search_box = ""
-
-#col1, col2 = st.columns([20,1])
-#with col1:
-#    st.text_input("🔎 Search", key="search_box", label_visibility="collapsed")
-#with col2:
- #   st.button("❌", on_click=clear_search)
-
-#filtered = apply_search(filtered, st.session_state.search_box)
-
-# ================= SEARCH =================
 def clear_search():
     st.session_state.search_box = ""
 
@@ -155,7 +128,6 @@ with col1:
 with col2:
     st.button("❌", on_click=clear_search)
 
-# APPLY SEARCH
 filtered = apply_search(filtered, search_value)
 st.session_state.search_box = search_value
 
@@ -178,14 +150,16 @@ df_display["Description"] = df_display["Description"].apply(
     lambda x: x[:80] + "..." if len(str(x)) > 80 else x
 )
 
+df_display = df_display.fillna("")
+
 # STATUS COLOR
 def format_status(v):
-    v2 = str(v).lower()
-    if "open" in v2 or "active" in v2:
+    v = str(v).lower()
+    if "open" in v or "active" in v:
         return f'<span class="status-open">{v}</span>'
-    if "closed" in v2:
+    if "closed" in v:
         return f'<span class="status-closed">{v}</span>'
-    if "cancel" in v2:
+    if "cancel" in v:
         return f'<span class="status-cancel">{v}</span>'
     return v
 
@@ -208,31 +182,39 @@ def make_link(row):
     return f'<a href="{url}" target="_blank">Open</a>' if url else ""
 
 df_display["Open"] = df_display.apply(make_link, axis=1)
+
+# ================= PAGINATION =================
 total_rows = len(df_display)
 
-# ================= HEADER =================
 colA, colB, colC, colD = st.columns([3,1,1,3])
 
-# RESULTS
 with colA:
     st.markdown(f"**Results: {total_rows}**")
     vc = filtered["Source"].value_counts()
     st.caption(f"AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}")
 
-# ROW
 with colB:
     page_size = st.selectbox("", [10,20,50,100], key="page_size")
 
-# PAGE
+total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
+
 with colC:
     page = st.selectbox("", list(range(1,total_pages+1)), key="page_number")
 
-# DOWNLOAD (RIGHT ALIGN)
 with colD:
     st.markdown("<div style='text-align:right'>", unsafe_allow_html=True)
+
+    def to_excel(df):
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        return buffer.getvalue()
+
     st.download_button("📥 Download Excel", to_excel(filtered), "ops_data.xlsx")
+
     st.markdown("</div>", unsafe_allow_html=True)
 
+# APPLY PAGINATION
 start = (page-1)*page_size
 end = start + page_size
 page_df = df_display.iloc[start:end]
