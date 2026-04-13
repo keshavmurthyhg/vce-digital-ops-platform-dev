@@ -178,12 +178,12 @@ with colA:
     st.caption(f"AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}")
 
 with colB:
-    page_size = st.selectbox("", [10,20,50,100], key="page_size")
+    page_size = st.selectbox("Row", [10,20,50,100], key="page_size")
 
 total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
 
 with colC:
-    page = st.selectbox("", list(range(1,total_pages+1)), key="page_number")
+    page = st.selectbox("Page", list(range(1,total_pages+1)), key="page_number")
 
 with colD:
     def to_excel(df):
