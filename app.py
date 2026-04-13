@@ -205,13 +205,13 @@ with col3:
 
 # ROWS
 with col4:
-    page_size = st.selectbox("", [10,20,50,100], key="page_size")
+    page_size = st.selectbox("Rows", [10,20,50,100], key="page_size")
 
 # PAGE
 total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
 
 with col5:
-    page = st.selectbox("", list(range(1,total_pages+1)), key="page_number")
+    page = st.selectbox("Page", list(range(1,total_pages+1)), key="page_number")
 
 # DOWNLOAD
 with col6:
