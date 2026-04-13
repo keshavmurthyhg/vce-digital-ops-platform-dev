@@ -44,45 +44,24 @@ td:nth-child(9), th:nth-child(9) { min-width:110px; }
 .status-cancel {color:gray;font-weight:600;}
 
 /* TOOLBAR ALIGN */
-div[data-testid="stHorizontalBlock"] > div {
-    align-items: center;
+div[data-testid="stHorizontalBlock"] {
+    align-items: flex-end;
 }
 
 /* INPUT + BUTTON HEIGHT */
-input { height:36px !important; }
-button[kind="secondary"] { height:36px !important; }
+input { height:38px !important; }
+button { height:38px !important; }
 
-/* COMPACT PAGINATION ONLY */
+/* ONLY PAGINATION DROPDOWN COMPACT */
 div[data-testid="column"]:nth-child(4) div[data-baseweb="select"],
 div[data-testid="column"]:nth-child(5) div[data-baseweb="select"] {
     min-width:70px !important;
-    max-width:80px !important;
+    max-width:85px !important;
 }
 
 /* SIDEBAR FONT */
 section[data-testid="stSidebar"] label {
     font-size:12px !important;
-}
-
-/* TOOLBAR ALIGNMENT PERFECT */
-div[data-testid="stHorizontalBlock"] {
-    align-items: flex-end;
-}
-
-/* SEARCH HEIGHT */
-input {
-    height: 38px !important;
-}
-
-/* BUTTON HEIGHT */
-button {
-    height: 38px !important;
-}
-
-/* PAGINATION WIDTH */
-div[data-baseweb="select"] {
-    min-width: 80px !important;
-    max-width: 90px !important;
 }
 
 </style>
@@ -129,9 +108,24 @@ with st.sidebar.expander("📂 Source", True):
 # ================= FILTER =================
 filtered = df[df["Source"].isin(sources)].copy()
 
+# SESSION STATE FOR FILTER RESET
+if "status_filter" not in st.session_state:
+    st.session_state.status_filter = []
+if "priority_filter" not in st.session_state:
+    st.session_state.priority_filter = []
+
 with st.sidebar.expander("🎯 Filters", True):
-    status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
-    priority = st.multiselect("Priority", sorted(filtered["Priority"].dropna().unique()))
+    status = st.multiselect(
+        "Status",
+        sorted(filtered["Status"].dropna().unique()),
+        key="sidebar_status"
+    )
+
+    priority = st.multiselect(
+        "Priority",
+        sorted(filtered["Priority"].dropna().unique()),
+        key="sidebar_priority"
+    )
 
 if status:
     filtered = filtered[filtered["Status"].isin(status)]
@@ -139,34 +133,24 @@ if priority:
     filtered = filtered[filtered["Priority"].isin(priority)]
 
 # ================= TOOLBAR =================
-# ================= TOOLBAR =================
-
 def clear_all():
-    st.session_state.search_box = ""
-    st.session_state.page_number = 1
-    st.session_state.page_size = 10
-    st.session_state.status_filter = []
-    st.session_state.priority_filter = []
+    st.session_state.toolbar_search = ""
+    st.session_state.toolbar_page_number = 1
+    st.session_state.toolbar_page_size = 10
+    st.session_state.sidebar_status = []
+    st.session_state.sidebar_priority = []
 
-# INIT SESSION STATE
-if "search_box" not in st.session_state:
-    st.session_state.search_box = ""
+if "toolbar_search" not in st.session_state:
+    st.session_state.toolbar_search = ""
 
-if "status_filter" not in st.session_state:
-    st.session_state.status_filter = []
-
-if "priority_filter" not in st.session_state:
-    st.session_state.priority_filter = []
-
-# LAYOUT (ALIGNED)
 col1, col2, col3, col4, col5, col6 = st.columns([5,1,2,1.5,1.5,2])
 
 # SEARCH
 with col1:
     search_value = st.text_input(
         "🔎 Search",
-        value=st.session_state.search_box,
-        key="search_box_input"
+        value=st.session_state.toolbar_search,
+        key="toolbar_search"
     )
 
 # CLEAR
@@ -176,7 +160,6 @@ with col2:
 
 # APPLY SEARCH
 filtered = apply_search(filtered, search_value)
-st.session_state.search_box = search_value
 
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
@@ -184,7 +167,7 @@ df_display.insert(0, "SL No", range(1, len(df_display)+1))
 
 total_rows = len(df_display)
 
-# RESULTS + SOURCE SPLIT
+# RESULTS + SOURCE COUNTS
 with col3:
     vc = filtered["Source"].value_counts()
     st.markdown(f"""
@@ -201,7 +184,7 @@ with col4:
     page_size = st.selectbox(
         "Rows",
         [10,20,50,100],
-        key="page_size"
+        key="toolbar_page_size"
     )
 
 # PAGE
@@ -211,7 +194,7 @@ with col5:
     page = st.selectbox(
         "Page",
         list(range(1, total_pages + 1)),
-        key="page_number"
+        key="toolbar_page_number"
     )
 
 # DOWNLOAD
@@ -233,26 +216,23 @@ start = (page - 1) * page_size
 end = start + page_size
 page_df = df_display.iloc[start:end]
 
-# ================= DATA =================
-df_display = filtered.copy().reset_index(drop=True)
-df_display.insert(0, "SL No", range(1, len(df_display)+1))
-
+# ================= CLEAN DATA =================
 def clean(x):
     return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
 
 for col in ["Created By","Assigned To"]:
-    if col in df_display:
-        df_display[col] = df_display[col].apply(clean)
+    if col in page_df:
+        page_df[col] = page_df[col].apply(clean)
 
 for col in ["Created Date","Resolved Date"]:
-    if col in df_display:
-        df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%b-%Y")
+    if col in page_df:
+        page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%Y")
 
-df_display["Description"] = df_display["Description"].apply(
+page_df["Description"] = page_df["Description"].apply(
     lambda x: x[:90] + "..." if len(str(x)) > 90 else x
 )
 
-df_display = df_display.fillna("")
+page_df = page_df.fillna("")
 
 # STATUS COLOR
 def format_status(v):
@@ -265,7 +245,7 @@ def format_status(v):
         return f'<span class="status-cancel">{v}</span>'
     return v
 
-df_display["Status"] = df_display["Status"].apply(format_status)
+page_df["Status"] = page_df["Status"].apply(format_status)
 
 # LINK
 def make_link(row):
@@ -283,43 +263,7 @@ def make_link(row):
 
     return f'<a href="{url}" target="_blank">Open</a>' if url else ""
 
-df_display["Open"] = df_display.apply(make_link, axis=1)
-
-# ================= PAGINATION =================
-total_rows = len(df_display)
-
-# RESULTS
-with col3:
-    st.markdown(f"<b>{total_rows}</b><br><span style='font-size:11px'>Results</span>", unsafe_allow_html=True)
-
-# ROWS
-with col4:
-    page_size = st.selectbox("Rows", [10,20,50,100], key="page_size")
-
-# PAGE
-total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
-
-with col5:
-    page = st.selectbox("Page", list(range(1,total_pages+1)), key="page_number")
-
-# DOWNLOAD
-with col6:
-    st.markdown("<div style='text-align:right'>", unsafe_allow_html=True)
-
-    def to_excel(df):
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False)
-        return buffer.getvalue()
-
-    st.download_button("📥 Download", to_excel(filtered), "ops_data.xlsx")
-
-    st.markdown("</div>", unsafe_allow_html=True)
-
-# APPLY PAGINATION
-start = (page-1)*page_size
-end = start + page_size
-page_df = df_display.iloc[start:end]
+page_df["Open"] = page_df.apply(make_link, axis=1)
 
 # ================= TABLE =================
 st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
