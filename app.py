@@ -23,7 +23,7 @@ td { padding:6px !important; font-size:13px; white-space:nowrap !important; }
 
 /* DESCRIPTION */
 td:nth-child(3), th:nth-child(3) {
-    max-width: 400px;
+    max-width: 420px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -33,21 +33,30 @@ td:nth-child(4), th:nth-child(4) { width:130px; }
 
 /* DATE */
 td:nth-child(7), th:nth-child(7),
-td:nth-child(9), th:nth-child(9) { min-width:100px; }
+td:nth-child(9), th:nth-child(9) { min-width:110px; }
 
-/* KPI FONT */
+/* KPI */
 [data-testid="stMetricValue"] { font-size:13px !important; }
 
-/* STATUS COLORS */
+/* STATUS */
 .status-open {color:red;font-weight:600;}
 .status-closed {color:green;font-weight:600;}
 .status-cancel {color:gray;font-weight:600;}
 
-/* ONLY PAGINATION DROPDOWN COMPACT */
-div[data-testid="column"]:nth-child(2) div[data-baseweb="select"],
-div[data-testid="column"]:nth-child(3) div[data-baseweb="select"] {
-    min-width:80px !important;
-    max-width:100px !important;
+/* TOOLBAR ALIGN */
+div[data-testid="stHorizontalBlock"] > div {
+    align-items: center;
+}
+
+/* INPUT + BUTTON HEIGHT */
+input { height:36px !important; }
+button[kind="secondary"] { height:36px !important; }
+
+/* COMPACT PAGINATION ONLY */
+div[data-testid="column"]:nth-child(4) div[data-baseweb="select"],
+div[data-testid="column"]:nth-child(5) div[data-baseweb="select"] {
+    min-width:70px !important;
+    max-width:80px !important;
 }
 
 /* SIDEBAR FONT */
@@ -108,21 +117,32 @@ if status:
 if priority:
     filtered = filtered[filtered["Priority"].isin(priority)]
 
-# ================= SEARCH =================
+# ================= TOOLBAR =================
 def clear_search():
     st.session_state.search_box = ""
 
 if "search_box" not in st.session_state:
     st.session_state.search_box = ""
 
-col1, col2 = st.columns([20,1])
+col1, col2, col3, col4, col5, col6 = st.columns([6,1,1.2,1,1,2])
+
+# SEARCH
 with col1:
-    st.text_input("🔎 Search", key="search_box", label_visibility="collapsed")
+    search_value = st.text_input(
+        "🔎 Search",
+        value=st.session_state.search_box,
+        key="search_box_input",
+        label_visibility="collapsed"
+    )
+
+# CLEAR
 with col2:
+    st.markdown("<div style='margin-top:4px'></div>", unsafe_allow_html=True)
     st.button("❌", on_click=clear_search)
 
-filtered = apply_search(filtered, st.session_state.search_box)
-
+# APPLY SEARCH
+filtered = apply_search(filtered, search_value)
+st.session_state.search_box = search_value
 
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
@@ -140,7 +160,7 @@ for col in ["Created Date","Resolved Date"]:
         df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%b-%Y")
 
 df_display["Description"] = df_display["Description"].apply(
-    lambda x: x[:80] + "..." if len(str(x)) > 80 else x
+    lambda x: x[:90] + "..." if len(str(x)) > 90 else x
 )
 
 df_display = df_display.fillna("")
@@ -179,22 +199,22 @@ df_display["Open"] = df_display.apply(make_link, axis=1)
 # ================= PAGINATION =================
 total_rows = len(df_display)
 
-colA, colB, colC, colD = st.columns([3,1,1,3])
+# RESULTS
+with col3:
+    st.markdown(f"<b>{total_rows}</b><br><span style='font-size:11px'>Results</span>", unsafe_allow_html=True)
 
-with colA:
-    st.markdown(f"**Results: {total_rows}**")
-    vc = filtered["Source"].value_counts()
-    st.caption(f"AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}")
+# ROWS
+with col4:
+    page_size = st.selectbox("", [10,20,50,100], key="page_size")
 
-with colB:
-    page_size = st.selectbox("Rows", [10,20,50,100], key="page_size")
-
+# PAGE
 total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
 
-with colC:
-    page = st.selectbox("Page", list(range(1,total_pages+1)), key="page_number")
+with col5:
+    page = st.selectbox("", list(range(1,total_pages+1)), key="page_number")
 
-with colD:
+# DOWNLOAD
+with col6:
     st.markdown("<div style='text-align:right'>", unsafe_allow_html=True)
 
     def to_excel(df):
@@ -203,7 +223,7 @@ with colD:
             df.to_excel(writer, index=False)
         return buffer.getvalue()
 
-    st.download_button("📥 Download Excel", to_excel(filtered), "ops_data.xlsx")
+    st.download_button("📥 Download", to_excel(filtered), "ops_data.xlsx")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -227,5 +247,5 @@ with st.sidebar.expander("📈 KPI", True):
     c3.metric("Closed", kpi["closed"])
     c4.metric("Cancelled", kpi["cancelled"])
 
-# ================= REFRESH =================
+# ================= FOOTER =================
 st.caption(f"Last refreshed: {last_refresh}")
