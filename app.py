@@ -208,8 +208,8 @@ def make_link(row):
     return f'<a href="{url}" target="_blank">Open</a>' if url else ""
 
 df_display["Open"] = df_display.apply(make_link, axis=1)
+total_rows = len(df_display)
 
-# ================= PAGINATION =================
 # ================= HEADER =================
 colA, colB, colC, colD = st.columns([3,1,1,3])
 
