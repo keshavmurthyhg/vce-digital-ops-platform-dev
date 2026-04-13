@@ -64,6 +64,27 @@ section[data-testid="stSidebar"] label {
     font-size:12px !important;
 }
 
+/* TOOLBAR ALIGNMENT PERFECT */
+div[data-testid="stHorizontalBlock"] {
+    align-items: flex-end;
+}
+
+/* SEARCH HEIGHT */
+input {
+    height: 38px !important;
+}
+
+/* BUTTON HEIGHT */
+button {
+    height: 38px !important;
+}
+
+/* PAGINATION WIDTH */
+div[data-baseweb="select"] {
+    min-width: 80px !important;
+    max-width: 90px !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -118,31 +139,99 @@ if priority:
     filtered = filtered[filtered["Priority"].isin(priority)]
 
 # ================= TOOLBAR =================
-def clear_search():
-    st.session_state.search_box = ""
+# ================= TOOLBAR =================
 
+def clear_all():
+    st.session_state.search_box = ""
+    st.session_state.page_number = 1
+    st.session_state.page_size = 10
+    st.session_state.status_filter = []
+    st.session_state.priority_filter = []
+
+# INIT SESSION STATE
 if "search_box" not in st.session_state:
     st.session_state.search_box = ""
 
-col1, col2, col3, col4, col5, col6 = st.columns([6,1,1.2,1,1,2])
+if "status_filter" not in st.session_state:
+    st.session_state.status_filter = []
+
+if "priority_filter" not in st.session_state:
+    st.session_state.priority_filter = []
+
+# LAYOUT (ALIGNED)
+col1, col2, col3, col4, col5, col6 = st.columns([5,1,2,1.5,1.5,2])
 
 # SEARCH
 with col1:
     search_value = st.text_input(
         "🔎 Search",
         value=st.session_state.search_box,
-        key="search_box_input",
-        label_visibility="collapsed"
+        key="search_box_input"
     )
 
 # CLEAR
 with col2:
-    st.markdown("<div style='margin-top:4px'></div>", unsafe_allow_html=True)
-    st.button("❌", on_click=clear_search)
+    st.markdown("<div style='margin-top:30px'></div>", unsafe_allow_html=True)
+    st.button("❌", on_click=clear_all)
 
 # APPLY SEARCH
 filtered = apply_search(filtered, search_value)
+st.session_state.search_box = search_value
 
+# ================= DATA =================
+df_display = filtered.copy().reset_index(drop=True)
+df_display.insert(0, "SL No", range(1, len(df_display)+1))
+
+total_rows = len(df_display)
+
+# RESULTS + SOURCE SPLIT
+with col3:
+    vc = filtered["Source"].value_counts()
+    st.markdown(f"""
+    <div style="margin-top:8px">
+        <b>{total_rows}</b> Results<br>
+        <span style="font-size:11px">
+        AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ROWS
+with col4:
+    page_size = st.selectbox(
+        "Rows",
+        [10,20,50,100],
+        key="page_size"
+    )
+
+# PAGE
+total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
+
+with col5:
+    page = st.selectbox(
+        "Page",
+        list(range(1, total_pages + 1)),
+        key="page_number"
+    )
+
+# DOWNLOAD
+with col6:
+    st.markdown("<div style='margin-top:30px;text-align:right'>", unsafe_allow_html=True)
+
+    def to_excel(df):
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        return buffer.getvalue()
+
+    st.download_button("📥 Download", to_excel(filtered), "ops_data.xlsx")
+
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# PAGINATION
+start = (page - 1) * page_size
+end = start + page_size
+page_df = df_display.iloc[start:end]
 
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
