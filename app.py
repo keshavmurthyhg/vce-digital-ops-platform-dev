@@ -304,6 +304,8 @@ page_df = df_display.iloc[start:end]
      #   st.rerun()
 
 # ================= HEADER =================
+# ================= PAGINATION (FIXED) =================
+
 colA, colB, colC, colD = st.columns([3,2,2,3])
 
 # RESULTS
@@ -312,22 +314,24 @@ with colA:
     vc = filtered["Source"].value_counts()
     st.caption(f"AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}")
 
-# ROWS (COMPACT)
+# ROWS (ADD KEY)
 with colB:
     page_size = st.selectbox(
         "Rows",
         [10, 20, 50, 100],
-        label_visibility="collapsed"
+        index=0,
+        key="page_size"
     )
 
-# PAGE (COMPACT)
+# PAGE (ADD KEY)
 total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
 
 with colC:
     page = st.selectbox(
         "Page",
         list(range(1, total_pages + 1)),
-        label_visibility="collapsed"
+        index=0,
+        key="page_number"
     )
 
 # DOWNLOAD
@@ -341,9 +345,17 @@ with colD:
     st.download_button("📥 Download Excel", to_excel(filtered), "ops_data.xlsx")
 
 # APPLY PAGINATION
-start = (page - 1) * page_size
-end = start + page_size
-page_df = df_display.iloc[start:end]
+#start = (page - 1) * page_size
+#end = start + page_size
+#page_df = df_display.iloc[start:end]
+
+#=========== Prevents reset when filters change ===========
+page = st.selectbox(
+    "Page",
+    list(range(1, total_pages + 1)),
+    index=min(st.session_state.get("page_number", 1)-1, total_pages-1),
+    key="page_number"
+)
 
 # ================= TABLE =================
 st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
