@@ -116,20 +116,13 @@ if "search_box" not in st.session_state:
     st.session_state.search_box = ""
 
 col1, col2 = st.columns([20,1])
-
 with col1:
-    search_value = st.text_input(
-        "🔎 Search",
-        value=st.session_state.search_box,
-        key="search_box_input",
-        label_visibility="collapsed"
-    )
-
+    st.text_input("🔎 Search", key="search_box", label_visibility="collapsed")
 with col2:
     st.button("❌", on_click=clear_search)
 
-filtered = apply_search(filtered, search_value)
-st.session_state.search_box = search_value
+filtered = apply_search(filtered, st.session_state.search_box)
+
 
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
