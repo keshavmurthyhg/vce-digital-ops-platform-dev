@@ -41,14 +41,32 @@ td:nth-child(9), th:nth-child(9) {
 
 /* Dropdown compact */
 div[data-baseweb="select"] {
-    min-width:80px !important;
+    min-width:100px !important;
     max-width:100px !important;
+}
+
+/* ONLY PAGINATION DROPDOWNS */
+div[data-testid="column"]:nth-child(2) div[data-baseweb="select"],
+div[data-testid="column"]:nth-child(3) div[data-baseweb="select"] {
+    min-width: 70px !important;
+    max-width: 80px !important;
 }
 
 /* Status */
 .status-open {color:red;font-weight:600;}
 .status-closed {color:green;font-weight:600;}
 .status-cancel {color:gray;font-weight:600;}
+
+/* ALIGN DOWNLOAD WITH SEARCH CLEAR */
+section.main > div {
+    padding-top: 1rem !important;
+}
+
+/* SOURCE CHECKBOX FONT */
+section[data-testid="stSidebar"] label {
+    font-size: 12px !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -103,6 +121,21 @@ if priority:
     filtered = filtered[filtered["Priority"].isin(priority)]
 
 # ================= SEARCH =================
+#def clear_search():
+#    st.session_state.search_box = ""
+
+#if "search_box" not in st.session_state:
+ #   st.session_state.search_box = ""
+
+#col1, col2 = st.columns([20,1])
+#with col1:
+#    st.text_input("🔎 Search", key="search_box", label_visibility="collapsed")
+#with col2:
+ #   st.button("❌", on_click=clear_search)
+
+#filtered = apply_search(filtered, st.session_state.search_box)
+
+# ================= SEARCH =================
 def clear_search():
     st.session_state.search_box = ""
 
@@ -110,12 +143,21 @@ if "search_box" not in st.session_state:
     st.session_state.search_box = ""
 
 col1, col2 = st.columns([20,1])
+
 with col1:
-    st.text_input("🔎 Search", key="search_box", label_visibility="collapsed")
+    search_value = st.text_input(
+        "🔎 Search",
+        value=st.session_state.search_box,
+        key="search_box_input",
+        label_visibility="collapsed"
+    )
+
 with col2:
     st.button("❌", on_click=clear_search)
 
-filtered = apply_search(filtered, st.session_state.search_box)
+# APPLY SEARCH
+filtered = apply_search(filtered, search_value)
+st.session_state.search_box = search_value
 
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
@@ -168,31 +210,28 @@ def make_link(row):
 df_display["Open"] = df_display.apply(make_link, axis=1)
 
 # ================= PAGINATION =================
-total_rows = len(df_display)
+# ================= HEADER =================
+colA, colB, colC, colD = st.columns([3,1,1,3])
 
-colA, colB, colC, colD = st.columns([3,2,2,3])
-
+# RESULTS
 with colA:
     st.markdown(f"**Results: {total_rows}**")
     vc = filtered["Source"].value_counts()
     st.caption(f"AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}")
 
+# ROW
 with colB:
-    page_size = st.selectbox("Row", [10,20,50,100], key="page_size")
+    page_size = st.selectbox("", [10,20,50,100], key="page_size")
 
-total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
-
+# PAGE
 with colC:
-    page = st.selectbox("Page", list(range(1,total_pages+1)), key="page_number")
+    page = st.selectbox("", list(range(1,total_pages+1)), key="page_number")
 
+# DOWNLOAD (RIGHT ALIGN)
 with colD:
-    def to_excel(df):
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False)
-        return buffer.getvalue()
-
+    st.markdown("<div style='text-align:right'>", unsafe_allow_html=True)
     st.download_button("📥 Download Excel", to_excel(filtered), "ops_data.xlsx")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 start = (page-1)*page_size
 end = start + page_size
