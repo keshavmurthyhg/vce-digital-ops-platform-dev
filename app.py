@@ -14,7 +14,7 @@ st.markdown("""
 <style>
 table { width:100%; border-collapse: collapse; }
 th { text-align:center !important; padding:6px !important; background:#f5f5f5; }
-td { padding:6px !important; white-space:nowrap !important; font-size:13px; }
+td { padding:6px !important; font-size:13px; white-space:nowrap !important; }
 
 /* Description truncate */
 td:nth-child(3), th:nth-child(3) {
@@ -23,29 +23,29 @@ td:nth-child(3), th:nth-child(3) {
     text-overflow: ellipsis;
 }
 
-/* Priority width */
+/* Priority */
 td:nth-child(4), th:nth-child(4) {
     width:130px;
 }
 
-/* Date columns */
+/* Date */
 td:nth-child(7), th:nth-child(7),
 td:nth-child(9), th:nth-child(9) {
     min-width:100px;
 }
 
-/* KPI font */
+/* KPI */
 [data-testid="stMetricValue"] {
     font-size:13px !important;
 }
 
-/* Compact dropdown */
+/* Dropdown compact */
 div[data-baseweb="select"] {
     min-width:80px !important;
     max-width:100px !important;
 }
 
-/* Status colors */
+/* Status */
 .status-open {color:red;font-weight:600;}
 .status-closed {color:green;font-weight:600;}
 .status-cancel {color:gray;font-weight:600;}
@@ -71,16 +71,18 @@ df["Priority"] = df.apply(clean_priority, axis=1)
 st.sidebar.markdown("## 📊 Menu")
 st.sidebar.selectbox("", ["Search Tool"])
 
-# SOURCE
 with st.sidebar.expander("📂 Source", True):
     cols = st.columns(2)
+
     all_src = cols[0].checkbox("ALL", True)
     azure = cols[1].checkbox("AZURE", all_src)
     snow = cols[0].checkbox("SNOW", all_src)
     ptc = cols[1].checkbox("PTC", all_src)
 
-    sources = ["AZURE","SNOW","PTC"] if all_src else []
-    if not all_src:
+    if all_src:
+        sources = ["AZURE","SNOW","PTC"]
+    else:
+        sources = []
         if azure: sources.append("AZURE")
         if snow: sources.append("SNOW")
         if ptc: sources.append("PTC")
@@ -88,10 +90,9 @@ with st.sidebar.expander("📂 Source", True):
     if not sources:
         st.stop()
 
-# ================= BASE FILTER =================
+# ================= FILTER =================
 filtered = df[df["Source"].isin(sources)].copy()
 
-# ================= FILTER =================
 with st.sidebar.expander("🎯 Filters", True):
     status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
     priority = st.multiselect("Priority", sorted(filtered["Priority"].dropna().unique()))
@@ -120,7 +121,6 @@ filtered = apply_search(filtered, st.session_state.search_box)
 df_display = filtered.copy().reset_index(drop=True)
 df_display.insert(0, "SL No", range(1, len(df_display)+1))
 
-# Clean text
 def clean(x):
     return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
 
@@ -128,17 +128,15 @@ for col in ["Created By","Assigned To"]:
     if col in df_display:
         df_display[col] = df_display[col].apply(clean)
 
-# Date format
 for col in ["Created Date","Resolved Date"]:
     if col in df_display:
         df_display[col] = pd.to_datetime(df_display[col], errors="coerce").dt.strftime("%d-%b-%Y")
 
-# Truncate description
 df_display["Description"] = df_display["Description"].apply(
     lambda x: x[:80] + "..." if len(str(x)) > 80 else x
 )
 
-# Status color
+# STATUS COLOR
 def format_status(v):
     v2 = str(v).lower()
     if "open" in v2 or "active" in v2:
@@ -151,10 +149,27 @@ def format_status(v):
 
 df_display["Status"] = df_display["Status"].apply(format_status)
 
-# ================= TOTAL ROWS (FIXED POSITION) =================
+# LINK
+def make_link(row):
+    num = str(row["Number"])
+    src = row["Source"]
+
+    if src == "SNOW":
+        url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
+    elif src == "PTC":
+        url = f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
+    elif src == "AZURE":
+        url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
+    else:
+        url = ""
+
+    return f'<a href="{url}" target="_blank">Open</a>' if url else ""
+
+df_display["Open"] = df_display.apply(make_link, axis=1)
+
+# ================= PAGINATION =================
 total_rows = len(df_display)
 
-# ================= HEADER + PAGINATION =================
 colA, colB, colC, colD = st.columns([3,2,2,3])
 
 with colA:
@@ -179,7 +194,6 @@ with colD:
 
     st.download_button("📥 Download Excel", to_excel(filtered), "ops_data.xlsx")
 
-# ================= PAGINATION =================
 start = (page-1)*page_size
 end = start + page_size
 page_df = df_display.iloc[start:end]
