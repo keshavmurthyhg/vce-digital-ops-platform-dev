@@ -227,28 +227,28 @@ df_display["Open"] = df_display.apply(make_link, axis=1)
 
 # ================= PAGINATION (NEW) =================
 
-col1, col2, col3 = st.columns([2,2,6])
+#col1, col2, col3 = st.columns([2,2,6])
 
-with col1:
-    page_size = st.selectbox(
-        "Rows",
-        [10, 20, 50, 100],
-        index=0
-    )
+#with col1:
+  #  page_size = st.selectbox(
+   #     "Rows",
+ #       [10, 20, 50, 100],
+ #       index=0
+#    )
 
-total_rows = len(df_display)
-total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
+#total_rows = len(df_display)
+#total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
 
-with col2:
-    page = st.selectbox(
-        "Page",
-        list(range(1, total_pages + 1))
-    )
+#with col2:
+    #page = st.selectbox(
+ #       "Page",
+  #      list(range(1, total_pages + 1))
+  #  )
 
-start = (page - 1) * page_size
-end = start + page_size
+#start = (page - 1) * page_size
+#end = start + page_size
 
-page_df = df_display.iloc[start:end]
+#page_df = df_display.iloc[start:end]
 
 # ================= HEADER =================
 colA, colB, colC = st.columns([4,3,3])
@@ -267,7 +267,7 @@ with colB:
 
     st.download_button("📥 Download Excel", to_excel(filtered), "ops_data.xlsx")
 
-with colC:
+#with colC:
  #   c1, c2, c3 = st.columns([1,2,1])
 
   #  if c1.button("◀") and st.session_state.page > 1:
