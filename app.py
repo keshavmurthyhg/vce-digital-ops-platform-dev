@@ -46,8 +46,8 @@ td:nth-child(9), th:nth-child(9) { min-width:100px; }
 /* ONLY PAGINATION DROPDOWN COMPACT */
 div[data-testid="column"]:nth-child(2) div[data-baseweb="select"],
 div[data-testid="column"]:nth-child(3) div[data-baseweb="select"] {
-    min-width:40px !important;
-    max-width:50px !important;
+    min-width:80px !important;
+    max-width:100px !important;
 }
 
 /* SIDEBAR FONT */
