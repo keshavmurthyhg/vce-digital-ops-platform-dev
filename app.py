@@ -142,7 +142,7 @@ with col2:
 
 # APPLY SEARCH
 filtered = apply_search(filtered, search_value)
-st.session_state.search_box = search_value
+
 
 # ================= DATA =================
 df_display = filtered.copy().reset_index(drop=True)
