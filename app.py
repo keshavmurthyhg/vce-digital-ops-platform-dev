@@ -18,7 +18,7 @@ st.markdown("""
 
 /* TABLE */
 table { width:100%; border-collapse: collapse; }
-th { text-align:center !important; padding:6px !important; background:#f5f5f5; font-size:11px;}
+th { text-align:center !important; padding:6px !important; background:#f5f5f5; font-size:13px;}
 td { padding:6px !important; font-size:13px; white-space:nowrap !important; }
 
 /* DESCRIPTION */
