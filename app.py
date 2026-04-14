@@ -199,7 +199,7 @@ with col5:
 
 # DOWNLOAD
 with col6:
-    st.markdown("<div style='margin-top:30px;text-align:right'>", unsafe_allow_html=True)
+    st.markdown("<div style='margin-top:50px;text-align:right'>", unsafe_allow_html=True)
 
     def to_excel(df):
         buffer = io.BytesIO()
