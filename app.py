@@ -18,12 +18,12 @@ st.markdown("""
 
 /* TABLE */
 table { width:100%; border-collapse: collapse; }
-th { text-align:center !important; padding:6px !important; background:#f5f5f5; font-size:13px;}
+th { text-align:center !important; padding:6px !important; background:#f5f5f5; font-size:11px;}
 td { padding:6px !important; font-size:13px; white-space:nowrap !important; }
 
 /* DESCRIPTION */
 td:nth-child(3), th:nth-child(3) {
-    max-width: 420px;
+    max-width: 300px;
     overflow: hidden;
     text-overflow: ellipsis;
 }
