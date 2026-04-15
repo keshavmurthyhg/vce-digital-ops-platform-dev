@@ -3,7 +3,6 @@ import pandas as pd
 import re
 import io
 
-from modules.snow_api import fetch_incident
 from modules.doc_generator import generate_word_doc
 from modules.data_loader import load_data
 from modules.search import apply_search
@@ -20,58 +19,7 @@ menu = st.sidebar.selectbox(
 # ================= CSS =================
 st.markdown("""
 <style>
-
-/* GLOBAL */
 .block-container { padding-top: 1rem !important; }
-
-/* TABLE */
-table { width:100%; border-collapse: collapse; }
-th { text-align:center !important; padding:6px !important; background:#f5f5f5; font-size:13px;}
-td { padding:6px !important; font-size:13px; white-space:nowrap !important; }
-
-/* DESCRIPTION */
-td:nth-child(3), th:nth-child(3) {
-    max-width: 300px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* PRIORITY */
-td:nth-child(4), th:nth-child(4) { width:130px; }
-
-/* DATE */
-td:nth-child(7), th:nth-child(7),
-td:nth-child(9), th:nth-child(9) { min-width:110px; }
-
-/* KPI */
-[data-testid="stMetricValue"] { font-size:13px !important; }
-
-/* STATUS */
-.status-open {color:red;font-weight:600;}
-.status-closed {color:green;font-weight:600;}
-.status-cancel {color:gray;font-weight:600;}
-
-/* TOOLBAR ALIGN */
-div[data-testid="stHorizontalBlock"] {
-    align-items: flex-end;
-}
-
-/* INPUT + BUTTON HEIGHT */
-input { height:38px !important; }
-button { height:38px !important; }
-
-/* ONLY PAGINATION DROPDOWN COMPACT */
-div[data-testid="column"]:nth-child(4) div[data-baseweb="select"],
-div[data-testid="column"]:nth-child(5) div[data-baseweb="select"] {
-    min-width:70px !important;
-    max-width:85px !important;
-}
-
-/* SIDEBAR FONT */
-section[data-testid="stSidebar"] label {
-    font-size:12px !important;
-}
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -79,28 +27,64 @@ section[data-testid="stSidebar"] label {
 # ================= WORD REPORT GENERATOR =====================
 # ============================================================
 
+def get_incident_from_df(df, incident_number):
+    row = df[df["Number"].astype(str) == str(incident_number)]
+
+    if not row.empty:
+        row = row.iloc[0]
+
+        return {
+            "number": row.get("Number", ""),
+            "short_description": row.get("Description", ""),
+            "description": row.get("Description", ""),
+            "priority": row.get("Priority", ""),
+            "state": row.get("Status", ""),
+            "resolution": row.get("Resolution", ""),
+            "work_notes": row.get("Work Notes", ""),
+            "comments": row.get("Additional Comments", "")
+        }
+
+    return None
+
+
 if menu == "Word Report Generator":
 
     st.title("📄 SNOW Incident Report Generator")
+
+    df, _ = load_data()
 
     incident_number = st.text_input("Enter Incident Number", key="snow_input")
 
     col1, col2 = st.columns(2)
 
     if col1.button("Fetch Incident"):
-        st.session_state.snow_data = fetch_incident(incident_number)
+        st.session_state.snow_data = get_incident_from_df(df, incident_number)
 
     if "snow_data" in st.session_state and st.session_state.snow_data:
 
         data = st.session_state.snow_data
 
         st.success("Incident ready")
-        st.json(data)
 
-        root_cause = st.text_area("Root Cause")
-        l2_analysis = st.text_area("L2 Analysis")
-        resolution = st.text_area("Resolution")
-        closure = st.text_area("Closure Notes")
+        root_cause = st.text_area(
+            "Root Cause",
+            value=data.get("work_notes", "")
+        )
+
+        l2_analysis = st.text_area(
+            "L2 Analysis",
+            value=data.get("comments", "")
+        )
+
+        resolution = st.text_area(
+            "Resolution",
+            value=data.get("resolution", "")
+        )
+
+        closure = st.text_area(
+            "Closure Notes",
+            value=data.get("resolution", "")
+        )
 
         if col2.button("Generate Document"):
 
@@ -120,18 +104,15 @@ if menu == "Word Report Generator":
             )
 
 # ============================================================
-# ================= SEARCH DASHBOARD (RESTORED) ===============
+# ================= SEARCH DASHBOARD ==========================
 # ============================================================
 
 if menu == "Search Dashboard":
 
-    # ================= TITLE =================
     st.title("Ops Insight Dashboard")
 
-    # ================= LOAD =================
     df, last_refresh = load_data()
 
-    # ================= PRIORITY FIX =================
     def clean_priority(row):
         if row["Source"] == "PTC":
             m = re.search(r"Severity\s*([1-3])", str(row["Priority"]))
@@ -163,10 +144,8 @@ if menu == "Search Dashboard":
         if not sources:
             st.stop()
 
-    # ================= FILTER =================
     filtered = df[df["Source"].isin(sources)].copy()
 
-    # SESSION STATE
     if "status_filter" not in st.session_state:
         st.session_state.status_filter = []
     if "priority_filter" not in st.session_state:
@@ -223,14 +202,15 @@ if menu == "Search Dashboard":
 
     with col3:
         vc = filtered["Source"].value_counts()
-        st.markdown(f"""
-        <div style="margin-top:8px">
-            <b>{total_rows}</b> Results<br>
-            <span style="font-size:11px">
-            AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}
-            </span>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='margin-top:8px;font-size:12px;'>"
+            f"<b>{total_rows}</b> Results | "
+            f"AZURE: {vc.get('AZURE',0)} | "
+            f"SNOW: {vc.get('SNOW',0)} | "
+            f"PTC: {vc.get('PTC',0)}"
+            f"</div>",
+            unsafe_allow_html=True
+        )
 
     with col4:
         page_size = st.selectbox("Rows", [10,20,50,100], key="toolbar_page_size")
@@ -241,8 +221,6 @@ if menu == "Search Dashboard":
         page = st.selectbox("Page", list(range(1, total_pages + 1)), key="toolbar_page_number")
 
     with col6:
-        st.markdown("<div style='margin-top:30px;text-align:right'>", unsafe_allow_html=True)
-
         def to_excel(df):
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
@@ -251,11 +229,14 @@ if menu == "Search Dashboard":
 
         st.download_button("📥 Download", to_excel(filtered), "ops_data.xlsx")
 
-        st.markdown("</div>", unsafe_allow_html=True)
-
     start = (page - 1) * page_size
     end = start + page_size
     page_df = df_display.iloc[start:end]
+
+    # DATE FORMAT FIX
+    for col in ["Created Date","Resolved Date"]:
+        if col in page_df:
+            page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
     page_df = page_df.fillna("")
 
