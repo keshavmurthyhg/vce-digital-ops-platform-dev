@@ -4,7 +4,8 @@ import re
 import io
 import requests
 
-
+from modules.snow_api import fetch_incident
+from modules.doc_generator import generate_word_doc
 from modules.data_loader import load_data
 from modules.search import apply_search
 from modules.kpi import calculate_kpi
