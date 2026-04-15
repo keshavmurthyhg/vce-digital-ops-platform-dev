@@ -81,20 +81,26 @@ section[data-testid="stSidebar"] label {
 # ============================================================
 
 def get_incident_from_df(df, incident_number):
-    row = df[df["Number"].astype(str) == str(incident_number)]
+
+    # Normalize column names
+    df.columns = df.columns.str.strip().str.lower()
+
+    row = df[df["number"].astype(str) == str(incident_number)]
 
     if not row.empty:
         row = row.iloc[0]
 
         return {
-            "number": row.get("Number", ""),
-            "short_description": row.get("Description", ""),
-            "description": row.get("Description", ""),
-            "priority": row.get("Priority", ""),
-            "state": row.get("Status", ""),
-            "resolution": row.get("Resolution", ""),
-            "work_notes": row.get("Work Notes", ""),
-            "comments": row.get("Additional Comments", "")
+            "number": str(row.get("number", "")),
+            "short_description": str(row.get("short description", "")),
+            "description": str(row.get("description", "")),
+            "priority": str(row.get("priority", "")),
+            "state": str(row.get("status", "")),
+
+            # ✅ EXACT COLUMN MATCH
+            "work_notes": str(row.get("work notes", "")),
+            "comments": str(row.get("additional comments", "")),
+            "resolution": str(row.get("resolution notes", ""))
         }
 
     return None
@@ -110,35 +116,29 @@ if menu == "Word Report Generator":
 
     col1, col2 = st.columns(2)
 
+    if "init_loaded" not in st.session_state:
+        st.session_state.init_loaded = False
+
     if col1.button("Fetch Incident"):
         st.session_state.snow_data = get_incident_from_df(df, incident_number)
+        st.session_state.init_loaded = False
 
     if "snow_data" in st.session_state and st.session_state.snow_data:
 
         data = st.session_state.snow_data
 
-        st.success("Incident ready")
+        if not st.session_state.init_loaded:
+            st.session_state.root = data.get("work_notes", "")
+             st.session_state.l2 = data.get("comments", "")
+            st.session_state.res = data.get("resolution", "")
+            st.session_state.closure = data.get("resolution", "")
+            st.session_state.init_loaded = True
 
-        root_cause = st.text_area(
-            "Root Cause",
-            value=data.get("work_notes", "")
-        )
-
-        l2_analysis = st.text_area(
-            "L2 Analysis",
-            value=data.get("comments", "")
-        )
-
-        resolution = st.text_area(
-            "Resolution",
-            value=data.get("resolution", "")
-        )
-
-        closure = st.text_area(
-            "Closure Notes",
-            value=data.get("resolution", "")
-        )
-
+        root_cause = st.text_area("Root Cause", key="root")
+        l2_analysis = st.text_area("L2 Analysis", key="l2")
+        resolution = st.text_area("Resolution", key="res")
+        closure = st.text_area("Closure Notes", key="closure")
+    
         if col2.button("Generate Document"):
 
             file = generate_word_doc(
