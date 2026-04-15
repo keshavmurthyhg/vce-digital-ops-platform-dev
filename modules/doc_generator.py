@@ -31,8 +31,11 @@ def generate_word_doc(data, root_cause, l2_analysis, resolution, closure):
     doc.add_heading('L2 Analysis', 1)
     doc.add_paragraph(l2_analysis)
 
-    doc.add_heading('Test Cases / Validation', 1)
-    doc.add_paragraph("1.\n2.\n3.")
+    doc.add_heading('Work Notes', 1)
+    doc.add_paragraph(data.get("work_notes", ""))
+
+    doc.add_heading('Additional Comments', 1)
+    doc.add_paragraph(data.get("comments", ""))
 
     doc.add_heading('Resolution', 1)
     doc.add_paragraph(resolution)
