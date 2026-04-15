@@ -1,3 +1,5 @@
 streamlit-aggrid==0.3.4.post3
 openpyxl
 pandas
+python-docx
+requests
