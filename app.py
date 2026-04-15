@@ -17,11 +17,64 @@ menu = st.sidebar.selectbox(
 )
 
 # ================= CSS =================
+# ================= CSS =================
 st.markdown("""
 <style>
+
+/* GLOBAL */
 .block-container { padding-top: 1rem !important; }
+
+/* TABLE */
+table { width:100%; border-collapse: collapse; }
+th { text-align:center !important; padding:6px !important; background:#f5f5f5; font-size:13px;}
+td { padding:6px !important; font-size:13px; white-space:nowrap !important; }
+
+/* DESCRIPTION */
+td:nth-child(3), th:nth-child(3) {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* PRIORITY */
+td:nth-child(4), th:nth-child(4) { width:130px; }
+
+/* DATE */
+td:nth-child(7), th:nth-child(7),
+td:nth-child(9), th:nth-child(9) { min-width:110px; }
+
+/* KPI */
+[data-testid="stMetricValue"] { font-size:13px !important; }
+
+/* STATUS */
+.status-open {color:red;font-weight:600;}
+.status-closed {color:green;font-weight:600;}
+.status-cancel {color:gray;font-weight:600;}
+
+/* TOOLBAR ALIGN */
+div[data-testid="stHorizontalBlock"] {
+    align-items: flex-end;
+}
+
+/* INPUT + BUTTON HEIGHT */
+input { height:38px !important; }
+button { height:38px !important; }
+
+/* ONLY PAGINATION DROPDOWN COMPACT */
+div[data-testid="column"]:nth-child(4) div[data-baseweb="select"],
+div[data-testid="column"]:nth-child(5) div[data-baseweb="select"] {
+    min-width:70px !important;
+    max-width:85px !important;
+}
+
+/* SIDEBAR FONT */
+section[data-testid="stSidebar"] label {
+    font-size:12px !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
+
 
 # ============================================================
 # ================= WORD REPORT GENERATOR =====================
