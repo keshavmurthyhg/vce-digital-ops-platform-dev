@@ -2,12 +2,57 @@ import streamlit as st
 import pandas as pd
 import re
 import io
+import requests
+
 
 from modules.data_loader import load_data
 from modules.search import apply_search
 from modules.kpi import calculate_kpi
+from docx import Document
+from io import BytesIO
 
 st.set_page_config(layout="wide")
+
+# =========================
+# 2. FUNCTIONS (ADD HERE 👇)
+# =========================
+
+def fetch_incident(incident_number):
+    url = f"https://your-instance.service-now.com/api/now/table/incident?sysparm_query=number={incident_number}"
+
+    headers = {
+        "Accept": "application/json"
+    }
+
+    response = requests.get(url, auth=("username", "password"), headers=headers)
+
+    if response.status_code == 200:
+        result = response.json()["result"]
+        if result:
+            return result[0]
+    return None
+
+
+def generate_word_doc(data):
+    doc = Document()
+    doc.add_heading('INCIDENT REPORT', 0)
+
+    table = doc.add_table(rows=1, cols=2)
+    table.style = 'Table Grid'
+
+    def add_row(field, value):
+        row = table.add_row().cells
+        row[0].text = field
+        row[1].text = str(value)
+
+    add_row("Incident Number", data.get("number", ""))
+    add_row("Short Description", data.get("short_description", ""))
+
+    buffer = BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+
+    return buffer
 
 # ================= CSS =================
 st.markdown("""
@@ -63,6 +108,32 @@ div[data-testid="column"]:nth-child(5) div[data-baseweb="select"] {
 section[data-testid="stSidebar"] label {
     font-size:12px !important;
 }
+
+# =========================
+# 3. STREAMLIT UI (MAIN APP)
+# =========================
+
+st.title("📄 SNOW Incident Report Generator")
+
+incident_number = st.text_input("Enter Incident Number")
+
+if st.button("Fetch Incident"):
+    data = fetch_incident(incident_number)
+
+    if data:
+        st.success("Incident fetched successfully")
+        st.json(data)
+
+        if st.button("Generate Document"):
+            file = generate_word_doc(data)
+
+            st.download_button(
+                label="Download",
+                data=file,
+                file_name=f"{incident_number}.docx"
+            )
+    else:
+        st.error("Incident not found")
 
 </style>
 """, unsafe_allow_html=True)
