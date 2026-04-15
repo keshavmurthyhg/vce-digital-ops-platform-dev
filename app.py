@@ -129,7 +129,7 @@ if menu == "Word Report Generator":
 
         if not st.session_state.init_loaded:
             st.session_state.root = data.get("work_notes", "")
-             st.session_state.l2 = data.get("comments", "")
+            st.session_state.l2 = data.get("comments", "")
             st.session_state.res = data.get("resolution", "")
             st.session_state.closure = data.get("resolution", "")
             st.session_state.init_loaded = True
