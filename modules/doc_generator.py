@@ -1,7 +1,12 @@
+from docx import Document
+from io import BytesIO
+
 def generate_word_doc(data, root_cause, l2_analysis, resolution, closure):
     doc = Document()
+
     doc.add_heading('INCIDENT REPORT', 0)
 
+    # TABLE
     table = doc.add_table(rows=1, cols=2)
     table.style = 'Table Grid'
 
@@ -16,6 +21,7 @@ def generate_word_doc(data, root_cause, l2_analysis, resolution, closure):
     add_row("Priority", data.get("priority", ""))
     add_row("State", data.get("state", ""))
 
+    # SECTIONS
     doc.add_heading('Issue Description', 1)
     doc.add_paragraph(data.get("description", ""))
 
