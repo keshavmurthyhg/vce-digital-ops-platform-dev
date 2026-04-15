@@ -109,6 +109,9 @@ section[data-testid="stSidebar"] label {
     font-size:12px !important;
 }
 
+</style>
+""", unsafe_allow_html=True)
+
 # =========================
 # 3. STREAMLIT UI (MAIN APP)
 # =========================
@@ -135,8 +138,45 @@ if st.button("Fetch Incident"):
     else:
         st.error("Incident not found")
 
-</style>
-""", unsafe_allow_html=True)
+# ================= SNOW DOCUMENT GENERATOR =================
+
+st.markdown("## 📄 SNOW Incident Report Generator")
+
+incident_number = st.text_input("Enter Incident Number")
+
+colA, colB = st.columns(2)
+
+if colA.button("Fetch Incident"):
+    st.session_state.snow_data = fetch_incident(incident_number)
+
+if "snow_data" in st.session_state and st.session_state.snow_data:
+
+    data = st.session_state.snow_data
+
+    st.success("Incident fetched successfully")
+    st.json(data)
+
+    # Editable fields
+    root_cause = st.text_area("Root Cause")
+    l2_analysis = st.text_area("L2 Analysis")
+    resolution = st.text_area("Resolution")
+    closure = st.text_area("Closure Notes")
+
+    if colB.button("Generate Document"):
+        file = generate_word_doc(
+            data,
+            root_cause,
+            l2_analysis,
+            resolution,
+            closure
+        )
+
+        st.download_button(
+            label="📥 Download Report",
+            data=file,
+            file_name=f"{incident_number}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
 
 # ================= TITLE =================
 st.title("Ops Insight Dashboard")
