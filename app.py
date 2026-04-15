@@ -20,7 +20,58 @@ menu = st.sidebar.selectbox(
 # ================= CSS =================
 st.markdown("""
 <style>
+
+/* GLOBAL */
 .block-container { padding-top: 1rem !important; }
+
+/* TABLE */
+table { width:100%; border-collapse: collapse; }
+th { text-align:center !important; padding:6px !important; background:#f5f5f5; font-size:13px;}
+td { padding:6px !important; font-size:13px; white-space:nowrap !important; }
+
+/* DESCRIPTION */
+td:nth-child(3), th:nth-child(3) {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* PRIORITY */
+td:nth-child(4), th:nth-child(4) { width:130px; }
+
+/* DATE */
+td:nth-child(7), th:nth-child(7),
+td:nth-child(9), th:nth-child(9) { min-width:110px; }
+
+/* KPI */
+[data-testid="stMetricValue"] { font-size:13px !important; }
+
+/* STATUS */
+.status-open {color:red;font-weight:600;}
+.status-closed {color:green;font-weight:600;}
+.status-cancel {color:gray;font-weight:600;}
+
+/* TOOLBAR ALIGN */
+div[data-testid="stHorizontalBlock"] {
+    align-items: flex-end;
+}
+
+/* INPUT + BUTTON HEIGHT */
+input { height:38px !important; }
+button { height:38px !important; }
+
+/* ONLY PAGINATION DROPDOWN COMPACT */
+div[data-testid="column"]:nth-child(4) div[data-baseweb="select"],
+div[data-testid="column"]:nth-child(5) div[data-baseweb="select"] {
+    min-width:70px !important;
+    max-width:85px !important;
+}
+
+/* SIDEBAR FONT */
+section[data-testid="stSidebar"] label {
+    font-size:12px !important;
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -46,7 +97,6 @@ if menu == "Word Report Generator":
         st.success("Incident ready")
         st.json(data)
 
-        # Editable Inputs
         root_cause = st.text_area("Root Cause")
         l2_analysis = st.text_area("L2 Analysis")
         resolution = st.text_area("Resolution")
@@ -70,16 +120,18 @@ if menu == "Word Report Generator":
             )
 
 # ============================================================
-# ================= SEARCH DASHBOARD ==========================
+# ================= SEARCH DASHBOARD (RESTORED) ===============
 # ============================================================
 
 if menu == "Search Dashboard":
 
+    # ================= TITLE =================
     st.title("Ops Insight Dashboard")
 
+    # ================= LOAD =================
     df, last_refresh = load_data()
 
-    # PRIORITY FIX
+    # ================= PRIORITY FIX =================
     def clean_priority(row):
         if row["Source"] == "PTC":
             m = re.search(r"Severity\s*([1-3])", str(row["Priority"]))
@@ -88,28 +140,125 @@ if menu == "Search Dashboard":
 
     df["Priority"] = df.apply(clean_priority, axis=1)
 
-    # SIDEBAR FILTERS
-    st.sidebar.markdown("## 📊 Filters")
+    # ================= SIDEBAR =================
+    st.sidebar.markdown("## 📊 Menu")
+    st.sidebar.selectbox("", ["Search Tool"])
 
-    sources = st.sidebar.multiselect(
-        "Source",
-        ["AZURE", "SNOW", "PTC"],
-        default=["AZURE", "SNOW", "PTC"]
-    )
+    with st.sidebar.expander("📂 Source", True):
+        cols = st.columns(2)
 
-    filtered = df[df["Source"].isin(sources)]
+        all_src = cols[0].checkbox("ALL", True)
+        azure = cols[1].checkbox("AZURE", all_src)
+        snow = cols[0].checkbox("SNOW", all_src)
+        ptc = cols[1].checkbox("PTC", all_src)
 
-    # SEARCH
-    search_value = st.text_input("🔎 Search", key="search_box")
+        if all_src:
+            sources = ["AZURE","SNOW","PTC"]
+        else:
+            sources = []
+            if azure: sources.append("AZURE")
+            if snow: sources.append("SNOW")
+            if ptc: sources.append("PTC")
+
+        if not sources:
+            st.stop()
+
+    # ================= FILTER =================
+    filtered = df[df["Source"].isin(sources)].copy()
+
+    # SESSION STATE
+    if "status_filter" not in st.session_state:
+        st.session_state.status_filter = []
+    if "priority_filter" not in st.session_state:
+        st.session_state.priority_filter = []
+
+    with st.sidebar.expander("🎯 Filters", True):
+        status = st.multiselect(
+            "Status",
+            sorted(filtered["Status"].dropna().unique()),
+            key="sidebar_status"
+        )
+
+        priority = st.multiselect(
+            "Priority",
+            sorted(filtered["Priority"].dropna().unique()),
+            key="sidebar_priority"
+        )
+
+    if status:
+        filtered = filtered[filtered["Status"].isin(status)]
+    if priority:
+        filtered = filtered[filtered["Priority"].isin(priority)]
+
+    # ================= TOOLBAR =================
+    def clear_all():
+        st.session_state.toolbar_search = ""
+        st.session_state.toolbar_page_number = 1
+        st.session_state.toolbar_page_size = 10
+        st.session_state.sidebar_status = []
+        st.session_state.sidebar_priority = []
+
+    if "toolbar_search" not in st.session_state:
+        st.session_state.toolbar_search = ""
+
+    col1, col2, col3, col4, col5, col6 = st.columns([5,1,2,1.5,1.5,2])
+
+    with col1:
+        search_value = st.text_input(
+            "🔎 Search",
+            value=st.session_state.toolbar_search,
+            key="toolbar_search"
+        )
+
+    with col2:
+        st.markdown("<div style='margin-top:30px'></div>", unsafe_allow_html=True)
+        st.button("❌", on_click=clear_all)
+
     filtered = apply_search(filtered, search_value)
 
     df_display = filtered.copy().reset_index(drop=True)
     df_display.insert(0, "SL No", range(1, len(df_display)+1))
 
-    # CLEAN
-    df_display = df_display.fillna("")
+    total_rows = len(df_display)
 
-    # LINK
+    with col3:
+        vc = filtered["Source"].value_counts()
+        st.markdown(f"""
+        <div style="margin-top:8px">
+            <b>{total_rows}</b> Results<br>
+            <span style="font-size:11px">
+            AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}
+            </span>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col4:
+        page_size = st.selectbox("Rows", [10,20,50,100], key="toolbar_page_size")
+
+    total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
+
+    with col5:
+        page = st.selectbox("Page", list(range(1, total_pages + 1)), key="toolbar_page_number")
+
+    with col6:
+        st.markdown("<div style='margin-top:30px;text-align:right'>", unsafe_allow_html=True)
+
+        def to_excel(df):
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False)
+            return buffer.getvalue()
+
+        st.download_button("📥 Download", to_excel(filtered), "ops_data.xlsx")
+
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_df = df_display.iloc[start:end]
+
+    page_df = page_df.fillna("")
+
     def make_link(row):
         num = str(row["Number"])
         src = row["Source"]
@@ -125,17 +274,19 @@ if menu == "Search Dashboard":
 
         return f'<a href="{url}" target="_blank">Open</a>' if url else ""
 
-    df_display["Open"] = df_display.apply(make_link, axis=1)
+    page_df["Open"] = page_df.apply(make_link, axis=1)
 
-    # TABLE
-    st.write(df_display.to_html(escape=False, index=False), unsafe_allow_html=True)
+    st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-    # KPI
-    kpi = calculate_kpi(filtered)
+    with st.sidebar.expander("📈 KPI", True):
+        kpi = calculate_kpi(filtered)
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Total", kpi["total"])
-    c2.metric("Open", kpi["open"])
-    c3.metric("Closed", kpi["closed"])
+        c1,c2 = st.columns(2)
+        c1.metric("Total", kpi["total"])
+        c2.metric("Open", kpi["open"])
+
+        c3,c4 = st.columns(2)
+        c3.metric("Closed", kpi["closed"])
+        c4.metric("Cancelled", kpi["cancelled"])
 
     st.caption(f"Last refreshed: {last_refresh}")
