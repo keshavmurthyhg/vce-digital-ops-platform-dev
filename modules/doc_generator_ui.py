@@ -34,8 +34,6 @@ def get_incident_from_df(df, incident_number):
         }
 
     return None
-st.write(df.columns)
-st.write(df.head(1))
 
 # ================= UI =================
 def render_doc_generator():
