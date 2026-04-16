@@ -44,6 +44,11 @@ def render_doc_generator():
 
     df, _ = load_data()
 
+    # 🔍 DEBUG START (ADD HERE)
+    st.write("Columns:", df.columns)
+    st.write("Sample Row:", df.head(1))
+    # 🔍 DEBUG END
+
     incident_number = st.text_input("Enter Incident Number")
 
     col1, col2 = st.columns(2)
