@@ -1,8 +1,7 @@
 import streamlit as st
 from modules.snow_loader import load_snow_data
 from modules.doc_generator import generate_word_doc
-from docx import Document
-from io import BytesIO
+
 
 # ================= FETCH FUNCTION =================
 def get_incident_from_df(df, incident_number):
@@ -40,20 +39,25 @@ def get_incident_from_df(df, incident_number):
 
     return None
 # ================= UI =================
-def render_doc_generator():
+if col2.button("Generate Document"):
 
-    st.title("📄 SNOW Incident Report Generator")
+    if "doc_data" not in st.session_state:
+        st.warning("⚠️ Please fetch incident first")
+        return
 
-    df = load_snow_data()
+    file = generate_word_doc(
+        st.session_state["doc_data"],
+        root_cause,
+        l2_analysis,
+        resolution,
+        closure
+    )
 
-    # 🔍 DEBUG START (ADD HERE)
-    #st.write("Columns:", df.columns)
-    #st.write("Sample Row:", df.head(1))
-    # 🔍 DEBUG END
-
-    incident_number = st.text_input("Enter Incident Number")
-
-    col1, col2 = st.columns(2)
+    st.download_button(
+        "📥 Download Report",
+        file,
+        f"{st.session_state['doc_data']['number']}.docx"
+    )
 
     # ================= FETCH =================
     if col1.button("Fetch Incident"):
@@ -89,22 +93,22 @@ def render_doc_generator():
 
     doc.add_heading('INCIDENT REPORT', 0)
 
-    # ================= TABLE 1 (LINKS) =================
+    # ================= TABLE 1 =================
     table1 = doc.add_table(rows=2, cols=3)
     table1.style = 'Table Grid'
 
     headers = ["Incident", "Azure Bug", "PTC Case"]
     values = [
         data.get("number", ""),
-        data.get("azure_bug", ""),
-        data.get("ptc_case", "")
+        #data.get("azure_bug", ""),
+        data.get("vendor ticket", "")
     ]
 
     for i in range(3):
         table1.rows[0].cells[i].text = headers[i]
         table1.rows[1].cells[i].text = str(values[i])
 
-    # ================= TABLE 2 (DETAILS) =================
+    # ================= TABLE 2 =================
     table2 = doc.add_table(rows=2, cols=5)
     table2.style = 'Table Grid'
 
@@ -121,7 +125,7 @@ def render_doc_generator():
         table2.rows[0].cells[i].text = headers2[i]
         table2.rows[1].cells[i].text = str(values2[i])
 
-    # ================= TABLE 3 (DESCRIPTION) =================
+    # ================= TABLE 3 =================
     table3 = doc.add_table(rows=2, cols=2)
     table3.style = 'Table Grid'
 
@@ -131,7 +135,7 @@ def render_doc_generator():
     table3.rows[1].cells[0].text = data.get("short_description", "")
     table3.rows[1].cells[1].text = data.get("description", "")
 
-    # ================= TEXT SECTIONS =================
+    # ================= TEXT =================
     doc.add_heading('Root Cause', 1)
     doc.add_paragraph(root_cause)
 
