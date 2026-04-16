@@ -6,8 +6,7 @@ st.set_page_config(layout="wide")
 st.sidebar.markdown("## 📊 Module")
 
 menu = st.sidebar.selectbox(
-    "📊 Module",
-    ["Search Dashboard", "Word Report Generator"]
+        ["Search Dashboard", "Word Report Generator"]
 )
 
 # ✅ GLOBAL CSS FIX
