@@ -1,7 +1,14 @@
 import streamlit as st
 from modules.snow_loader import load_snow_data
 from modules.doc_generator import generate_word_doc
+import re
 
+def extract_azure_link(text):
+    if not text:
+        return ""
+
+    match = re.search(r"https://dev\.azure\.com[^\s]+", str(text))
+    return match.group(0) if match else ""
 
 # ================= FETCH FUNCTION =================
 def get_incident_from_df(df, incident_number):
@@ -18,24 +25,27 @@ def get_incident_from_df(df, incident_number):
         row = row.iloc[0]
 
         return {
-            "number": row.get("number", ""),
-            "short_description": row.get("short description", ""),
-            "description": row.get("description", ""),
+    "number": row.get("number", ""),
+    "short_description": row.get("short description", ""),
+    "description": row.get("description", ""),
 
-            "priority": row.get("priority", ""),
-            "created_by": row.get("created by", ""),
-            "created_date": row.get("created date", ""),
-            "assigned_to": row.get("assigned to", ""),
-            "resolved_date": row.get("resolved date", ""),
+    # ✅ FIXED MAPPINGS
+    "priority": row.get("priority", ""),
+    "created_by": row.get("caller", ""),              # ✅ FIX
+    "created_date": row.get("created", ""),           # ✅ FIX
+    "assigned_to": row.get("assigned to", ""),
+    "resolved_date": row.get("resolved", ""),         # ✅ FIX
 
-            "work_notes": row.get("work notes", ""),
-            "comments": row.get("additional comments", ""),
-            "resolution": row.get("resolution notes", ""),
+    "work_notes": row.get("work notes", ""),
+    "comments": row.get("additional comments", ""),
+    "resolution": row.get("resolution notes", ""),
 
-            # optional mappings
-            "azure_bug": row.get("azure bug", ""),
-            "ptc_case": row.get("vendor ticket", "")
-        }
+    # ✅ FIXED
+    "ptc_case": row.get("vendor ticket", ""),
+
+    # ✅ NEW (Azure extraction handled below)
+    "azure_bug": extract_azure_link(row.get("resolution notes", ""))
+}
 
     return None
 
