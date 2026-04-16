@@ -3,9 +3,9 @@ from modules.search_page import render_search_page
 from modules.doc_generator_ui import render_doc_generator
 
 st.set_page_config(layout="wide")
-st.sidebar.markdown("## 📊 Module")
 
-menu = st.sidebar.selectbox("",
+
+menu = st.sidebar.selectbox("st.sidebar.markdown("## 📊 Module")",
         ["Search Dashboard", "Word Report Generator"]
 )
 
