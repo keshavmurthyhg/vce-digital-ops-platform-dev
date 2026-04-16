@@ -2,8 +2,7 @@ import streamlit as st
 from modules.data_loader import load_data
 from modules.doc_generator import generate_word_doc
 
-st.write(df.columns)
-st.write(df.head(1))
+
 # ================= FETCH FUNCTION =================
 def get_incident_from_df(df, incident_number):
 
@@ -35,7 +34,8 @@ def get_incident_from_df(df, incident_number):
         }
 
     return None
-
+st.write(df.columns)
+st.write(df.head(1))
 
 # ================= UI =================
 def render_doc_generator():
