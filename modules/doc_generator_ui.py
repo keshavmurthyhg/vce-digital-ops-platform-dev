@@ -32,32 +32,24 @@ def get_incident_from_df(df, incident_number):
             "comments": row.get("additional comments", ""),
             "resolution": row.get("resolution notes", ""),
 
-            # OPTIONAL FIELDS (if exist)
-           # "azure_bug": row.get(" ", ""),
+            # optional mappings
+            "azure_bug": row.get("azure bug", ""),
             "ptc_case": row.get("vendor ticket", "")
         }
 
     return None
+
+
 # ================= UI =================
-if col2.button("Generate Document"):
+def render_doc_generator():
 
-    if "doc_data" not in st.session_state:
-        st.warning("⚠️ Please fetch incident first")
-        return
+    st.title("📄 SNOW Incident Report Generator")
 
-    file = generate_word_doc(
-        st.session_state["doc_data"],
-        root_cause,
-        l2_analysis,
-        resolution,
-        closure
-    )
+    df = load_snow_data()
 
-    st.download_button(
-        "📥 Download Report",
-        file,
-        f"{st.session_state['doc_data']['number']}.docx"
-    )
+    incident_number = st.text_input("Enter Incident Number")
+
+    col1, col2 = st.columns(2)
 
     # ================= FETCH =================
     if col1.button("Fetch Incident"):
@@ -67,14 +59,16 @@ if col2.button("Generate Document"):
         if data:
             st.session_state["doc_data"] = data
 
-            # ✅ FORCE UPDATE TEXT FIELDS
+            # auto-fill editable fields
             st.session_state["root"] = data.get("work_notes", "")
             st.session_state["l2"] = data.get("comments", "")
             st.session_state["res"] = data.get("resolution", "")
             st.session_state["closure"] = data.get("resolution", "")
 
+            st.success("✅ Incident loaded")
+
         else:
-            st.warning("❌ Incident not found in dataset")
+            st.warning("❌ Incident not found in Snow data")
 
     # ================= FORM =================
     root_cause = st.text_area("Root Cause", key="root")
@@ -83,78 +77,20 @@ if col2.button("Generate Document"):
     closure = st.text_area("Closure Notes", key="closure")
 
     # ================= GENERATE =================
-    from docx import Document
-    from io import BytesIO
+    if col2.button("Generate Document"):
 
+        if "doc_data" not in st.session_state:
+            st.warning("⚠️ Please fetch incident first")
+            return
 
-    def generate_word_doc(data, root_cause, l2_analysis, resolution, closure):
+        file = generate_word_doc(
+            st.session_state["doc_data"],
+            root_cause,
+            l2_analysis,
+            resolution,
+            closure
+        )
 
-    doc = Document()
-
-    doc.add_heading('INCIDENT REPORT', 0)
-
-    # ================= TABLE 1 =================
-    table1 = doc.add_table(rows=2, cols=3)
-    table1.style = 'Table Grid'
-
-    headers = ["Incident", "Azure Bug", "PTC Case"]
-    values = [
-        data.get("number", ""),
-        #data.get("azure_bug", ""),
-        data.get("vendor ticket", "")
-    ]
-
-    for i in range(3):
-        table1.rows[0].cells[i].text = headers[i]
-        table1.rows[1].cells[i].text = str(values[i])
-
-    # ================= TABLE 2 =================
-    table2 = doc.add_table(rows=2, cols=5)
-    table2.style = 'Table Grid'
-
-    headers2 = ["Priority", "Created By", "Created Date", "Assigned To", "Resolved Date"]
-    values2 = [
-        data.get("priority", ""),
-        data.get("created_by", ""),
-        str(data.get("created_date", "")),
-        data.get("assigned_to", ""),
-        str(data.get("resolved_date", ""))
-    ]
-
-    for i in range(5):
-        table2.rows[0].cells[i].text = headers2[i]
-        table2.rows[1].cells[i].text = str(values2[i])
-
-    # ================= TABLE 3 =================
-    table3 = doc.add_table(rows=2, cols=2)
-    table3.style = 'Table Grid'
-
-    table3.rows[0].cells[0].text = "Short Description"
-    table3.rows[0].cells[1].text = "Description"
-
-    table3.rows[1].cells[0].text = data.get("short_description", "")
-    table3.rows[1].cells[1].text = data.get("description", "")
-
-    # ================= TEXT =================
-    doc.add_heading('Root Cause', 1)
-    doc.add_paragraph(root_cause)
-
-    doc.add_heading('L2 Analysis', 1)
-    doc.add_paragraph(l2_analysis)
-
-    doc.add_heading('Resolution', 1)
-    doc.add_paragraph(resolution)
-
-    doc.add_heading('Closure Notes', 1)
-    doc.add_paragraph(closure)
-
-    buffer = BytesIO()
-    doc.save(buffer)
-    buffer.seek(0)
-
-    return buffer
-
-# ============= Download Documnent ===========================
         st.download_button(
             "📥 Download Report",
             file,
