@@ -1,8 +1,8 @@
 import streamlit as st
 from modules.snow_loader import load_snow_data
 from modules.doc_generator import generate_word_doc
-from docx import Document
-from io import BytesIO
+#from docx import Document
+#from io import BytesIO
 
 # ================= FETCH FUNCTION =================
 def get_incident_from_df(df, incident_number):
@@ -79,8 +79,8 @@ def render_doc_generator():
     closure = st.text_area("Closure Notes", key="closure")
 
     # ================= GENERATE =================
-    #from docx import Document
-    #from io import BytesIO
+    from docx import Document
+    from io import BytesIO
 
 
     def generate_word_doc(data, root_cause, l2_analysis, resolution, closure):
