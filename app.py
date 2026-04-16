@@ -3,9 +3,13 @@ from modules.search_page import render_search_page
 from modules.doc_generator_ui import render_doc_generator
 
 st.set_page_config(layout="wide")
+
 st.sidebar.markdown("## 📊 Module")
-menu = st.sidebar.selectbox("",
-        ["Search Dashboard", "Word Report Generator"]
+
+menu = st.sidebar.selectbox(
+    "Module",  # keep label (important)
+    ["Search Dashboard", "Word Report Generator"],
+    label_visibility="collapsed"
 )
 
 # ✅ GLOBAL CSS FIX
