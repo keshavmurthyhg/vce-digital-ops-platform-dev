@@ -3,9 +3,10 @@ from modules.search_page import render_search_page
 from modules.doc_generator_ui import render_doc_generator
 
 st.set_page_config(layout="wide")
+st.sidebar.markdown("## 📊 Module")
 
 menu = st.sidebar.selectbox(
-    "📊 Select Module",
+    "📊 Module",
     ["Search Dashboard", "Word Report Generator"]
 )
 
@@ -13,8 +14,19 @@ menu = st.sidebar.selectbox(
 st.markdown("""
 <style>
 
-/* CENTER ALIGN ALL */
+section[data-testid="stSidebar"] label {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+/* FORCE NO WRAP FOR ALL CELLS */
 td, th {
+    white-space: nowrap !important;
     text-align: center !important;
 }
 
@@ -22,11 +34,11 @@ td, th {
 td:nth-child(3) {
     text-align: left !important;
     max-width: 350px;
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
+/* HEADER CENTER */
 th:nth-child(3) {
     text-align: center !important;
 }
