@@ -1,8 +1,8 @@
 import streamlit as st
 from modules.snow_loader import load_snow_data
 from modules.doc_generator import generate_word_doc
-#from docx import Document
-#from io import BytesIO
+from docx import Document
+from io import BytesIO
 
 # ================= FETCH FUNCTION =================
 def get_incident_from_df(df, incident_number):
