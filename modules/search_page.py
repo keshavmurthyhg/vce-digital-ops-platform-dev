@@ -124,11 +124,11 @@ def render_search_page():
 
     # ---------- LINK ----------
     open_link = f'''
-<span onclick="window.open('{link}', '_blank')"
-      style="color:#1f77b4; cursor:pointer; text-decoration:underline;">
-    🔗 Open
-</span>
-''' if link else "-"
+        <span onclick="window.open('{link}', '_blank')"
+            style="color:#1f77b4; cursor:pointer; text-decoration:underline;">
+            🔗 Open
+        </span>
+        ''' if link else "-"
 
     # ---------- TABLE ----------
     st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
