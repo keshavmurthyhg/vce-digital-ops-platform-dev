@@ -1,7 +1,7 @@
 import pandas as pd
 
 def load_snow_data():
-    df = pd.read_excel("data/snow.xlsx")
+    df = pd.read_excel("data/Snow.xlsx")
 
     # normalize columns
     df.columns = df.columns.str.strip().str.lower()
