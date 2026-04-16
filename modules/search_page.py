@@ -24,8 +24,7 @@ def render_search_page():
     df["Priority"] = df.apply(clean_priority, axis=1)
 
     # ---------- SIDEBAR ----------
-    st.sidebar.markdown("## 📊 Menu")
-
+    
     with st.sidebar.expander("📂 Source", True):
         cols = st.columns(2)
 
