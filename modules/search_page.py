@@ -22,11 +22,6 @@ def render_search_page():
 
     df["Priority"] = df.apply(clean_priority, axis=1)
 
-    # ✅ MENU ABOVE DROPDOWN
-    st.sidebar.markdown("## 📊 Menu")
-
-    st.sidebar.selectbox("Search Tool", ["Search Tool"])
-
     # ================= SOURCE =================
     with st.sidebar.expander("📂 Source", True):
         cols = st.columns(2)
@@ -60,12 +55,16 @@ def render_search_page():
     # ================= TOOLBAR =================
     col1, col2, col3, col4, col5, col6 = st.columns([5,1,2,1.5,1.5,2])
 
-    search_value = col1.text_input("🔎 Search")
+    search_value = col1.text_input("🔎 Search", key="search_box")
 
     col2.markdown("<div style='margin-top:30px'></div>", unsafe_allow_html=True)
-    col2.button("❌")
-
-    filtered = apply_search(filtered, search_value)
+    col2.button("❌", on_click=clear_all)
+    
+    def clear_all():
+        st.session_state["search_box"] = ""
+        st.session_state["page"] = 1
+        st.session_state["rows"] = 10
+        filtered = apply_search(filtered, search_value)
 
     df_display = filtered.reset_index(drop=True)
     df_display.insert(0, "SL No", range(1, len(df_display)+1))
@@ -95,7 +94,14 @@ def render_search_page():
             df.to_excel(writer, index=False)
         return buffer.getvalue()
 
-    col6.download_button("📥 Download", to_excel(filtered), "ops_data.xlsx")
+    with col6:
+    st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
+
+    st.download_button(
+        "📥 Download",
+        to_excel(filtered),
+        "ops_data.xlsx"
+    )
 
     start = (page - 1) * page_size
     end = start + page_size
