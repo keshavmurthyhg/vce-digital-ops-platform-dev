@@ -1,5 +1,5 @@
 import streamlit as st
-from modules.data_loader import load_data
+from modules.snow_loader import load_snow_data
 from modules.doc_generator import generate_word_doc
 
 
@@ -8,10 +8,7 @@ def get_incident_from_df(df, incident_number):
 
     df_copy = df.copy()
 
-    # normalize column names
-    df_copy.columns = df_copy.columns.str.strip().str.lower()
-
-    # normalize values
+    # normalize
     df_copy["number"] = df_copy["number"].astype(str).str.strip().str.upper()
     incident_number = incident_number.strip().upper()
 
@@ -24,10 +21,8 @@ def get_incident_from_df(df, incident_number):
             "number": row.get("number", ""),
             "short_description": row.get("short description", ""),
             "description": row.get("description", ""),
-            "priority": row.get("priority", ""),
-            "state": row.get("status", ""),
 
-            # ✅ YOUR EXACT COLUMNS
+            # ✅ KEY FIX (now available)
             "work_notes": row.get("work notes", ""),
             "comments": row.get("additional comments", ""),
             "resolution": row.get("resolution notes", "")
@@ -40,11 +35,11 @@ def render_doc_generator():
 
     st.title("📄 SNOW Incident Report Generator")
 
-    df, _ = load_data()
+    df = load_snow_data()
 
     # 🔍 DEBUG START (ADD HERE)
-    st.write("Columns:", df.columns)
-    st.write("Sample Row:", df.head(1))
+    #st.write("Columns:", df.columns)
+    #st.write("Sample Row:", df.head(1))
     # 🔍 DEBUG END
 
     incident_number = st.text_input("Enter Incident Number")
