@@ -27,20 +27,11 @@ def parse_mixed_date(val):
 
     val = str(val).strip()
 
-    for fmt in (
-        "%Y-%m-%d %H:%M:%S",  # SNOW
-        "%d-%m-%Y %H:%M",     # AZURE
-        "%d-%b-%Y",           # PTC
-        "%Y-%m-%d",
-        "%d-%m-%Y",
-    ):
-        try:
-            return pd.to_datetime(val, format=fmt)
-        except:
-            continue
-
-    return pd.to_datetime(val, errors="coerce")
-
+    try:
+        # 🔥 Let pandas auto-detect + enforce day-first
+        return pd.to_datetime(val, dayfirst=True, errors="coerce")
+    except:
+        return pd.NaT
 
 # -------------------------------
 # AZURE
