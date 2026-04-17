@@ -7,8 +7,8 @@ def extract_azure_link(text):
     if not text:
         return ""
 
-    match = re.search(r"https://dev\.azure\.com[^\s]+", str(text))
-    return match.group(0) if match else ""
+    match = re.search(r"/(\d+)", str(text))
+    return match.group(1) if match else ""
 
 # ================= FETCH FUNCTION =================
 def get_incident_from_df(df, incident_number):
@@ -59,7 +59,7 @@ def render_doc_generator():
 
     incident_number = st.text_input("Enter Incident Number")
 
-    col1, col2 = st.columns(2)
+    col1, col2, col3, col4 = st.columns(4)
 
     # ================= FETCH =================
     if col1.button("Fetch Incident"):
@@ -106,3 +106,14 @@ def render_doc_generator():
             file,
             f"{st.session_state['doc_data']['number']}.docx"
         )
+   
+    if col3.button("Preview"):
+    if "doc_data" in st.session_state:
+        st.json(st.session_state["doc_data"])
+
+    if col4.download_button(
+        "Download",
+        file if "file" in locals() else None,
+        f"{st.session_state.get('doc_data', {}).get('number','report')}.docx"
+    ):
+        pass
