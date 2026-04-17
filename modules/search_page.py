@@ -50,92 +50,86 @@ def render_search_page():
     with st.sidebar.expander("🎯 Filters", True):
         status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
         priority = st.multiselect("Priority", sorted(filtered["Priority"].dropna().unique()))
-    
-    # ---------- DATE FILTER (ADVANCED) ----------
-with st.sidebar.expander("📅 Date Filter", True):
 
-    date_column = st.selectbox(
-        "Select Date Field",
-        ["Created Date", "Resolved Date"]
-    )
-
-    mode = st.radio(
-        "Filter Type",
-        ["No Filter", "Date Range", "By Year", "Quick Select"]
-    )
-
-    # Prepare date column safely
-    temp_dates = pd.to_datetime(df[date_column], errors="coerce")
-
-    min_date = temp_dates.min()
-    max_date = temp_dates.max()
-
-    selected_year = None
-    date_range = None
-    quick_option = None
-
-    if mode == "Date Range":
-        date_range = st.date_input(
-            "Select Date Range",
-            value=(min_date, max_date),
-            min_value=min_date,
-            max_value=max_date
-        )
-
-    elif mode == "By Year":
-        years = sorted(temp_dates.dt.year.dropna().unique())
-        selected_year = st.selectbox("Select Year", years)
-
-    elif mode == "Quick Select":
-        quick_option = st.selectbox(
-            "Quick Options",
-            ["Last 7 Days", "Last 30 Days", "This Month"]
-        )
-        
     if status:
         filtered = filtered[filtered["Status"].isin(status)]
     if priority:
         filtered = filtered[filtered["Priority"].isin(priority)]
 
+    # ---------- DATE FILTER (ADVANCED) ----------
+    with st.sidebar.expander("📅 Date Filter", True):
+
+        date_column = st.selectbox(
+            "Select Date Field",
+            ["Created Date", "Resolved Date"]
+        )
+
+        mode = st.radio(
+            "Filter Type",
+            ["No Filter", "Date Range", "By Year", "Quick Select"]
+        )
+
+        temp_dates = pd.to_datetime(df[date_column], errors="coerce")
+
+        min_date = temp_dates.min()
+        max_date = temp_dates.max()
+
+        selected_year = None
+        date_range = None
+        quick_option = None
+
+        if mode == "Date Range":
+            date_range = st.date_input(
+                "Select Date Range",
+                value=(min_date, max_date),
+                min_value=min_date,
+                max_value=max_date
+            )
+
+        elif mode == "By Year":
+            years = sorted(temp_dates.dt.year.dropna().unique())
+            selected_year = st.selectbox("Select Year", years)
+
+        elif mode == "Quick Select":
+            quick_option = st.selectbox(
+                "Quick Options",
+                ["Last 7 Days", "Last 30 Days", "This Month"]
+            )
+
     # ---------- APPLY DATE FILTER ----------
     if mode != "No Filter":
 
-    filtered[date_column] = pd.to_datetime(filtered[date_column], errors="coerce")
+        filtered[date_column] = pd.to_datetime(filtered[date_column], errors="coerce")
 
-    if mode == "Date Range" and date_range and len(date_range) == 2:
-        start_date, end_date = date_range
+        if mode == "Date Range" and date_range and len(date_range) == 2:
+            start_date, end_date = date_range
 
-        filtered = filtered[
-            (filtered[date_column] >= pd.to_datetime(start_date)) &
-            (filtered[date_column] <= pd.to_datetime(end_date))
-        ]
+            filtered = filtered[
+                (filtered[date_column] >= pd.to_datetime(start_date)) &
+                (filtered[date_column] <= pd.to_datetime(end_date))
+            ]
 
-    elif mode == "By Year" and selected_year:
-        filtered = filtered[
-            filtered[date_column].dt.year == selected_year
-        ]
+        elif mode == "By Year" and selected_year:
+            filtered = filtered[
+                filtered[date_column].dt.year == selected_year
+            ]
 
-    elif mode == "Quick Select" and quick_option:
-        today = pd.Timestamp.today()
+        elif mode == "Quick Select" and quick_option:
+            today = pd.Timestamp.today()
 
-        if quick_option == "Last 7 Days":
-            start_date = today - pd.Timedelta(days=7)
+            if quick_option == "Last 7 Days":
+                start_date = today - pd.Timedelta(days=7)
 
-        elif quick_option == "Last 30 Days":
-            start_date = today - pd.Timedelta(days=30)
+            elif quick_option == "Last 30 Days":
+                start_date = today - pd.Timedelta(days=30)
 
-        elif quick_option == "This Month":
-            start_date = today.replace(day=1)
+            elif quick_option == "This Month":
+                start_date = today.replace(day=1)
 
-        filtered = filtered[
-            filtered[date_column] >= start_date
-        ]
+            filtered = filtered[
+                filtered[date_column] >= start_date
+            ]
 
-    filtered = filtered[
-        (filtered["Created Date"] >= pd.to_datetime(start_date)) &
-        (filtered["Created Date"] <= pd.to_datetime(end_date))
-    ]
-    
     # ---------- CLEAR FUNCTION ----------
     def clear_all():
         st.session_state["search_box"] = ""
@@ -204,7 +198,7 @@ with st.sidebar.expander("📅 Date Filter", True):
 
     page_df = page_df.fillna("")
 
-    # ---------- LINK (FIXED) ----------
+    # ---------- LINK ----------
     def make_link(row):
         num = str(row.get("Number", ""))
         src = row.get("Source", "")
