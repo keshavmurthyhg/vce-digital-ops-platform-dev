@@ -12,45 +12,42 @@ def build_link(num, src):
 
 
 # ================= TABLE RENDER =================
+import streamlit as st
+import pandas as pd
+
+
+def build_link(num, src):
+    if src == "SNOW":
+        return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
+    elif src == "PTC":
+        return f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
+    elif src == "AZURE":
+        return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
+    return ""
+
+
 def render_table(df):
 
-    html = """
-    <table style="width:100%; border-collapse: collapse;">
-    <thead>
-    <tr>
-        <th>SL No</th>
-        <th>Number</th>
-        <th>Description</th>
-        <th>Priority</th>
-        <th>Status</th>
-        <th>Created By</th>
-        <th>Created Date</th>
-        <th>Assigned To</th>
-        <th>Resolved Date</th>
-        <th>Source</th>
-        <th>Open</th>
-    </tr>
-    </thead>
-    <tbody>
-    """
+    df = df.copy()
 
-    for _, row in df.iterrows():
+    # ✅ Create clickable link column
+    df["Open"] = df.apply(
+        lambda row: f"[Open]({build_link(row['Number'], row['Source'])})"
+        if build_link(row["Number"], row["Source"]) else "-",
+        axis=1
+    )
 
-        number = row.get("Number", "")
-        source = row.get("Source", "")
-        link = build_link(number, source)
+    # ✅ Truncate description (no wrap)
+    df["Description"] = df["Description"].astype(str).str.slice(0, 80) + "..."
 
-        # ✅ SAFE LINK (NO MULTILINE ERROR)
-        if link:
-            open_link = (
-                f'<span onclick="window.open(\'{link}\', \'_blank\')" '
-                f'style="color:#1f77b4; cursor:pointer; text-decoration:underline;">'
-                f'🔗 Open</span>'
-            )
-        else:
-            open_link = "-"
-
-        html += f"""
+    # ✅ Display table
+    st.dataframe(
+        df,
+        use_container_width=True,
+        column_config={
+            "Open": st.column_config.LinkColumn("Open")
+        }
+    )
         <tr>
             <td>{row.get('SL No','')}</td>
             <td>{number}</td>
