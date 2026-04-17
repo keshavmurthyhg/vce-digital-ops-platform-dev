@@ -14,7 +14,7 @@ st.sidebar.markdown("## 📊 Module")
 
 menu = st.sidebar.selectbox(
     "Module",  # keep label (important)
-    ["Search Dashboard", "Word Report Generator"],
+    ["Insights Dashboard", "Search Dashboard", "Word Report Generator"],
     label_visibility="collapsed"
 )
 
