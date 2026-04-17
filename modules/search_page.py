@@ -6,6 +6,7 @@ import io
 from modules.data_loader import load_data
 from modules.search import apply_search
 from modules.kpi import calculate_kpi
+from modules.table import render_table   # ✅ IMPORTANT
 
 
 def render_search_page():
@@ -24,7 +25,6 @@ def render_search_page():
     df["Priority"] = df.apply(clean_priority, axis=1)
 
     # ---------- SIDEBAR ----------
-    
     with st.sidebar.expander("📂 Source", True):
         cols = st.columns(2)
 
@@ -54,7 +54,7 @@ def render_search_page():
     if priority:
         filtered = filtered[filtered["Priority"].isin(priority)]
 
-    # ---------- CLEAR FUNCTION ----------
+    # ---------- CLEAR ----------
     def clear_all():
         st.session_state["search_box"] = ""
         st.session_state["page"] = 1
@@ -122,9 +122,7 @@ def render_search_page():
 
     page_df = page_df.fillna("")
 
-    # ---------- TABLE ----------
-    from modules.table import render_table
-
+    # ✅ ---------- USE CUSTOM TABLE ----------
     render_table(page_df)
 
     # ---------- KPI ----------
