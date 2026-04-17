@@ -42,9 +42,14 @@ def render_table(df):
         link = build_link(number, source)
 
         # ✅ CRITICAL FIX (NEW TAB)
-        open_link = f'<a href="{link}" target="_blank">🔗 Open</a>' if link else "-"
-
-        html += f"""
+        if link:
+    open_link = (
+        f'<span onclick="window.open(\'{link}\', \'_blank\')" '
+        f'style="color:#1f77b4; cursor:pointer; text-decoration:underline;">'
+        f'🔗 Open</span>'
+    )
+else:
+    open_link = "-"
         <tr>
             <td style="text-align:center;">{i+1}</td>
             <td style="text-align:center;">{number}</td>
