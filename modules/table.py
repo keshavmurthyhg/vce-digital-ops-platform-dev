@@ -1,21 +1,7 @@
 import streamlit as st
-import pandas as pd
-import re
 
 
-def clean_name(val):
-    if pd.isna(val):
-        return val
-    val = str(val)
-    val = re.sub(r"\s*<.*?>", "", val)
-    val = re.sub(r"\s*\(.*?\)", "", val)
-    return val.strip()
-
-
-def build_link(row):
-    num = str(row.get("Number", ""))
-    src = row.get("Source", "")
-
+def build_link(num, src):
     if src == "SNOW":
         return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
     elif src == "PTC":
@@ -25,56 +11,71 @@ def build_link(row):
     return ""
 
 
-def show_table(df, page, page_size):
+def clean_name(val):
+    if not val:
+        return ""
+    return str(val).split("<")[0].strip()
 
-    if df.empty:
-        st.warning("No data")
-        return
 
-    df = df.copy().reset_index(drop=True)
+def truncate_text(text, length=60):
+    text = str(text)
+    return text[:length] + "..." if len(text) > length else text
 
-    # SL NO
-    df.insert(0, "SL No", df.index + 1)
 
-    # CLEAN NAMES
-    for col in ["Created By", "Assigned To"]:
-        if col in df.columns:
-            df[col] = df[col].apply(clean_name)
+def render_table(df):
 
-    # DATE FORMAT
-    for col in ["Created Date", "Resolved Date"]:
-        if col in df.columns:
-            df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%b-%y")
+    html = """
+    <style>
+    table {width:100%; border-collapse:collapse; font-size:13px;}
+    th, td {padding:6px; border:1px solid #ddd; text-align:center; white-space:nowrap;}
+    th {background-color:#f5f5f5;}
+    td.desc {text-align:left; max-width:350px; overflow:hidden; text-overflow:ellipsis;}
+    </style>
 
-    # REMOVE .0
-    if "Assigned To" in df.columns:
-        df["Assigned To"] = df["Assigned To"].astype(str).str.replace(".0", "", regex=False)
+    <table>
+    <thead>
+    <tr>
+        <th>SL No</th>
+        <th>Number</th>
+        <th>Description</th>
+        <th>Priority</th>
+        <th>Status</th>
+        <th>Created By</th>
+        <th>Created Date</th>
+        <th>Assigned To</th>
+        <th>Resolved Date</th>
+        <th>Source</th>
+        <th>Open</th>
+    </tr>
+    </thead>
+    <tbody>
+    """
 
-    # LINK
-    page_df["Link"] = page_df.apply(
-    lambda row: f'<a href="{build_link(row)}" target="_blank">Open</a>' if build_link(row) else "",
-    axis=1
-)
+    for _, row in df.iterrows():
 
-    # PAGINATION
-    start = (page - 1) * page_size
-    end = start + page_size
-    df_page = df.iloc[start:end]
+        number = row.get("Number", "")
+        source = row.get("Source", "")
+        link = build_link(number, source)
 
-    cols = [
-        "SL No", "Number", "Description", "Priority", "Status",
-        "Created By", "Created Date", "Assigned To",
-        "Resolved Date", "Source", "Open"
-    ]
+        open_link = f'<a href="{link}" target="_blank">Open</a>' if link else "-"
 
-    df_page = df_page[[c for c in cols if c in df_page.columns]]
+        html += f"""
+        <tr>
+            <td>{row.get('SL No','')}</td>
+            <td>{number}</td>
+            <td class="desc">{truncate_text(row.get('Description',''))}</td>
+            <td>{row.get('Priority','')}</td>
+            <td>{row.get('Status','')}</td>
+            <td>{clean_name(row.get('Created By',''))}</td>
+            <td>{row.get('Created Date','')}</td>
+            <td>{clean_name(row.get('Assigned To',''))}</td>
+            <td>{row.get('Resolved Date','')}</td>
+            <td>{source}</td>
+            <td>{open_link}</td>
+        </tr>
+        """
 
-    st.dataframe(
-        df_page,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Open": st.column_config.LinkColumn("🔗"),
-            "Description": st.column_config.TextColumn(width="large"),
-        }
-    )
+    html += "</tbody></table>"
+
+    # ONLY THIS — NO st.write anywhere
+    st.markdown(html, unsafe_allow_html=True)
