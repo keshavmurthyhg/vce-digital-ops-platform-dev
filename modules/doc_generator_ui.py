@@ -54,11 +54,29 @@ def get_incident_from_df(df, incident_number):
 def render_doc_generator():
 
     st.title("📄 SNOW Incident Report Generator")
-
+    filtered_df = df.copy()
+    
+    if priority_filter:
+        filtered_df = filtered_df[filtered_df["priority"].isin(priority_filter)]
+    
+    if state_filter and "state" in df.columns:
+        filtered_df = filtered_df[filtered_df["state"].isin(state_filter)]
+    
+    if len(date_filter) == 2:
+        filtered_df["created"] = pd.to_datetime(filtered_df["created"], errors='coerce')
+        filtered_df = filtered_df[
+            (filtered_df["created"] >= pd.to_datetime(date_filter[0])) &
+            (filtered_df["created"] <= pd.to_datetime(date_filter[1]))
+    ]
+    
+    df = filtered_df
+   
     df = load_snow_data()
 
     incident_number = st.text_input("Enter Incident Number")
-
+    
+    bulk_ids = st.text_area("Bulk Incident Numbers (comma separated)")
+    
     col1, col2, col3, col4 = st.columns(4)
 
     # ================= FETCH =================
@@ -117,3 +135,25 @@ def render_doc_generator():
         f"{st.session_state.get('doc_data', {}).get('number','report')}.docx"
     ):
         pass
+   
+    if st.button("Bulk Generate"):
+    
+        ids = [i.strip().upper() for i in bulk_ids.split(",") if i.strip()]
+    
+        zip_buffer = BytesIO()
+        import zipfile
+    
+        with zipfile.ZipFile(zip_buffer, "w") as zf:
+            for inc in ids:
+                data = get_incident_from_df(df, inc)
+                if data:
+                    file = generate_word_doc(data, "", "", "", "")
+                    zf.writestr(f"{inc}.docx", file.getvalue())
+    
+        zip_buffer.seek(0)
+    
+        st.download_button(
+            "Download ZIP",
+            zip_buffer,
+            "incident_reports.zip"
+        )
