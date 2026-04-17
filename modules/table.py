@@ -12,7 +12,9 @@ def build_link(num, src):
 
 
 # ================= TABLE RENDER =================
-def render_table(df):
+from modules.table import render_table
+
+render_table(page_df)
 
     html = """
     <table style="width:100%; border-collapse: collapse;">
