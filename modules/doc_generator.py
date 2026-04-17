@@ -40,7 +40,7 @@ def generate_word_doc(data, root_cause, l2_analysis, resolution, closure):
     # Hyperlinks
     add_hyperlink(
         table1.rows[1].cells[0].paragraphs[0],
-        f"https://volvoitsm.service-now.com/{data.get('number')}",
+        f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}",
         str(data.get("number", ""))
     )
 
