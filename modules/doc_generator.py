@@ -40,19 +40,19 @@ def generate_word_doc(data, root_cause, l2_analysis, resolution, closure):
     # Hyperlinks
     add_hyperlink(
         table1.rows[1].cells[0].paragraphs[0],
-        f"https://snow.service-now.com/{data.get('number')}",
+        f"https://volvoitsm.service-now.com/{data.get('number')}",
         str(data.get("number", ""))
     )
 
     add_hyperlink(
         table1.rows[1].cells[1].paragraphs[0],
-        f"https://dev.azure.com/.../{data.get('azure_bug')}",
+        f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{data.get('azure_bug')}",
         str(data.get("azure_bug", ""))
     )
 
     add_hyperlink(
         table1.rows[1].cells[2].paragraphs[0],
-        f"https://ptc.com/case/{data.get('ptc_case')}",
+        f"https://support.ptc.com/app/caseviewer/?case=data.get('ptc_case')}",
         str(data.get("ptc_case", ""))
     )
 
