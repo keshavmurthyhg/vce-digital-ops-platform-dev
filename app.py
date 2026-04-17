@@ -1,6 +1,12 @@
 import streamlit as st
 from modules.search_page import render_search_page
 from modules.doc_generator_ui import render_doc_generator
+from modules.charts_page import render_charts_page
+
+page = st.sidebar.selectbox(
+    "Module",
+    ["Search Dashboard", "Word Report Generator", "Insights Dashboard"]
+)
 
 st.set_page_config(layout="wide")
 
@@ -58,8 +64,10 @@ input, button {
 </style>
 """, unsafe_allow_html=True)
 
-if menu == "Search Dashboard":
+if page == "Search Dashboard":
     render_search_page()
+else:
+    render_charts_page()
 
 elif menu == "Word Report Generator":
     render_doc_generator()
