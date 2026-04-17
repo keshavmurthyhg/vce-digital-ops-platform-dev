@@ -52,7 +52,7 @@ def generate_word_doc(data, root_cause, l2_analysis, resolution, closure):
 
     add_hyperlink(
         table1.rows[1].cells[2].paragraphs[0],
-        f"https://support.ptc.com/app/caseviewer/?case=data.get('ptc_case')}",
+        f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}",
         str(data.get("ptc_case", ""))
     )
 
