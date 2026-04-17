@@ -38,35 +38,35 @@ def render_table(df):
 
         number = row.get("Number", "")
         source = row.get("Source", "")
-
         link = build_link(number, source)
 
-        # ✅ CRITICAL FIX (NEW TAB)
+        # ✅ FIXED LINK (NO MULTILINE ISSUE)
         if link:
-    open_link = (
-        f'<span onclick="window.open(\'{link}\', \'_blank\')" '
-        f'style="color:#1f77b4; cursor:pointer; text-decoration:underline;">'
-        f'🔗 Open</span>'
-    )
-else:
-    open_link = "-"
-        <tr>
-            <td style="text-align:center;">{i+1}</td>
-            <td style="text-align:center;">{number}</td>
+            open_link = (
+                f'<span onclick="window.open(\'{link}\', \'_blank\')" '
+                f'style="color:#1f77b4; cursor:pointer; text-decoration:underline;">'
+                f'🔗 Open</span>'
+            )
+        else:
+            open_link = "-"
 
-            <td style="text-align:left; max-width:350px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+        html += f"""
+        <tr>
+            <td>{row.get('SL No','')}</td>
+            <td>{number}</td>
+
+            <td style="text-align:left; max-width:350px; overflow:hidden; text-overflow:ellipsis;">
                 {row.get('Description','')}
             </td>
 
-            <td style="text-align:center;">{row.get('Priority','')}</td>
-            <td style="text-align:center;">{row.get('Status','')}</td>
-            <td style="text-align:center;">{row.get('Created By','')}</td>
-            <td style="text-align:center;">{row.get('Created Date','')}</td>
-            <td style="text-align:center;">{row.get('Assigned To','')}</td>
-            <td style="text-align:center;">{row.get('Resolved Date','')}</td>
-            <td style="text-align:center;">{source}</td>
-
-            <td style="text-align:center;">{open_link}</td>
+            <td>{row.get('Priority','')}</td>
+            <td>{row.get('Status','')}</td>
+            <td>{row.get('Created By','')}</td>
+            <td>{row.get('Created Date','')}</td>
+            <td>{row.get('Assigned To','')}</td>
+            <td>{row.get('Resolved Date','')}</td>
+            <td>{source}</td>
+            <td>{open_link}</td>
         </tr>
         """
 
