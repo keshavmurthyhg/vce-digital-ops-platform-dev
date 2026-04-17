@@ -1,22 +1,33 @@
 import streamlit as st
+
 from modules.search_page import render_search_page
 from modules.doc_generator_ui import render_doc_generator
 from modules.charts_page import render_charts_page
 
-page = st.sidebar.selectbox(
-    "Module",
-    ["Search Dashboard", "Word Report Generator", "Insights Dashboard"]
-)
-
 st.set_page_config(layout="wide")
 
+# ---------- SIDEBAR ----------
 st.sidebar.markdown("## 📊 Module")
 
-menu = st.sidebar.selectbox(
-    "Module",  # keep label (important)
-    ["Insights Dashboard", "Search Dashboard", "Word Report Generator"],
+page = st.sidebar.selectbox(
+    "Module",
+    [
+        "Search Dashboard",
+        "Insights Dashboard",
+        "Word Report Generator"
+    ],
     label_visibility="collapsed"
 )
+
+# ---------- ROUTING ----------
+if page == "Search Dashboard":
+    render_search_page()
+
+elif page == "Insights Dashboard":
+    render_charts_page()
+
+elif page == "Word Report Generator":
+    render_doc_generator()
 
 # ✅ GLOBAL CSS FIX
 st.markdown("""
@@ -63,12 +74,3 @@ input, button {
 
 </style>
 """, unsafe_allow_html=True)
-
-if page == "Search Dashboard":
-    render_search_page()
-
-elif page == "Insights Dashboard":
-    render_charts_page()
-
-elif page == "Word Report Generator":
-    render_doc_generator()
