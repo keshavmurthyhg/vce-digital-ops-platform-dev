@@ -29,11 +29,13 @@ def generate_word_doc(data, root_cause, l2_analysis, resolution, closure):
 
     headers2 = ["Priority", "Created By", "Created Date", "Assigned To", "Resolved Date"]
     values2 = [
+        values2 = [
         str(data.get("priority", "")),
-        str(data.get("caller", "")),
-        str(data.get("created", "")),
+        str(data.get("created_by", "")),   # FIX
+        str(data.get("created_date", "")), # FIX
         str(data.get("assigned_to", "")),
-        str(data.get("resolved", ""))
+        str(data.get("resolved_date", "")) # FIX
+]
     ]
 
     for i in range(5):
