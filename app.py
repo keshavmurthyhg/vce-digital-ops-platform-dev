@@ -3,10 +3,10 @@ from modules.search_page import render_search_page
 from modules.doc_generator_ui import render_doc_generator
 from modules.charts_page import render_charts_page
 
-#page = st.sidebar.selectbox(
-#    "Module",
- #   ["Search Dashboard", "Word Report Generator", "Insights Dashboard"]
-#)
+page = st.sidebar.selectbox(
+    "Module",
+    ["Search Dashboard", "Word Report Generator", "Insights Dashboard"]
+)
 
 st.set_page_config(layout="wide")
 
