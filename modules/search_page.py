@@ -124,7 +124,21 @@ def render_search_page():
 
     # ---------- LINK ----------
     def make_link(row):
-        return '<a href="#" target="_blank">Open</a>'
+    num = str(row.get("Number", ""))
+    src = row.get("Source", "")
+
+    if src == "SNOW":
+        url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
+    elif src == "PTC":
+        url = f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
+    elif src == "AZURE":
+        url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
+    else:
+        url = ""
+
+    if url:
+        return f'<a href="{url}" target="_blank">Open</a>'
+    return ""
 
     page_df["Open"] = page_df.apply(make_link, axis=1)
 
