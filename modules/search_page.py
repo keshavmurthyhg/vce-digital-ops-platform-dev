@@ -123,9 +123,9 @@ def render_search_page():
     page_df = page_df.fillna("")
 
     # ---------- TABLE ----------
-    #from modules.table import render_table
+    from modules.table import render_table
 
-    #render_table(page_df)
+    render_table(page_df)
 
     # ---------- KPI ----------
     with st.sidebar.expander("📈 KPI", True):
