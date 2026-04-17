@@ -122,16 +122,10 @@ def render_search_page():
 
     page_df = page_df.fillna("")
 
-    # ---------- LINK ----------
-    open_link = f'''
-        <span onclick="window.open('{link}', '_blank')"
-            style="color:#1f77b4; cursor:pointer; text-decoration:underline;">
-            🔗 Open
-        </span>
-        ''' if link else "-"
-
     # ---------- TABLE ----------
-    st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+    from modules.table import render_table
+
+    render_table(page_df)
 
     # ---------- KPI ----------
     with st.sidebar.expander("📈 KPI", True):
