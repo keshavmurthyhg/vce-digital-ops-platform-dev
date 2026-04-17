@@ -12,9 +12,7 @@ def build_link(num, src):
 
 
 # ================= TABLE RENDER =================
-from modules.table import render_table
-
-render_table(page_df)
+def render_table(df):
 
     html = """
     <table style="width:100%; border-collapse: collapse;">
@@ -36,13 +34,13 @@ render_table(page_df)
     <tbody>
     """
 
-    for i, row in df.iterrows():
+    for _, row in df.iterrows():
 
         number = row.get("Number", "")
         source = row.get("Source", "")
         link = build_link(number, source)
 
-        # ✅ FIXED LINK (NO MULTILINE ISSUE)
+        # ✅ SAFE LINK (NO MULTILINE ERROR)
         if link:
             open_link = (
                 f'<span onclick="window.open(\'{link}\', \'_blank\')" '
@@ -56,11 +54,9 @@ render_table(page_df)
         <tr>
             <td>{row.get('SL No','')}</td>
             <td>{number}</td>
-
             <td style="text-align:left; max-width:350px; overflow:hidden; text-overflow:ellipsis;">
                 {row.get('Description','')}
             </td>
-
             <td>{row.get('Priority','')}</td>
             <td>{row.get('Status','')}</td>
             <td>{row.get('Created By','')}</td>
