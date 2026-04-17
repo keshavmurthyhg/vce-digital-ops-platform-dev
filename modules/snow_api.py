@@ -2,7 +2,7 @@ import requests
 
 def fetch_incident(incident_number):
     try:
-        url = f"https://your-instance.service-now.com/api/now/table/incident?sysparm_query=number={incident_number}"
+        url = f"https://volvoitsm.service-now.com/api/now/table/incident?sysparm_query=number={incident_number}"
 
         headers = {"Accept": "application/json"}
 

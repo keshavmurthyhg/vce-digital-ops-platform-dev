@@ -1,7 +1,14 @@
 import streamlit as st
 from modules.snow_loader import load_snow_data
 from modules.doc_generator import generate_word_doc
+import re
 
+def extract_azure_link(text):
+    if not text:
+        return ""
+
+    match = re.search(r"https://dev\.azure\.com[^\s]+", str(text))
+    return match.group(0) if match else ""
 
 # ================= FETCH FUNCTION =================
 def get_incident_from_df(df, incident_number):
@@ -18,17 +25,30 @@ def get_incident_from_df(df, incident_number):
         row = row.iloc[0]
 
         return {
-            "number": row.get("number", ""),
-            "short_description": row.get("short description", ""),
-            "description": row.get("description", ""),
+    "number": row.get("number", ""),
+    "short_description": row.get("short description", ""),
+    "description": row.get("description", ""),
 
-            # ✅ KEY FIX (now available)
-            "work_notes": row.get("work notes", ""),
-            "comments": row.get("additional comments", ""),
-            "resolution": row.get("resolution notes", "")
-        }
+    # ✅ FIXED MAPPINGS
+    "priority": row.get("priority", ""),
+    "created_by": row.get("caller", ""),              # ✅ FIX
+    "created_date": row.get("created", ""),           # ✅ FIX
+    "assigned_to": row.get("assigned to", ""),
+    "resolved_date": row.get("resolved", ""),         # ✅ FIX
+
+    "work_notes": row.get("work notes", ""),
+    "comments": row.get("additional comments", ""),
+    "resolution": row.get("resolution notes", ""),
+
+    # ✅ FIXED
+    "ptc_case": row.get("vendor ticket", ""),
+
+    # ✅ NEW (Azure extraction handled below)
+    "azure_bug": extract_azure_link(row.get("resolution notes", ""))
+}
 
     return None
+
 
 # ================= UI =================
 def render_doc_generator():
@@ -36,11 +56,6 @@ def render_doc_generator():
     st.title("📄 SNOW Incident Report Generator")
 
     df = load_snow_data()
-
-    # 🔍 DEBUG START (ADD HERE)
-    #st.write("Columns:", df.columns)
-    #st.write("Sample Row:", df.head(1))
-    # 🔍 DEBUG END
 
     incident_number = st.text_input("Enter Incident Number")
 
@@ -54,14 +69,16 @@ def render_doc_generator():
         if data:
             st.session_state["doc_data"] = data
 
-            # ✅ FORCE UPDATE TEXT FIELDS
+            # auto-fill editable fields
             st.session_state["root"] = data.get("work_notes", "")
             st.session_state["l2"] = data.get("comments", "")
             st.session_state["res"] = data.get("resolution", "")
             st.session_state["closure"] = data.get("resolution", "")
 
+            st.success("✅ Incident loaded")
+
         else:
-            st.warning("❌ Incident not found in dataset")
+            st.warning("❌ Incident not found in Snow data")
 
     # ================= FORM =================
     root_cause = st.text_area("Root Cause", key="root")
