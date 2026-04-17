@@ -51,28 +51,10 @@ def show_table(df, page, page_size):
         df["Assigned To"] = df["Assigned To"].astype(str).str.replace(".0", "", regex=False)
 
     # LINK
-    def make_link(row):
-    num = str(row.get("Number", ""))
-    src = row.get("Source", "")
-
-    if src == "SNOW":
-        url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
-    elif src == "PTC":
-        url = f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
-    elif src == "AZURE":
-        url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
-    else:
-        url = ""
-
-    if url:
-        return f'<a href="{url}" target="_blank">Open</a>'
-    return ""
-)
-
-df["Open"] = df.apply(
-    lambda row: f'<a href="{build_link(row)}" target="_blank">Open</a>' if build_link(row) else "",
-    axis=1
-)
+    df["Open"] = df.apply(
+        lambda row: f'<a href="{build_link(row)}" target="_blank">Open</a>' if build_link(row) else "",
+        axis=1
+    )
 
     # PAGINATION
     start = (page - 1) * page_size
