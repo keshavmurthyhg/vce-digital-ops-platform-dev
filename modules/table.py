@@ -24,75 +24,24 @@ def truncate_text(text, length=60):
 
 def render_table(df):
 
-    html = """
-    <style>
-    table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 13px;
-    }
-    th, td {
-        padding: 6px;
-        border: 1px solid #ddd;
-        text-align: center;
-        white-space: nowrap;
-    }
-    th {
-        background-color: #f5f5f5;
-    }
-    td.desc {
-        text-align: left;
-        max-width: 350px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    </style>
+    df = df.copy()
 
-    <table>
-    <thead>
-    <tr>
-        <th>SL No</th>
-        <th>Number</th>
-        <th>Description</th>
-        <th>Priority</th>
-        <th>Status</th>
-        <th>Created By</th>
-        <th>Created Date</th>
-        <th>Assigned To</th>
-        <th>Resolved Date</th>
-        <th>Source</th>
-        <th>Open</th>
-    </tr>
-    </thead>
-    <tbody>
-    """
+    # ✅ Clean fields
+    df["Created By"] = df["Created By"].apply(clean_name)
+    df["Assigned To"] = df["Assigned To"].apply(clean_name)
+    df["Description"] = df["Description"].apply(truncate_text)
 
-    for _, row in df.iterrows():
+    # ✅ Create link column
+    df["Open"] = df.apply(
+        lambda row: build_link(row["Number"], row["Source"]),
+        axis=1
+    )
 
-        number = row.get("Number", "")
-        source = row.get("Source", "")
-        link = build_link(number, source)
-
-        # ✅ FIXED LINK (works in Streamlit)
-        open_link = f'<a href="{link}" target="_blank">Open</a>' if link else "-"
-
-        html += f"""
-        <tr>
-            <td>{row.get('SL No','')}</td>
-            <td>{number}</td>
-            <td class="desc">{truncate_text(row.get('Description',''))}</td>
-            <td>{row.get('Priority','')}</td>
-            <td>{row.get('Status','')}</td>
-            <td>{clean_name(row.get('Created By',''))}</td>
-            <td>{row.get('Created Date','')}</td>
-            <td>{clean_name(row.get('Assigned To',''))}</td>
-            <td>{row.get('Resolved Date','')}</td>
-            <td>{source}</td>
-            <td>{open_link}</td>
-        </tr>
-        """
-
-    html += "</tbody></table>"
-
-    # ✅ IMPORTANT: ONLY THIS
-    st.markdown(html, unsafe_allow_html=True)
+    # ✅ Show table safely
+    st.dataframe(
+        df,
+        use_container_width=True,
+        column_config={
+            "Open": st.column_config.LinkColumn("Open", display_text="Open")
+        }
+    )
