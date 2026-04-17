@@ -193,8 +193,8 @@ def render_search_page():
 
     # ---------- DATE FORMAT ----------
     for col in ["Created Date", "Resolved Date"]:
-    if col in page_df:
-        page_df[col] = page_df[col].dt.strftime("%d-%b-%y")
+        if col in page_df:
+            page_df[col] = page_df[col].dt.strftime("%d-%b-%y")
 
     page_df = page_df.fillna("")
 
