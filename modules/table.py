@@ -1,6 +1,21 @@
 import streamlit as st
+import pandas as pd
+import re
 
-def build_link(num, src):
+
+def clean_name(val):
+    if pd.isna(val):
+        return val
+    val = str(val)
+    val = re.sub(r"\s*<.*?>", "", val)
+    val = re.sub(r"\s*\(.*?\)", "", val)
+    return val.strip()
+
+
+def build_link(row):
+    num = str(row.get("Number", ""))
+    src = row.get("Source", "")
+
     if src == "SNOW":
         return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
     elif src == "PTC":
@@ -9,18 +24,57 @@ def build_link(num, src):
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
     return ""
 
-def render_table(df):
-    df = df.copy()
 
-    # Create link column
-    links = []
-    for _, row in df.iterrows():
-        link = build_link(row.get("Number", ""), row.get("Source", ""))
-        links.append(link if link else "")
+def show_table(df, page, page_size):
 
-    df["Open"] = links
+    if df.empty:
+        st.warning("No data")
+        return
 
-    # Limit description length (no wrap)
-    df["Description"] = df["Description"].astype(str).str[:80]
+    df = df.copy().reset_index(drop=True)
 
-    st.dataframe(df, use_container_width=True)
+    # SL NO
+    df.insert(0, "SL No", df.index + 1)
+
+    # CLEAN NAMES
+    for col in ["Created By", "Assigned To"]:
+        if col in df.columns:
+            df[col] = df[col].apply(clean_name)
+
+    # DATE FORMAT
+    for col in ["Created Date", "Resolved Date"]:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], errors="coerce").dt.strftime("%d-%b-%y")
+
+    # REMOVE .0
+    if "Assigned To" in df.columns:
+        df["Assigned To"] = df["Assigned To"].astype(str).str.replace(".0", "", regex=False)
+
+    # LINK
+    page_df["Link"] = page_df.apply(
+    lambda row: f'<a href="{build_link(row)}" target="_blank">Open</a>' if build_link(row) else "",
+    axis=1
+)
+
+    # PAGINATION
+    start = (page - 1) * page_size
+    end = start + page_size
+    df_page = df.iloc[start:end]
+
+    cols = [
+        "SL No", "Number", "Description", "Priority", "Status",
+        "Created By", "Created Date", "Assigned To",
+        "Resolved Date", "Source", "Open"
+    ]
+
+    df_page = df_page[[c for c in cols if c in df_page.columns]]
+
+    st.dataframe(
+        df_page,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Open": st.column_config.LinkColumn("🔗"),
+            "Description": st.column_config.TextColumn(width="large"),
+        }
+    )
