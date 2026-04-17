@@ -24,7 +24,6 @@ def render_search_page():
     df["Priority"] = df.apply(clean_priority, axis=1)
 
     # ---------- SIDEBAR ----------
-    
     with st.sidebar.expander("📂 Source", True):
         cols = st.columns(2)
 
@@ -35,9 +34,12 @@ def render_search_page():
 
         sources = ["AZURE", "SNOW", "PTC"] if all_src else []
         if not all_src:
-            if azure: sources.append("AZURE")
-            if snow: sources.append("SNOW")
-            if ptc: sources.append("PTC")
+            if azure:
+                sources.append("AZURE")
+            if snow:
+                sources.append("SNOW")
+            if ptc:
+                sources.append("PTC")
 
         if not sources:
             st.stop()
@@ -61,7 +63,7 @@ def render_search_page():
         st.session_state["rows"] = 10
 
     # ---------- TOOLBAR ----------
-    col1, col2, col3, col4, col5, col6 = st.columns([5,1,2,1.5,1.5,2])
+    col1, col2, col3, col4, col5, col6 = st.columns([5, 1, 2, 1.5, 1.5, 2])
 
     with col1:
         search_value = st.text_input("🔎 Search", key="search_box")
@@ -73,7 +75,7 @@ def render_search_page():
     filtered = apply_search(filtered, search_value)
 
     df_display = filtered.reset_index(drop=True)
-    df_display.insert(0, "SL No", range(1, len(df_display)+1))
+    df_display.insert(0, "SL No", range(1, len(df_display) + 1))
 
     total_rows = len(df_display)
 
@@ -92,7 +94,7 @@ def render_search_page():
         )
 
     with col4:
-        page_size = st.selectbox("Rows", [10,20,50,100], key="rows")
+        page_size = st.selectbox("Rows", [10, 20, 50, 100], key="rows")
 
     total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
 
@@ -116,29 +118,29 @@ def render_search_page():
     page_df = df_display.iloc[start:end]
 
     # ---------- DATE FORMAT ----------
-    for col in ["Created Date","Resolved Date"]:
+    for col in ["Created Date", "Resolved Date"]:
         if col in page_df:
             page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%y")
 
     page_df = page_df.fillna("")
 
-    # ---------- LINK ----------
+    # ---------- LINK (FIXED) ----------
     def make_link(row):
-    num = str(row.get("Number", ""))
-    src = row.get("Source", "")
+        num = str(row.get("Number", ""))
+        src = row.get("Source", "")
 
-    if src == "SNOW":
-        url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
-    elif src == "PTC":
-        url = f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
-    elif src == "AZURE":
-        url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
-    else:
-        url = ""
+        if src == "SNOW":
+            url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
+        elif src == "PTC":
+            url = f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
+        elif src == "AZURE":
+            url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
+        else:
+            url = ""
 
-    if url:
-        return f'<a href="{url}" target="_blank">Open</a>'
-    return ""
+        if url:
+            return f'<a href="{url}" target="_blank">Open</a>'
+        return ""
 
     page_df["Open"] = page_df.apply(make_link, axis=1)
 
