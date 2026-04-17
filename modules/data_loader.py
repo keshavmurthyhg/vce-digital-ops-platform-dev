@@ -19,6 +19,30 @@ def col(df, *names):
 
 
 # -------------------------------
+# DATE PARSER (FIXED)
+# -------------------------------
+def parse_mixed_date(val):
+    if pd.isna(val):
+        return pd.NaT
+
+    val = str(val).strip()
+
+    for fmt in (
+        "%Y-%m-%d %H:%M:%S",  # SNOW
+        "%d-%m-%Y %H:%M",     # AZURE
+        "%d-%b-%Y",           # PTC
+        "%Y-%m-%d",
+        "%d-%m-%Y",
+    ):
+        try:
+            return pd.to_datetime(val, format=fmt)
+        except:
+            continue
+
+    return pd.to_datetime(val, errors="coerce")
+
+
+# -------------------------------
 # AZURE
 # -------------------------------
 def build_azure(df):
@@ -36,7 +60,7 @@ def build_azure(df):
 
 
 # -------------------------------
-# SNOW (FIXED)
+# SNOW
 # -------------------------------
 def build_snow(df):
     return pd.DataFrame({
@@ -53,7 +77,7 @@ def build_snow(df):
 
 
 # -------------------------------
-# PTC (FIXED)
+# PTC
 # -------------------------------
 def build_ptc(df):
     return pd.DataFrame({
@@ -105,38 +129,16 @@ def load_data():
         build_ptc(ptc)
     ], ignore_index=True)
 
-
-    def parse_mixed_date(val):
-    if pd.isna(val):
-        return pd.NaT
-
-    val = str(val).strip()
-
-    for fmt in (
-        "%Y-%m-%d %H:%M:%S",  # SNOW
-        "%d-%m-%Y %H:%M",     # AZURE
-        "%d-%b-%Y",           # PTC
-        "%Y-%m-%d",           # fallback
-        "%d-%m-%Y",           # fallback
-    ):
-        try:
-            return pd.to_datetime(val, format=fmt)
-        except:
-            continue
-
-    return pd.to_datetime(val, errors="coerce")
-    
     df = df.reset_index(drop=True)
 
     # ---------- DATE NORMALIZATION ----------
-    for col in ["Created Date", "Resolved Date"]:
-    if col in df.columns:
-        df[col] = df[col].apply(parse_mixed_date)
+    for col_name in ["Created Date", "Resolved Date"]:
+        if col_name in df.columns:
+            df[col_name] = df[col_name].apply(parse_mixed_date)
 
     df = df.fillna("")
 
     from datetime import datetime
-    
     info = datetime.now().strftime("%d-%b-%Y %H:%M")
 
     return df, info
