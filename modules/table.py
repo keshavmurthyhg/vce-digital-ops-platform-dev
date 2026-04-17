@@ -26,10 +26,26 @@ def render_table(df):
 
     html = """
     <style>
-    table {width:100%; border-collapse:collapse; font-size:13px;}
-    th, td {padding:6px; border:1px solid #ddd; text-align:center; white-space:nowrap;}
-    th {background-color:#f5f5f5;}
-    td.desc {text-align:left; max-width:350px; overflow:hidden; text-overflow:ellipsis;}
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+    th, td {
+        padding: 6px;
+        border: 1px solid #ddd;
+        text-align: center;
+        white-space: nowrap;
+    }
+    th {
+        background-color: #f5f5f5;
+    }
+    td.desc {
+        text-align: left;
+        max-width: 350px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     </style>
 
     <table>
@@ -57,6 +73,7 @@ def render_table(df):
         source = row.get("Source", "")
         link = build_link(number, source)
 
+        # ✅ FIXED LINK (works in Streamlit)
         open_link = f'<a href="{link}" target="_blank">Open</a>' if link else "-"
 
         html += f"""
@@ -77,5 +94,5 @@ def render_table(df):
 
     html += "</tbody></table>"
 
-    # ONLY THIS — NO st.write anywhere
+    # ✅ IMPORTANT: ONLY THIS
     st.markdown(html, unsafe_allow_html=True)
