@@ -66,8 +66,9 @@ input, button {
 
 if page == "Search Dashboard":
     render_search_page()
-else:
+
+elif page == "Insights Dashboard":
     render_charts_page()
 
-else: menu == "Word Report Generator":
+elif page == "Word Report Generator":
     render_doc_generator()
