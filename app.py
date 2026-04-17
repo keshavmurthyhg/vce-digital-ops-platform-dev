@@ -69,5 +69,5 @@ if page == "Search Dashboard":
 else:
     render_charts_page()
 
-elif menu == "Word Report Generator":
+else menu == "Word Report Generator":
     render_doc_generator()
