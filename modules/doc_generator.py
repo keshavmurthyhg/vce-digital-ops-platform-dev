@@ -1,6 +1,24 @@
 from docx import Document
 from io import BytesIO
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.opc.constants import RELATIONSHIP_TYPE as RT
 
+def add_hyperlink(paragraph, url, text):
+    part = paragraph.part
+    r_id = part.relate_to(url, RT.HYPERLINK, is_external=True)
+
+    hyperlink = OxmlElement('w:hyperlink')
+    hyperlink.set(qn('r:id'), r_id)
+
+    new_run = OxmlElement('w:r')
+    rPr = OxmlElement('w:rPr')
+
+    new_run.append(rPr)
+    new_run.text = text
+    hyperlink.append(new_run)
+
+    paragraph._p.append(hyperlink)
 
 def generate_word_doc(data, root_cause, l2_analysis, resolution, closure):
 
@@ -9,15 +27,20 @@ def generate_word_doc(data, root_cause, l2_analysis, resolution, closure):
     doc.add_heading('INCIDENT REPORT', 0)
 
     # ================= TABLE 1 (LINKS) =================
-    table1 = doc.add_table(rows=2, cols=3)
-    table1.style = 'Table Grid'
-
-    headers = ["Incident", "Azure Bug", "PTC Case"]
-    values = [
-        data.get("number", ""),
-        data.get("azure_bug", ""),
-        data.get("ptc_case", "")
-    ]
+    for i in range(3):
+        table1.rows[0].cells[i].text = headers[i]
+    
+    # Incident link
+    p = table1.rows[1].cells[0].paragraphs[0]
+    add_hyperlink(p, f"https://your-snow-url/{data.get('number')}", data.get("number"))
+    
+    # Azure
+    p = table1.rows[1].cells[1].paragraphs[0]
+    add_hyperlink(p, f"https://dev.azure.com/.../{data.get('azure_bug')}", data.get("azure_bug"))
+    
+    # PTC
+    p = table1.rows[1].cells[2].paragraphs[0]
+    add_hyperlink(p, f"https://ptc.com/case/{data.get('ptc_case')}", data.get("ptc_case"))
 
     for i in range(3):
         table1.rows[0].cells[i].text = headers[i]
