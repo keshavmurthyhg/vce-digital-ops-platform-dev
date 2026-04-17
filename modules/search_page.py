@@ -50,12 +50,36 @@ def render_search_page():
     with st.sidebar.expander("🎯 Filters", True):
         status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
         priority = st.multiselect("Priority", sorted(filtered["Priority"].dropna().unique()))
+    
+    # ---------- DATE FILTER ----------
+    with st.sidebar.expander("📅 Date Range", True):
 
+    min_date = pd.to_datetime(df["Created Date"], errors="coerce").min()
+    max_date = pd.to_datetime(df["Created Date"], errors="coerce").max()
+
+    date_range = st.date_input(
+        "Select Date Range",
+        value=(min_date, max_date),
+        min_value=min_date,
+        max_value=max_date
+    )
+        
     if status:
         filtered = filtered[filtered["Status"].isin(status)]
     if priority:
         filtered = filtered[filtered["Priority"].isin(priority)]
 
+    # ---------- APPLY DATE FILTER ----------
+    if date_range and len(date_range) == 2:
+    start_date, end_date = date_range
+
+    filtered["Created Date"] = pd.to_datetime(filtered["Created Date"], errors="coerce")
+
+    filtered = filtered[
+        (filtered["Created Date"] >= pd.to_datetime(start_date)) &
+        (filtered["Created Date"] <= pd.to_datetime(end_date))
+    ]
+    
     # ---------- CLEAR FUNCTION ----------
     def clear_all():
         st.session_state["search_box"] = ""
