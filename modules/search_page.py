@@ -69,7 +69,7 @@ def render_search_page():
             ["No Filter", "Date Range", "By Year", "Quick Select"]
         )
 
-        temp_dates = pd.to_datetime(df[date_column], errors="coerce")
+        temp_dates = df[date_column]
 
         min_date = temp_dates.min()
         max_date = temp_dates.max()
@@ -99,7 +99,7 @@ def render_search_page():
     # ---------- APPLY DATE FILTER ----------
     if mode != "No Filter":
 
-        filtered[date_column] = pd.to_datetime(filtered[date_column], errors="coerce")
+        filtered[date_column] = filtered[date_column]
 
         if mode == "Date Range" and date_range and len(date_range) == 2:
             start_date, end_date = date_range
