@@ -1,26 +1,34 @@
 import streamlit as st
 import pandas as pd
 from modules.snow_loader import load_snow_data
-from modules.doc_generator import generate_word_doc
+from modules.doc_generator import generate_word_doc, generate_pdf
 import re
 from io import BytesIO
 import zipfile
 
 
-# ================= AZURE ID EXTRACTION =================
+# ================= AZURE ID =================
 def extract_azure_link(text):
     if not text:
         return ""
-
     match = re.search(r"/(\d+)", str(text))
     return match.group(1) if match else ""
 
 
-# ================= FETCH FUNCTION =================
+# ================= DATE FORMAT =================
+def format_date(date_val):
+    if not date_val:
+        return ""
+    try:
+        return pd.to_datetime(date_val).strftime("%d-%b-%Y")
+    except:
+        return str(date_val)
+
+
+# ================= FETCH =================
 def get_incident_from_df(df, incident_number):
 
     df_copy = df.copy()
-
     df_copy["number"] = df_copy["number"].astype(str).str.strip().str.upper()
     incident_number = incident_number.strip().upper()
 
@@ -36,9 +44,9 @@ def get_incident_from_df(df, incident_number):
 
             "priority": row.get("priority", ""),
             "created_by": row.get("caller", ""),
-            "created_date": row.get("created", ""),
+            "created_date": format_date(row.get("created", "")),
             "assigned_to": row.get("assigned to", ""),
-            "resolved_date": row.get("resolved", ""),
+            "resolved_date": format_date(row.get("resolved", "")),
 
             "work_notes": row.get("work notes", ""),
             "comments": row.get("additional comments", ""),
@@ -58,7 +66,7 @@ def render_doc_generator():
 
     df = load_snow_data()
 
-    # ================= SIDEBAR FILTERS =================
+    # SIDEBAR
     st.sidebar.header("Filters")
 
     priority_filter = st.sidebar.multiselect(
@@ -73,7 +81,7 @@ def render_doc_generator():
 
     date_filter = st.sidebar.date_input("Created Date Range", [])
 
-    # Apply filters
+    # APPLY FILTER
     filtered_df = df.copy()
 
     if priority_filter:
@@ -91,82 +99,65 @@ def render_doc_generator():
 
     df = filtered_df
 
-    # ================= INPUT =================
     incident_number = st.text_input("Enter Incident Number")
-
     bulk_ids = st.text_area("Bulk Incident Numbers (comma separated)")
 
     # ================= BUTTON ROW =================
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     # FETCH
-    if col1.button("Fetch Incident"):
-
+    if col1.button("Fetch"):
         data = get_incident_from_df(df, incident_number)
-
         if data:
             st.session_state["doc_data"] = data
-
             st.session_state["root"] = data.get("work_notes", "")
             st.session_state["l2"] = data.get("comments", "")
             st.session_state["res"] = data.get("resolution", "")
-            st.session_state["closure"] = data.get("resolution", "")
+            st.success("✅ Loaded")
 
-            st.success("✅ Incident loaded")
-
-        else:
-            st.warning("❌ Incident not found")
-
-    # ================= FORM =================
-    root_cause = st.text_area("Root Cause", key="root")
-    l2_analysis = st.text_area("L2 Analysis", key="l2")
-    resolution = st.text_area("Resolution", key="res")
-    closure = st.text_area("Closure Notes", key="closure")
-
-    # GENERATE
-    if col2.button("Generate Document"):
-
-        if "doc_data" not in st.session_state:
-            st.warning("⚠️ Fetch incident first")
-            return
-
-        file = generate_word_doc(
-            st.session_state["doc_data"],
-            root_cause,
-            l2_analysis,
-            resolution,
-            closure
-        )
-
-        st.session_state["generated_file"] = file
-
-    # PREVIEW
-    if col3.button("Preview"):
+    # GENERATE WORD
+    if col2.button("Word"):
         if "doc_data" in st.session_state:
-            st.json(st.session_state["doc_data"])
+            st.session_state["word"] = generate_word_doc(
+                st.session_state["doc_data"],
+                st.session_state["root"],
+                st.session_state["l2"],
+                st.session_state["res"]
+            )
 
-    # DOWNLOAD
-    if "generated_file" in st.session_state:
-        col4.download_button(
-            "Download",
-            st.session_state["generated_file"],
-            f"{st.session_state['doc_data']['number']}.docx"
-        )
+    # GENERATE PDF
+    if col3.button("PDF"):
+        if "doc_data" in st.session_state:
+            st.session_state["pdf"] = generate_pdf(
+                st.session_state["doc_data"],
+                st.session_state["root"],
+                st.session_state["l2"],
+                st.session_state["res"]
+            )
 
-    # ================= BULK =================
-    if st.button("Bulk Generate"):
-
+    # BULK
+    if col4.button("Bulk"):
         ids = [i.strip().upper() for i in bulk_ids.split(",") if i.strip()]
-
         zip_buffer = BytesIO()
 
         with zipfile.ZipFile(zip_buffer, "w") as zf:
             for inc in ids:
                 data = get_incident_from_df(df, inc)
                 if data:
-                    file = generate_word_doc(data, "", "", "", "")
+                    file = generate_word_doc(data, "", "", "")
                     zf.writestr(f"{inc}.docx", file.getvalue())
 
         zip_buffer.seek(0)
+        st.download_button("Download ZIP", zip_buffer, "reports.zip")
 
-        st.download_button("Download ZIP", zip_buffer, "incident_reports.zip")
+    # DOWNLOAD
+    if "word" in st.session_state:
+        col5.download_button("Download", st.session_state["word"], "report.docx")
+
+    if "pdf" in st.session_state:
+        col5.download_button("Download PDF", st.session_state["pdf"], "report.pdf")
+
+    # TEXT AREAS
+    st.text_area("Root Cause", key="root")
+    st.text_area("L2 Analysis", key="l2")
+    st.text_area("Resolution", key="res")
