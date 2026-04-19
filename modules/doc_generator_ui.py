@@ -29,6 +29,7 @@ def format_date(date_val):
 def get_incident_from_df(df, incident_number):
 
     df_copy = df.copy()
+
     df_copy["number"] = df_copy["number"].astype(str).str.strip().str.upper()
     incident_number = incident_number.strip().upper()
 
@@ -66,6 +67,10 @@ def render_doc_generator():
 
     df = load_snow_data()
 
+    # ================= FIX STATE COLUMN =================
+    if "state" in df.columns:
+        df["state"] = df["state"].astype(str)
+
     # ================= SIDEBAR =================
     st.sidebar.header("Filters")
 
@@ -81,7 +86,12 @@ def render_doc_generator():
 
     date_filter = st.sidebar.date_input("Created Date Range", [])
 
-    # APPLY FILTERS
+    # ================= CLEAR BUTTON =================
+    if st.sidebar.button("Clear"):
+        st.session_state.clear()
+        st.rerun()
+
+    # ================= APPLY FILTER =================
     filtered_df = df.copy()
 
     if priority_filter:
@@ -99,7 +109,7 @@ def render_doc_generator():
 
     df = filtered_df
 
-    # 👉 Sidebar → Bulk Auto Fill
+    # ================= SIDEBAR → BULK =================
     if st.sidebar.button("Apply Filters to Bulk"):
         ids = df["number"].dropna().astype(str).unique()
         st.session_state["bulk_ids"] = ", ".join(ids)
@@ -115,7 +125,7 @@ def render_doc_generator():
     # ================= BUTTON ROW =================
     col1, col2, col3, col4 = st.columns(4)
 
-    # FETCH
+    # ================= FETCH =================
     if col1.button("Fetch"):
         data = get_incident_from_df(df, incident_number)
 
@@ -124,6 +134,7 @@ def render_doc_generator():
             st.session_state["root"] = data.get("work_notes", "")
             st.session_state["l2"] = data.get("comments", "")
             st.session_state["res"] = data.get("resolution", "")
+
             st.success("✅ Incident loaded")
         else:
             st.warning("❌ Incident not found")
@@ -142,6 +153,7 @@ def render_doc_generator():
                 l2_analysis,
                 resolution
             )
+            st.success("✅ Word generated")
 
     if "word_file" in st.session_state:
         col2.download_button(
@@ -159,6 +171,7 @@ def render_doc_generator():
                 l2_analysis,
                 resolution
             )
+            st.success("✅ PDF generated")
 
     if "pdf_file" in st.session_state:
         col3.download_button(
@@ -183,6 +196,8 @@ def render_doc_generator():
 
         zip_buffer.seek(0)
         st.session_state["zip_file"] = zip_buffer
+
+        st.success("✅ Bulk ZIP ready")
 
     if "zip_file" in st.session_state:
         col4.download_button(
