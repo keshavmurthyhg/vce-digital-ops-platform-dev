@@ -110,8 +110,13 @@ def render_doc_generator():
         st.session_state["bulk_ids"] = ", ".join(ids)
 
     if st.sidebar.button("Clear"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
+        for key in [
+            "doc_data", "root", "l2", "res",
+            "word_file", "pdf_file", "zip_file",
+            "bulk_ids"
+        ]:
+            if key in st.session_state:
+                del st.session_state[key]
         st.rerun()
 
     # ================= INPUT =================
