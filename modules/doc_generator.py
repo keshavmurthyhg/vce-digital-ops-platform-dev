@@ -1,76 +1,74 @@
 from docx import Document
 from io import BytesIO
+import re
 
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-from docx.opc.constants import RELATIONSHIP_TYPE as RT
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 
 
-# ================= WORD HYPERLINK =================
-def add_hyperlink(paragraph, url, text):
-    part = paragraph.part
-    r_id = part.relate_to(url, RT.HYPERLINK, is_external=True)
-
-    hyperlink = OxmlElement('w:hyperlink')
-    hyperlink.set(qn('r:id'), r_id)
-
-    run = OxmlElement('w:r')
-    run.text = text
-
-    hyperlink.append(run)
-    paragraph._p.append(hyperlink)
+# ================= CLEAN DESCRIPTION =================
+def clean_text(text):
+    if not text:
+        return ""
+    text = re.sub(
+        r"How does the user want to be contacted.*?(\+?\d[\d\s]+)",
+        "",
+        str(text),
+        flags=re.IGNORECASE
+    )
+    return text.strip()
 
 
 # ================= WORD =================
 def generate_word_doc(data, root, l2, res):
 
     doc = Document()
-    doc.add_heading('INCIDENT REPORT', 0)
 
-    table = doc.add_table(rows=10, cols=2)
+    # TITLE
+    title = doc.add_heading("INCIDENT REPORT", 0)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # TABLE (2 COLUMN STYLE)
+    table = doc.add_table(rows=6, cols=4)
     table.style = 'Table Grid'
 
-    rows = [
-        ("Incident", data.get("number")),
-        ("Azure Bug", data.get("azure_bug")),
-        ("PTC Case", data.get("ptc_case")),
-        ("Priority", data.get("priority")),
-        ("Created By", data.get("created_by")),
-        ("Created Date", data.get("created_date")),
-        ("Assigned To", data.get("assigned_to")),
-        ("Resolved Date", data.get("resolved_date")),
-        ("Short Description", data.get("short_description")),
-        ("Description", data.get("description")),
-    ]
+    def set_cell(row, col, key, value):
+        table.rows[row].cells[col].text = key.upper()
+        table.rows[row].cells[col+1].text = str(value)
 
-    for i, (k, v) in enumerate(rows):
-        table.rows[i].cells[0].text = str(k)
+    set_cell(0, 0, "Incident", data.get("number"))
+    set_cell(0, 2, "Created By", data.get("created_by"))
 
-        p = table.rows[i].cells[1].paragraphs[0]
+    set_cell(1, 0, "Azure Bug", data.get("azure_bug"))
+    set_cell(1, 2, "Created Date", data.get("created_date"))
 
-        if k == "Incident":
-            add_hyperlink(p, f"https://volvoitsm.service-now.com/{v}", str(v))
+    set_cell(2, 0, "PTC Case", data.get("ptc_case"))
+    set_cell(2, 2, "Assigned To", data.get("assigned_to"))
 
-        elif k == "Azure Bug":
-            add_hyperlink(p, f"https://dev.azure.com/.../{v}", str(v))
+    set_cell(3, 0, "Priority", data.get("priority"))
+    set_cell(3, 2, "Resolved Date", data.get("resolved_date"))
 
-        elif k == "PTC Case":
-            add_hyperlink(p, f"https://support.ptc.com/app/caseviewer/?case={v}", str(v))
+    # DESCRIPTION TABLE
+    desc_table = doc.add_table(rows=2, cols=2)
+    desc_table.style = 'Table Grid'
 
-        else:
-            p.text = str(v)
+    desc_table.rows[0].cells[0].text = "SHORT DESCRIPTION"
+    desc_table.rows[0].cells[1].text = "DESCRIPTION"
 
-    doc.add_heading('Root Cause', 1)
+    desc_table.rows[1].cells[0].text = clean_text(data.get("short_description"))
+    desc_table.rows[1].cells[1].text = clean_text(data.get("description"))
+
+    # TEXT
+    doc.add_heading("ROOT CAUSE", 1)
     doc.add_paragraph(root)
 
-    doc.add_heading('L2 Analysis', 1)
+    doc.add_heading("L2 ANALYSIS", 1)
     doc.add_paragraph(l2)
 
-    doc.add_heading('Resolution', 1)
+    doc.add_heading("RESOLUTION", 1)
     doc.add_paragraph(res)
 
     buffer = BytesIO()
@@ -87,39 +85,63 @@ def generate_pdf(data, root, l2, res):
     doc = SimpleDocTemplate(buffer)
     styles = getSampleStyleSheet()
 
+    elements = []
+
+    # TITLE
+    elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
+    elements.append(Spacer(1, 10))
+
+    # LINKS
     def link(url, text):
-        return f'<link href="{url}">{text}</link>'
+        return Paragraph(f'<link href="{url}">{text}</link>', styles["Normal"])
 
     table_data = [
-        ["Incident", Paragraph(link(f"https://volvoitsm.service-now.com/{data.get('number')}", data.get("number")), styles["Normal"])],
-        ["Azure Bug", Paragraph(link(f"https://dev.azure.com/.../{data.get('azure_bug')}", data.get("azure_bug")), styles["Normal"])],
-        ["PTC Case", Paragraph(link(f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}", data.get("ptc_case")), styles["Normal"])],
-        ["Priority", data.get("priority")],
-        ["Created By", data.get("created_by")],
-        ["Created Date", data.get("created_date")],
-        ["Assigned To", data.get("assigned_to")],
-        ["Resolved Date", data.get("resolved_date")],
-        ["Short Description", data.get("short_description")],
-        ["Description", data.get("description")],
+        ["INCIDENT", link(f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}", data.get("number")),
+         "CREATED BY", data.get("created_by")],
+
+        ["AZURE BUG", link(f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{data.get('azure_bug')}", data.get("azure_bug")),
+         "CREATED DATE", data.get("created_date")],
+
+        ["PTC CASE", link(f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}", data.get("ptc_case")),
+         "ASSIGNED TO", data.get("assigned_to")],
+
+        ["PRIORITY", data.get("priority"),
+         "RESOLVED DATE", data.get("resolved_date")]
     ]
 
-    table = Table(table_data, colWidths=[150, 350])  # ✅ FIX layout
+    table = Table(table_data, colWidths=[120, 180, 120, 180])
 
     table.setStyle(TableStyle([
         ('GRID', (0,0), (-1,-1), 1, colors.black),
-        ('BACKGROUND', (0,0), (0,-1), colors.lightgrey),
+        ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
         ('VALIGN', (0,0), (-1,-1), 'TOP')
     ]))
 
-    elements = [table]
+    elements.append(table)
+    elements.append(Spacer(1, 10))
 
-    elements.append(Paragraph("<b>Root Cause</b>", styles["Heading2"]))
+    # DESCRIPTION
+    desc_table = Table([
+        ["SHORT DESCRIPTION", "DESCRIPTION"],
+        [clean_text(data.get("short_description")), clean_text(data.get("description"))]
+    ], colWidths=[200, 300])
+
+    desc_table.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+        ('VALIGN', (0,0), (-1,-1), 'TOP')
+    ]))
+
+    elements.append(desc_table)
+
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph("<b>ROOT CAUSE</b>", styles["Heading2"]))
     elements.append(Paragraph(root, styles["Normal"]))
 
-    elements.append(Paragraph("<b>L2 Analysis</b>", styles["Heading2"]))
+    elements.append(Paragraph("<b>L2 ANALYSIS</b>", styles["Heading2"]))
     elements.append(Paragraph(l2, styles["Normal"]))
 
-    elements.append(Paragraph("<b>Resolution</b>", styles["Heading2"]))
+    elements.append(Paragraph("<b>RESOLUTION</b>", styles["Heading2"]))
     elements.append(Paragraph(res, styles["Normal"]))
 
     doc.build(elements)
