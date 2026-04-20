@@ -22,46 +22,90 @@ def clean_text(text):
     return text.strip()
 
 
-# ================= WORD =================
+# ================= WORD DOC =================
 def generate_word_doc(data, root, l2, res):
 
     doc = Document()
 
-    # TITLE
+    # ===== TITLE =====
     title = doc.add_heading("INCIDENT REPORT", 0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    run = title.runs[0]
+    run.bold = True
+    run.font.color.rgb = RGBColor(31, 78, 121)
 
-    # TABLE (2 COLUMN STYLE)
-    table = doc.add_table(rows=6, cols=4)
-    table.style = 'Table Grid'
+    # ===== TABLE 1 =====
+    table = doc.add_table(rows=4, cols=4)
+    table.style = "Table Grid"
 
-    def set_cell(row, col, key, value):
-        table.rows[row].cells[col].text = key.upper()
-        table.rows[row].cells[col+1].text = str(value)
+    def fill(row, col, key, value):
+        h = table.rows[row].cells[col]
+        v = table.rows[row].cells[col+1]
 
-    set_cell(0, 0, "Incident", data.get("number"))
-    set_cell(0, 2, "Created By", data.get("created_by"))
+        h.text = key.upper()
+        shade_cell(h)
 
-    set_cell(1, 0, "Azure Bug", data.get("azure_bug"))
-    set_cell(1, 2, "Created Date", data.get("created_date"))
+        # Bold header
+        for r in h.paragraphs[0].runs:
+            r.bold = True
 
-    set_cell(2, 0, "PTC Case", data.get("ptc_case"))
-    set_cell(2, 2, "Assigned To", data.get("assigned_to"))
+        v.text = ""
+        p = v.paragraphs[0]
 
-    set_cell(3, 0, "Priority", data.get("priority"))
-    set_cell(3, 2, "Resolved Date", data.get("resolved_date"))
+        if key == "Incident":
+            add_hyperlink(
+                p,
+                f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={value}",
+                str(value)
+            )
+        elif key == "Azure Bug":
+            add_hyperlink(
+                p,
+                f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{value}",
+                str(value)
+            )
+        elif key == "PTC Case":
+            add_hyperlink(
+                p,
+                f"https://support.ptc.com/app/caseviewer/?case={value}",
+                str(value)
+            )
+        else:
+            p.text = str(value)
 
-    # DESCRIPTION TABLE
+    fill(0,0,"Incident",data.get("number"))
+    fill(0,2,"Created By",data.get("created_by"))
+
+    fill(1,0,"Azure Bug",data.get("azure_bug"))
+    fill(1,2,"Created Date",data.get("created_date"))
+
+    fill(2,0,"PTC Case",data.get("ptc_case"))
+    fill(2,2,"Assigned To",data.get("assigned_to"))
+
+    fill(3,0,"Priority",data.get("priority"))
+    fill(3,2,"Resolved Date",data.get("resolved_date"))
+
+    doc.add_paragraph("")
+
+    # ===== TABLE 2 =====
     desc_table = doc.add_table(rows=2, cols=2)
-    desc_table.style = 'Table Grid'
+    desc_table.style = "Table Grid"
 
-    desc_table.rows[0].cells[0].text = "SHORT DESCRIPTION"
-    desc_table.rows[0].cells[1].text = "DESCRIPTION"
+    headers = ["SHORT DESCRIPTION", "DESCRIPTION"]
+
+    for i in range(2):
+        cell = desc_table.rows[0].cells[i]
+        cell.text = headers[i]
+        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        shade_cell(cell)
+
+        for r in cell.paragraphs[0].runs:
+            r.bold = True
 
     desc_table.rows[1].cells[0].text = clean_text(data.get("short_description"))
     desc_table.rows[1].cells[1].text = clean_text(data.get("description"))
 
-    # TEXT
+    # ===== TEXT =====
     doc.add_heading("ROOT CAUSE", 1)
     doc.add_paragraph(root)
 
@@ -71,11 +115,14 @@ def generate_word_doc(data, root, l2, res):
     doc.add_heading("RESOLUTION", 1)
     doc.add_paragraph(res)
 
+    # ===== FOOTER =====
+    add_footer(doc, data)
+
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
-
     return buffer
+
 
 
 
