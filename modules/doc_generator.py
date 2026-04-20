@@ -179,6 +179,21 @@ def generate_pdf(data, root, l2, res, images=None):
     elements.append(table)
 
     elements.append(Spacer(1,10))
+    # DESCRIPTION
+    desc_table = Table([
+        ["SHORT DESCRIPTION", "DESCRIPTION"],
+        [clean_text(data.get("short_description")), clean_text(data.get("description"))]
+    ], colWidths=[200, 300])
+
+    desc_table.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+        ('VALIGN', (0,0), (-1,-1), 'TOP')
+    ]))
+
+    elements.append(desc_table)
+
+    elements.append(Spacer(1, 10))
 
     elements.append(Paragraph("<b>ROOT CAUSE</b>", styles["Heading2"]))
     elements.append(Paragraph(root, styles["Normal"]))
