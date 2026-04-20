@@ -38,13 +38,7 @@ def clean_text(text):
 
 
 # ================= HYPERLINK =================
-def add_hyperlink(paragraph, url, text):
-    part = paragraph.part
-    r_id = part.relate_to(
-        url,
-        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
-        is_external=True
-    )
+p.text = safe_text(f"{value} (URL available)")
 
     hyperlink = OxmlElement("w:hyperlink")
     hyperlink.set(qn("r:id"), r_id)
