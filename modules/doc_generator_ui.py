@@ -71,36 +71,28 @@ def render_doc_generator():
         df["state"] = df["state"].fillna("Unknown").astype(str)
 
     # ================= SIDEBAR =================
-    st.sidebar.header("Filters")
-
-    priority_filter = st.sidebar.multiselect(
-        "Priority",
-        options=df["priority"].dropna().unique()
+        # ---------- SIDEBAR ----------
+    st.sidebar.markdown("## 📊 Module")
+    
+    options = [
+        "Search Dashboard",
+        "Insights Dashboard",
+        "Word Report Generator"
+    ]
+    
+    # ✅ Safe default
+    if "page" not in st.session_state or st.session_state.page not in options:
+        st.session_state.page = "Search Dashboard"
+    
+    page = st.sidebar.selectbox(
+        "Module",
+        options,
+        index=options.index(st.session_state.page),
+        label_visibility="collapsed"
     )
-
-    state_filter = st.sidebar.multiselect(
-        "State",
-        options=df["state"].dropna().unique() if "state" in df.columns else []
-    )
-
-    date_filter = st.sidebar.date_input("Created Date Range", [])
-
-    filtered_df = df.copy()
-
-    if priority_filter:
-        filtered_df = filtered_df[filtered_df["priority"].isin(priority_filter)]
-
-    if state_filter and "state" in df.columns:
-        filtered_df = filtered_df[filtered_df["state"].isin(state_filter)]
-
-    if len(date_filter) == 2:
-        filtered_df["created"] = pd.to_datetime(filtered_df["created"], errors="coerce")
-        filtered_df = filtered_df[
-            (filtered_df["created"] >= pd.to_datetime(date_filter[0])) &
-            (filtered_df["created"] <= pd.to_datetime(date_filter[1]))
-        ]
-
-    df = filtered_df
+    
+    # ✅ Persist selection
+    st.session_state.page = page
 
     # ================= INPUT =================
     incident_number = st.text_input("Enter Incident Number")
