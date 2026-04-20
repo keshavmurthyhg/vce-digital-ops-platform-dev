@@ -3,11 +3,11 @@ from io import BytesIO
 import re
 
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-
+from docx.shared import RGBColor 
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
-from docx.shared import RGBColor   
+ 
 
 # ================= CLEAN DESCRIPTION =================
 def clean_text(text):
