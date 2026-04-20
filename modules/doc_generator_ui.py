@@ -43,9 +43,16 @@ def render_doc_generator():
                 "created_date": "2026-01-29",
                 "assigned_to": "Keshavamurthy Hg",
                 "resolved_date": "2026-02-16",
-                "short_description": "Edit Association button is missing",
-                "description": "Users need to be able to edit association..."
+                t2 = doc.add_table(rows=2, cols=2)
+                t2.style = "Table Grid"
+                
+                t2.rows[0].cells[0].text = "SHORT DESCRIPTION"
+                t2.rows[0].cells[1].text = "DESCRIPTION"
+                
+                t2.rows[1].cells[0].text = clean_text(data.get("short_description"))
+                t2.rows[1].cells[1].text = clean_text(data.get("description"))
             }
+            
             st.success("Incident loaded")
 
     # WORD (SAFE — WON'T BREAK UI)
