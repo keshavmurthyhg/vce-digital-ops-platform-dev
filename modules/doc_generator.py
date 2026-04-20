@@ -79,6 +79,22 @@ def generate_word_doc(data, root, l2, res, images=None):
     t2.rows[1].cells[0].text = clean_text(data.get("short_description"))
     t2.rows[1].cells[1].text = clean_text(data.get("description"))
 
+    table.autofit = False
+    for i, width in enumerate([1.5, 2.5, 1.5, 2.5]):
+        for row in table.rows:
+            row.cells[i].width = Inches(width)
+    
+    t2.autofit = False
+    for row in t2.rows:
+        row.cells[0].width = Inches(3)
+        row.cells[1].width = Inches(3)
+    
+    for cell in t2.rows[0].cells:
+        p = cell.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        for run in p.runs:
+            run.bold = True
+        
     for section in [("ROOT CAUSE", root, "root"), ("L2 ANALYSIS", l2, "l2"), ("RESOLUTION", res, "res")]:
         doc.add_heading(section[0], 1)
         doc.add_paragraph(section[1])
@@ -119,31 +135,61 @@ def generate_pdf(data, root, l2, res, images=None):
 
     # Table 1: Header Info
     table = Table([
-        ["INCIDENT", link(f"https://volvoitsm.service-now.com/...", data.get('number')), "CREATED BY", wrap(data.get('created_by'))],
-        ["AZURE BUG", wrap(data.get('azure_bug')), "CREATED DATE", wrap(data.get('created_date'))],
-        ["PTC CASE", wrap(data.get('ptc_case')), "ASSIGNED TO", wrap(data.get('assigned_to'))],
-        ["PRIORITY", wrap(data.get('priority')), "RESOLVED DATE", wrap(data.get('resolved_date'))]
-    ], colWidths=[80, 185, 80, 185])
+        [
+            Paragraph("<b>INCIDENT</b>", styles["Normal"]),
+            link(f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}", data.get('number')),
+            Paragraph("<b>CREATED BY</b>", styles["Normal"]),
+            wrap(data.get('created_by'))
+        ],
+        [
+            Paragraph("<b>AZURE BUG</b>", styles["Normal"]),
+            link(f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{data.get('azure_bug')}", data.get('azure_bug')),
+            Paragraph("<b>CREATED DATE</b>", styles["Normal"]),
+            wrap(data.get('created_date'))
+        ],
+        [
+            Paragraph("<b>PTC CASE</b>", styles["Normal"]),
+            link(f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}", data.get('ptc_case')),
+            Paragraph("<b>ASSIGNED TO</b>", styles["Normal"]),
+            wrap(data.get('assigned_to'))
+        ],
+        [
+            Paragraph("<b>PRIORITY</b>", styles["Normal"]),
+            wrap(data.get('priority')),
+            Paragraph("<b>RESOLVED DATE</b>", styles["Normal"]),
+            wrap(data.get('resolved_date'))
+        ]
+    ], colWidths=[90, 180, 90, 180])
 
     table.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
         ('BACKGROUND',(0,0),(0,-1),colors.lightgrey),
         ('BACKGROUND',(2,0),(2,-1),colors.lightgrey),
         ('FONTSIZE', (0,0), (-1,-1), 9),
+        ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+        ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
     ]))
     elements.append(table)
     elements.append(Spacer(1,15))
 
     # Table 2: Descriptions with Wrapping
     desc_table = Table([
-        [Paragraph("<b>SHORT DESCRIPTION</b>", styles["Normal"]), Paragraph("<b>DESCRIPTION</b>", styles["Normal"])],
-        [wrap(clean_text(data.get("short_description"))), wrap(clean_text(data.get("description")))]
-    ], colWidths=[180, 350])
+        [
+            Paragraph("<b>SHORT DESCRIPTION</b>", styles["Normal"]),
+            Paragraph("<b>DESCRIPTION</b>", styles["Normal"])
+        ],
+        [
+            wrap(clean_text(data.get("short_description"))),
+            wrap(clean_text(data.get("description")))
+        ]
+    ], colWidths=[260, 260])
 
     desc_table.setStyle(TableStyle([
         ('GRID', (0,0), (-1,-1), 1, colors.black),
         ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
-        ('VALIGN', (0,0), (-1,-1), 'TOP')
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('ALIGN', (0,0), (-1,0), 'CENTER')  # ✅ header center
     ]))
     elements.append(desc_table)
     elements.append(Spacer(1, 15))
