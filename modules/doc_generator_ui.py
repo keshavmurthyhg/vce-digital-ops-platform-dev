@@ -9,7 +9,9 @@ import re
 
 # ================= CLEAR =================
 def clear_all():
-    st.session_state.clear()
+    keys = list(st.session_state.keys())
+    for k in keys:
+        del st.session_state[k]
     st.rerun()
 
 
@@ -78,12 +80,25 @@ def render_doc_generator():
         clear_all()
 
     # ================= INPUT =================
-    inc = st.text_input("Enter Incident Number")
+    inc = st.text_input("Enter Incident Number", key="inc_input")
 
     bulk = st.text_area("Bulk Incident Numbers", key="bulk_ids")
 
-    # ================= STATUS =================
-    status = st.empty()
+    # ================= STATUS (SINGLE MESSAGE) =================
+    if "status_msg" not in st.session_state:
+        st.session_state["status_msg"] = ""
+
+    status_box = st.empty()
+
+    def set_status(msg, success=True):
+        st.session_state["status_msg"] = msg
+        if success:
+            status_box.success(msg)
+        else:
+            status_box.error(msg)
+
+    if st.session_state["status_msg"]:
+        status_box.info(st.session_state["status_msg"])
 
     # ================= BUTTON ROW =================
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -97,21 +112,21 @@ def render_doc_generator():
             st.session_state["root"] = data["work_notes"]
             st.session_state["l2"] = data["comments"]
             st.session_state["res"] = data["resolution"]
-            status.success("✅ Incident loaded")
+            set_status("✅ Incident loaded")
         else:
-            status.error("❌ Incident not found")
+            set_status("❌ Incident not found", False)
 
     # ================= WORD =================
     if col2.button("Word"):
         if "data" in st.session_state:
             st.session_state["word"] = generate_word_doc(
                 st.session_state["data"],
-                st.session_state["root"],
-                st.session_state["l2"],
-                st.session_state["res"],
+                st.session_state.get("root", ""),
+                st.session_state.get("l2", ""),
+                st.session_state.get("res", ""),
                 st.session_state.get("images")
             )
-            status.success("✅ Word generated")
+            set_status("✅ Word generated")
 
     if "word" in st.session_state:
         col2.download_button(
@@ -125,12 +140,12 @@ def render_doc_generator():
         if "data" in st.session_state:
             st.session_state["pdf"] = generate_pdf(
                 st.session_state["data"],
-                st.session_state["root"],
-                st.session_state["l2"],
-                st.session_state["res"],
+                st.session_state.get("root", ""),
+                st.session_state.get("l2", ""),
+                st.session_state.get("res", ""),
                 st.session_state.get("images")
             )
-            status.success("✅ PDF generated")
+            set_status("✅ PDF generated")
 
     if "pdf" in st.session_state:
         col3.download_button(
@@ -154,7 +169,7 @@ def render_doc_generator():
 
         zip_buffer.seek(0)
         st.session_state["zip"] = zip_buffer
-        status.success("✅ Bulk ZIP ready")
+        set_status("✅ Bulk ZIP ready")
 
     if "zip" in st.session_state:
         col4.download_button("⬇ ZIP", st.session_state["zip"], "reports.zip")
@@ -162,7 +177,8 @@ def render_doc_generator():
     # ================= PREVIEW =================
     if col5.button("Preview"):
         if "data" in st.session_state:
-            st.write("### Preview")
+
+            st.markdown("### 🔍 Preview")
 
             st.markdown("**Short Description**")
             st.write(st.session_state["data"]["short_description"])
@@ -181,13 +197,16 @@ def render_doc_generator():
 
     # ================= TEXT =================
     st.text_area("Root Cause", key="root")
-    root_img = st.file_uploader("Root Image", type=["png", "jpg"])
+
+    root_img = st.file_uploader("Root Image", type=["png", "jpg"], key="root_img")
 
     st.text_area("L2 Analysis", key="l2")
-    l2_img = st.file_uploader("L2 Image", type=["png", "jpg"])
+
+    l2_img = st.file_uploader("L2 Image", type=["png", "jpg"], key="l2_img")
 
     st.text_area("Resolution", key="res")
-    res_img = st.file_uploader("Resolution Image", type=["png", "jpg"])
+
+    res_img = st.file_uploader("Resolution Image", type=["png", "jpg"], key="res_img")
 
     # ================= STORE IMAGES =================
     st.session_state["images"] = {
