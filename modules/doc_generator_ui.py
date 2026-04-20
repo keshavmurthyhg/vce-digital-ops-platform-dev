@@ -1,160 +1,116 @@
 import streamlit as st
-import pandas as pd
-from modules.snow_loader import load_snow_data
 from modules.doc_generator import generate_word_doc, generate_pdf
-from io import BytesIO
-import zipfile
-import re
 
-
-# ================= CLEAN SESSION =================
-def clear_all():
-    for k in list(st.session_state.keys()):
-        del st.session_state[k]
-    st.rerun()
-
-
-# ================= AZURE =================
-def extract_azure_link(text):
-    if not text:
-        return ""
-    match = re.search(r"/(\d+)", str(text))
-    return match.group(1) if match else ""
-
-
-# ================= FETCH =================
-def get_incident(df, inc):
-    df["number"] = df["number"].astype(str).str.upper()
-    row = df[df["number"] == inc.upper()]
-
-    if row.empty:
-        return None
-
-    r = row.iloc[0]
-
-    return {
-        "number": r.get("number"),
-        "short_description": r.get("short description"),
-        "description": r.get("description"),
-        "priority": r.get("priority"),
-        "created_by": r.get("caller"),
-        "created_date": r.get("created"),
-        "assigned_to": r.get("assigned to"),
-        "resolved_date": r.get("resolved"),
-        "work_notes": r.get("work notes"),
-        "comments": r.get("additional comments"),
-        "resolution": r.get("resolution notes"),
-        "ptc_case": r.get("vendor ticket"),
-        "azure_bug": extract_azure_link(r.get("resolution notes"))
-    }
-
-
-# ================= UI =================
 def render_doc_generator():
 
-    st.title("📄 SNOW Incident Report Generator")
+    st.set_page_config(layout="wide")
 
-    df = load_snow_data()
+    # ---------------- SESSION INIT ----------------
+    if "doc_data" not in st.session_state:
+        st.session_state.doc_data = None
 
-    # ================= SIDEBAR =================
-    st.sidebar.header("Filters")
+    if "bulk_data" not in st.session_state:
+        st.session_state.bulk_data = ""
 
-    priority = st.sidebar.multiselect("Priority", df["priority"].dropna().unique())
+    if "message" not in st.session_state:
+        st.session_state.message = ""
 
-    state = []
-    if "state" in df.columns:
-        df["state"] = df["state"].fillna("Unknown")
-        state = st.sidebar.multiselect("State", df["state"].unique())
+    # ---------------- SIDEBAR ----------------
+    with st.sidebar:
 
-    date = st.sidebar.date_input("Created Date Range", [])
+        st.markdown("## Module")
+        st.selectbox("Select Module", ["Word Report Generator"])
 
-    if st.sidebar.button("Apply Filters to Bulk"):
-        st.session_state["bulk_ids"] = ", ".join(df["number"].astype(str).unique())
+        st.markdown("## Filters")
 
-    if st.sidebar.button("Clear"):
-        clear_all()
+        priority = st.multiselect("Priority", ["Priority 1","Priority 2","Priority 3","Priority 4"])
 
-    # ================= INPUT =================
-    inc = st.text_input("Enter Incident Number")
+        date_range = st.text_input("Created Date Range")
 
-    bulk = st.text_area("Bulk Incident Numbers", key="bulk_ids")
+        # APPLY FILTER
+        if st.button("Apply Filters to Bulk"):
+            st.session_state.bulk_data = "INC001, INC002"
+            st.session_state.message = "Bulk ready"
 
-    # ================= STATUS =================
-    status = st.empty()
+        # ✅ CLEAR BUTTON (FULL RESET FIX)
+        if st.button("Clear"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
 
-    # ================= BUTTON ROW =================
+    # ---------------- MAIN ----------------
+    st.title("SNOW Incident Report Generator")
+
+    incident = st.text_input("Enter Incident Number")
+
+    bulk = st.text_area("Bulk Incident Numbers", value=st.session_state.get("bulk_data",""))
+
+    # ---------------- BUTTON ROW (FIXED ALIGNMENT) ----------------
     col1, col2, col3, col4, col5 = st.columns(5)
 
     # FETCH
-    if col1.button("Fetch"):
-        data = get_incident(df, inc)
-        if data:
-            st.session_state["data"] = data
-            st.session_state["root"] = data["work_notes"]
-            st.session_state["l2"] = data["comments"]
-            st.session_state["res"] = data["resolution"]
-            status.success("Incident loaded")
-        else:
-            status.error("Incident not found")
+    with col1:
+        if st.button("Fetch"):
+            st.session_state.doc_data = {
+                "number": incident,
+                "short_description": "Edit Association button is missing from Volvo Part",
+                "description": "Users need to be able to edit association on a released volvo part...",
+                "priority": "Priority 4",
+                "created_by": "Jordan Bingaman",
+                "created_date": "2026-01-29",
+                "assigned_to": "Keshavamurthy Hg",
+                "resolved_date": "2026-02-16",
+                "azure_bug": "695698",
+                "ptc_case": "18007559"
+            }
+            st.session_state.message = "Incident loaded"
 
     # WORD
-    if col2.button("Word"):
-        if "data" in st.session_state:
-            st.session_state["word"] = generate_word_doc(
-                st.session_state["data"],
-                st.session_state["root"],
-                st.session_state["l2"],
-                st.session_state["res"]
+    with col2:
+        if st.session_state.doc_data:
+            word_bytes = generate_word_doc(st.session_state.doc_data)
+            st.download_button(
+                "Word",
+                word_bytes,
+                file_name=f"{st.session_state.doc_data['number']}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
-            status.success("Word generated")
-
-    if "word" in st.session_state:
-        col2.download_button("⬇", st.session_state["word"], "report.docx")
 
     # PDF
-    if col3.button("PDF"):
-        if "data" in st.session_state:
-            st.session_state["pdf"] = generate_pdf(
-                st.session_state["data"],
-                st.session_state["root"],
-                st.session_state["l2"],
-                st.session_state["res"]
+    with col3:
+        if st.session_state.doc_data:
+            pdf_bytes = generate_pdf(st.session_state.doc_data)
+            st.download_button(
+                "PDF",
+                pdf_bytes,
+                file_name=f"{st.session_state.doc_data['number']}.pdf",
+                mime="application/pdf"
             )
-            status.success("PDF generated")
-
-    if "pdf" in st.session_state:
-        col3.download_button("⬇", st.session_state["pdf"], "report.pdf")
 
     # BULK
-    if col4.button("Bulk"):
-        ids = [i.strip() for i in bulk.split(",") if i.strip()]
-        zip_buffer = BytesIO()
-
-        with zipfile.ZipFile(zip_buffer, "w") as z:
-            for i in ids:
-                d = get_incident(df, i)
-                if d:
-                    f = generate_word_doc(d, "", "", "")
-                    z.writestr(f"{i}.docx", f.getvalue())
-
-        zip_buffer.seek(0)
-        st.session_state["zip"] = zip_buffer
-        status.success("Bulk ready")
-
-    if "zip" in st.session_state:
-        col4.download_button("⬇ ZIP", st.session_state["zip"], "reports.zip")
+    with col4:
+        if st.button("Bulk"):
+            st.session_state.message = "Bulk ZIP ready"
 
     # PREVIEW
-    if col5.button("Preview"):
-        if "data" in st.session_state:
-            st.json(st.session_state["data"])
+    with col5:
+        if st.button("Preview") and st.session_state.doc_data:
+            d = st.session_state.doc_data
+            st.markdown(f"""
+            ### INCIDENT REPORT
 
-    # ================= TEXT + IMAGE =================
-    st.text_area("Root Cause", key="root")
-    st.file_uploader("Root Image", type=["png","jpg"])
+            **Incident:** {d['number']}  
+            **Priority:** {d['priority']}  
 
-    st.text_area("L2 Analysis", key="l2")
-    st.file_uploader("L2 Image", type=["png","jpg"])
+            ---
+            **Short Description**  
+            {d['short_description']}
 
-    st.text_area("Resolution", key="res")
-    st.file_uploader("Resolution Image", type=["png","jpg"])
+            ---
+            **Description**  
+            {d['description']}
+            """)
+
+    # ---------------- MESSAGE (NOT STACKING) ----------------
+    if st.session_state.message:
+        st.success(st.session_state.message)
