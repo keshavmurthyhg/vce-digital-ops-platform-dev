@@ -126,7 +126,7 @@ def render_doc_generator():
         else:
             st.warning("❌ Incident not found")
 
-   
+   st.write("👉 word_file in session:", "word_file" in st.session_state)
     # ================= WORD =================
     with col2:
         
