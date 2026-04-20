@@ -65,7 +65,8 @@ def generate_word_doc(data, root, l2, res):
     def fill(row, col, key, value):
         header_cell = table.rows[row].cells[col]
         value_cell = table.rows[row].cells[col+1]
-
+        for run in header_cell.paragraphs[0].runs:
+        run.bold = True
         header_cell.text = key.upper()
         value_cell.text = ""
 
@@ -143,7 +144,34 @@ def generate_word_doc(data, root, l2, res):
     section = doc.sections[0]
     footer = section.footer.paragraphs[0]
 
-    footer.text = f"{data.get('number')}     Page     {data.get('priority')}"
+    from docx.enum.text import WD_TAB_ALIGNMENT
+
+    section = doc.sections[0]
+    footer = section.footer.paragraphs[0]
+    footer.text = ""
+    
+    footer.add_run(data.get("number"))
+    footer.add_run("\t")
+    
+    # PAGE FIELD
+    fldChar1 = OxmlElement('w:fldChar')
+    fldChar1.set(qn('w:fldCharType'), 'begin')
+    
+    instrText = OxmlElement('w:instrText')
+    instrText.text = "PAGE"
+    
+    fldChar2 = OxmlElement('w:fldChar')
+    fldChar2.set(qn('w:fldCharType'), 'end')
+    
+    footer._p.append(fldChar1)
+    footer._p.append(instrText)
+    footer._p.append(fldChar2)
+    
+    footer.add_run("\t" + data.get("priority"))
+    
+    tabs = footer.paragraph_format.tab_stops
+    tabs.add_tab_stop(3000000, WD_TAB_ALIGNMENT.CENTER)
+    tabs.add_tab_stop(6000000, WD_TAB_ALIGNMENT.RIGHT)
 
     buffer = BytesIO()
     doc.save(buffer)
@@ -172,6 +200,18 @@ def generate_pdf(data, root, l2, res):
         return Paragraph(str(text), styles["Normal"])
 
     # TABLE 1
+    def wrap(text):
+    return Paragraph(str(text), styles["Normal"])
+
+    table_data = [
+        ["INCIDENT", wrap(data["number"]), "CREATED BY", wrap(data["created_by"])],
+        ["AZURE BUG", wrap(data["azure_bug"]), "CREATED DATE", wrap(data["created_date"])],
+        ["PTC CASE", wrap(data["ptc_case"]), "ASSIGNED TO", wrap(data["assigned_to"])],
+        ["PRIORITY", wrap(data["priority"]), "RESOLVED DATE", wrap(data["resolved_date"])]
+    ]
+    
+    table = Table(table_data, colWidths=[110, 180, 110, 180])
+    
     table_data = [
         ["INCIDENT", link(f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}", data.get("number")),
          "CREATED BY", data.get("created_by")],
