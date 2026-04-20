@@ -121,12 +121,8 @@ def render_doc_generator():
    
 
     # ================= WORD =================
-    
-    word_clicked = st.button("📄 Generate Word Report")
-    
-    if word_clicked:
-    
-        st.write("👉 BUTTON CLICK WORKING")
+
+    if st.button("📄 Generate Word Report"):
     
         if "doc_data" not in st.session_state:
             st.warning("❌ Please fetch incident first")
@@ -140,7 +136,9 @@ def render_doc_generator():
                     st.session_state.get("res", "")
                 )
     
-                st.session_state["word_file"] = buffer.getvalue()
+                # ✅ CRITICAL FIX (deep copy of bytes)
+                word_bytes = buffer.getvalue()
+                st.session_state["word_file"] = bytes(word_bytes)
     
                 st.success("✅ Word generated successfully")
     
@@ -148,13 +146,14 @@ def render_doc_generator():
                 st.error(f"❌ Error: {str(e)}")
     
     
+    # ✅ DOWNLOAD (stable)
     if "word_file" in st.session_state:
         st.download_button(
-        "⬇ Download Word",
-        data=st.session_state["word_file"],
-        file_name=f"{st.session_state['doc_data']['number']}.docx",
-        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    )
+            "⬇ Download Word",
+            data=st.session_state["word_file"],
+            file_name=f"{st.session_state['doc_data']['number']}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
     # ================= PDF =================
     if col3.button("PDF"):
         if "doc_data" in st.session_state:
