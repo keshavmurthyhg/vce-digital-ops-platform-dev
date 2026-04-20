@@ -7,61 +7,14 @@ from docx.oxml.ns import qn
 from io import BytesIO
 import re
 
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
-
 
 # ================= SAFE TEXT =================
 def safe_text(text):
     if text is None:
         return ""
-
     text = str(text)
-
-    # Remove invalid XML characters
     text = re.sub(r"[^\x09\x0A\x0D\x20-\x7E]", "", text)
-
     return text.strip()
-
-
-# ================= CLEAN TEXT =================
-def clean_text(text):
-    if not text:
-        return ""
-    return re.sub(
-        r"How does the user want.*?\d+",
-        "",
-        str(text),
-        flags=re.IGNORECASE
-    ).strip()
-
-
-# ================= HYPERLINK =================
-p.text = safe_text(f"{value} (URL available)")
-
-    hyperlink = OxmlElement("w:hyperlink")
-    hyperlink.set(qn("r:id"), r_id)
-
-    run = OxmlElement("w:r")
-    rPr = OxmlElement("w:rPr")
-
-    u = OxmlElement("w:u")
-    u.set(qn("w:val"), "single")
-    rPr.append(u)
-
-    color = OxmlElement("w:color")
-    color.set(qn("w:val"), "0000FF")
-    rPr.append(color)
-
-    run.append(rPr)
-
-    text_elem = OxmlElement("w:t")
-    text_elem.text = safe_text(text)   # ✅ FIX
-    run.append(text_elem)
-
-    hyperlink.append(run)
-    paragraph._p.append(hyperlink)
 
 
 # ================= SHADE CELL =================
@@ -73,33 +26,9 @@ def shade_cell(cell, color="D9D9D9"):
 
 # ================= FOOTER =================
 def add_footer(doc, data):
-    from docx.enum.text import WD_TAB_ALIGNMENT
-
     section = doc.sections[0]
     footer = section.footer.paragraphs[0]
-    footer.text = ""
-
-    footer.add_run(safe_text(data.get("number")))
-    footer.add_run("\t")
-
-    fldChar1 = OxmlElement('w:fldChar')
-    fldChar1.set(qn('w:fldCharType'), 'begin')
-
-    instrText = OxmlElement('w:instrText')
-    instrText.text = "PAGE"
-
-    fldChar2 = OxmlElement('w:fldChar')
-    fldChar2.set(qn('w:fldCharType'), 'end')
-
-    footer._p.append(fldChar1)
-    footer._p.append(instrText)
-    footer._p.append(fldChar2)
-
-    footer.add_run("\t" + safe_text(data.get("priority")))
-
-    tabs = footer.paragraph_format.tab_stops
-    tabs.add_tab_stop(3000000, WD_TAB_ALIGNMENT.CENTER)
-    tabs.add_tab_stop(6000000, WD_TAB_ALIGNMENT.RIGHT)
+    footer.text = f"{safe_text(data.get('number'))}    |    {safe_text(data.get('priority'))}"
 
 
 # ================= WORD DOC =================
@@ -119,32 +48,16 @@ def generate_word_doc(data, root, l2, res):
     table.style = "Table Grid"
 
     def fill(row, col, key, value):
-    h = table.rows[row].cells[col]
-    v = table.rows[row].cells[col + 1]
+        h = table.rows[row].cells[col]
+        v = table.rows[row].cells[col + 1]
 
-    h.text = safe_text(key.upper())
-    shade_cell(h)
+        h.text = safe_text(key.upper())
+        shade_cell(h)
 
-    for r in h.paragraphs[0].runs:
-        r.bold = True
+        for r in h.paragraphs[0].runs:
+            r.bold = True
 
-    v.text = safe_text(value)
-        p = v.paragraphs[0]
-
-        if key == "Incident":
-            add_hyperlink(p,
-                f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={value}",
-                value)
-        elif key == "Azure Bug":
-            add_hyperlink(p,
-                f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{value}",
-                value)
-        elif key == "PTC Case":
-            add_hyperlink(p,
-                f"https://support.ptc.com/app/caseviewer/?case={value}",
-                value)
-        else:
-            p.text = safe_text(value)
+        v.text = safe_text(value)
 
     fill(0, 0, "Incident", data.get("number"))
     fill(0, 2, "Created By", data.get("created_by"))
@@ -160,7 +73,7 @@ def generate_word_doc(data, root, l2, res):
 
     doc.add_paragraph("")
 
-    # ===== TABLE 2 =====
+    # ===== DESCRIPTION TABLE =====
     desc_table = doc.add_table(rows=2, cols=2)
     desc_table.style = "Table Grid"
 
@@ -169,7 +82,6 @@ def generate_word_doc(data, root, l2, res):
     for i in range(2):
         cell = desc_table.rows[0].cells[i]
         cell.text = headers[i]
-        cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         shade_cell(cell)
 
         for r in cell.paragraphs[0].runs:
@@ -195,51 +107,4 @@ def generate_word_doc(data, root, l2, res):
     doc.save(buffer)
     buffer.seek(0)
 
-    return buffer
-
-
-# ================= PDF =================
-def generate_pdf(data, root, l2, res):
-
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer)
-    styles = getSampleStyleSheet()
-
-    elements = []
-
-    elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
-    elements.append(Spacer(1, 10))
-
-    def wrap(text):
-        return Paragraph(safe_text(text), styles["Normal"])
-
-    table_data = [
-        ["INCIDENT", wrap(data.get("number")), "CREATED BY", wrap(data.get("created_by"))],
-        ["AZURE BUG", wrap(data.get("azure_bug")), "CREATED DATE", wrap(data.get("created_date"))],
-        ["PTC CASE", wrap(data.get("ptc_case")), "ASSIGNED TO", wrap(data.get("assigned_to"))],
-        ["PRIORITY", wrap(data.get("priority")), "RESOLVED DATE", wrap(data.get("resolved_date"))]
-    ]
-
-    table = Table(table_data, colWidths=[110, 180, 110, 180])
-    table.setStyle(TableStyle([
-        ('GRID',(0,0),(-1,-1),1,colors.black),
-        ('BACKGROUND',(0,0),(0,-1),colors.lightgrey),
-        ('BACKGROUND',(2,0),(2,-1),colors.lightgrey)
-    ]))
-
-    elements.append(table)
-    elements.append(Spacer(1, 10))
-
-    elements.append(Paragraph("<b>ROOT CAUSE</b>", styles["Heading2"]))
-    elements.append(wrap(root))
-
-    elements.append(Paragraph("<b>L2 ANALYSIS</b>", styles["Heading2"]))
-    elements.append(wrap(l2))
-
-    elements.append(Paragraph("<b>RESOLUTION</b>", styles["Heading2"]))
-    elements.append(wrap(res))
-
-    doc.build(elements)
-
-    buffer.seek(0)
     return buffer
