@@ -200,6 +200,7 @@ def generate_word_doc(data, root, l2, res):
     return buffer
 
 
+
 # ================= PDF =================
 def generate_pdf(data, root, l2, res):
 
