@@ -91,48 +91,53 @@ def generate_pdf(data, root, l2, res):
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
     elements.append(Spacer(1, 10))
 
-    # LINKS
     def link(url, text):
         return Paragraph(f'<link href="{url}">{text}</link>', styles["Normal"])
 
+    def wrap(text):
+        return Paragraph(str(text), styles["Normal"])
+
+    # TABLE 1
     table_data = [
         ["INCIDENT", link(f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}", data.get("number")),
-         "CREATED BY", data.get("created_by")],
+         "CREATED BY", wrap(data.get("created_by"))],
 
         ["AZURE BUG", link(f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{data.get('azure_bug')}", data.get("azure_bug")),
-         "CREATED DATE", data.get("created_date")],
+         "CREATED DATE", wrap(data.get("created_date"))],
 
         ["PTC CASE", link(f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}", data.get("ptc_case")),
-         "ASSIGNED TO", data.get("assigned_to")],
+         "ASSIGNED TO", wrap(data.get("assigned_to"))],
 
-        ["PRIORITY", data.get("priority"),
-         "RESOLVED DATE", data.get("resolved_date")]
+        ["PRIORITY", wrap(data.get("priority")),
+         "RESOLVED DATE", wrap(data.get("resolved_date"))]
     ]
 
-    table = Table(table_data, colWidths=[120, 180, 120, 180])
+    table = Table(table_data, colWidths=[110, 180, 110, 180])
 
     table.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 1, colors.black),
-        ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
-        ('VALIGN', (0,0), (-1,-1), 'TOP')
+        ('GRID',(0,0),(-1,-1),1,colors.black),
+        ('BACKGROUND',(0,0),(0,-1),colors.lightgrey),
+        ('BACKGROUND',(2,0),(2,-1),colors.lightgrey),
+        ('VALIGN',(0,0),(-1,-1),'TOP')
     ]))
 
     elements.append(table)
     elements.append(Spacer(1, 10))
 
-    # DESCRIPTION
-    desc_table = Table([
-        ["SHORT DESCRIPTION", "DESCRIPTION"],
-        [clean_text(data.get("short_description")), clean_text(data.get("description"))]
-    ], colWidths=[200, 300])
+    # TABLE 2
+    desc = Table([
+        ["SHORT DESCRIPTION","DESCRIPTION"],
+        [wrap(clean_text(data.get("short_description"))),
+         wrap(clean_text(data.get("description")))]
+    ], colWidths=[220,280])
 
-    desc_table.setStyle(TableStyle([
-        ('GRID', (0,0), (-1,-1), 1, colors.black),
-        ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
-        ('VALIGN', (0,0), (-1,-1), 'TOP')
+    desc.setStyle(TableStyle([
+        ('GRID',(0,0),(-1,-1),1,colors.black),
+        ('BACKGROUND',(0,0),(-1,0),colors.lightgrey),
+        ('VALIGN',(0,0),(-1,-1),'TOP')
     ]))
 
-    elements.append(desc_table)
+    elements.append(desc)
 
     elements.append(Spacer(1, 10))
     elements.append(Paragraph("<b>ROOT CAUSE</b>", styles["Heading2"]))
@@ -144,7 +149,19 @@ def generate_pdf(data, root, l2, res):
     elements.append(Paragraph("<b>RESOLUTION</b>", styles["Heading2"]))
     elements.append(Paragraph(res, styles["Normal"]))
 
-    doc.build(elements)
-    buffer.seek(0)
+    # FOOTER
+    def footer(canvas, doc):
+        canvas.saveState()
+        width, height = doc.pagesize
 
+        canvas.drawString(40, 20, data.get("number"))
+        canvas.drawCentredString(width/2, 20, f"Page {doc.page}")
+        canvas.drawRightString(width-40, 20, data.get("priority"))
+
+        canvas.restoreState()
+
+    doc.build(elements, onFirstPage=footer, onLaterPages=footer)
+
+    buffer.seek(0)
     return buffer
+
