@@ -157,3 +157,6 @@ st.session_state["images"] = {
     "l2": l2_img,
     "res": res_img
 }
+
+def render_doc_generator():
+    main()
