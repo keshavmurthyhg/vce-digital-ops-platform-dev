@@ -5,8 +5,6 @@ from modules.doc_pdf import generate_pdf
 
 def render_doc_generator():
 
-    import streamlit as st
-
     st.set_page_config(layout="wide")
 
     # ================= SIDEBAR =================
