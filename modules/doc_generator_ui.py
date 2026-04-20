@@ -2,10 +2,18 @@ import streamlit as st
 from modules.doc_word import generate_word_doc
 from modules.doc_pdf import generate_pdf
 
-# ================= MAIN FUNCTION =================
+
 def render_doc_generator():
 
     st.set_page_config(layout="wide")
+
+    st.title("SNOW Incident Report Generator")
+
+    # SIMPLE TEST UI (to confirm loading)
+    incident = st.text_input("Enter Incident Number")
+
+    if st.button("Test Load"):
+        st.success("UI Loaded Successfully")
 
     # ================= SIDEBAR =================
     st.sidebar.title("Module")
