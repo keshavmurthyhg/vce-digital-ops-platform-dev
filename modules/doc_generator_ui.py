@@ -7,14 +7,13 @@ import zipfile
 import re
 
 
-# ================= CLEAN SESSION =================
+# ================= CLEAR =================
 def clear_all():
-    for k in list(st.session_state.keys()):
-        del st.session_state[k]
+    st.session_state.clear()
     st.rerun()
 
 
-# ================= AZURE =================
+# ================= AZURE EXTRACT =================
 def extract_azure_link(text):
     if not text:
         return ""
@@ -38,9 +37,9 @@ def get_incident(df, inc):
         "description": r.get("description"),
         "priority": r.get("priority"),
         "created_by": r.get("caller"),
-        "created_date": r.get("created"),
+        "created_date": str(r.get("created")).split()[0],
         "assigned_to": r.get("assigned to"),
-        "resolved_date": r.get("resolved"),
+        "resolved_date": str(r.get("resolved")).split()[0],
         "work_notes": r.get("work notes"),
         "comments": r.get("additional comments"),
         "resolution": r.get("resolution notes"),
@@ -59,17 +58,21 @@ def render_doc_generator():
     # ================= SIDEBAR =================
     st.sidebar.header("Filters")
 
-    priority = st.sidebar.multiselect("Priority", df["priority"].dropna().unique())
+    priority = st.sidebar.multiselect(
+        "Priority", df["priority"].dropna().unique()
+    )
 
-    state = []
-    if "state" in df.columns:
-        df["state"] = df["state"].fillna("Unknown")
-        state = st.sidebar.multiselect("State", df["state"].unique())
-
-    date = st.sidebar.date_input("Created Date Range", [])
+    date_range = st.sidebar.date_input("Created Date Range", [])
 
     if st.sidebar.button("Apply Filters to Bulk"):
-        st.session_state["bulk_ids"] = ", ".join(df["number"].astype(str).unique())
+        filtered = df.copy()
+
+        if priority:
+            filtered = filtered[filtered["priority"].isin(priority)]
+
+        st.session_state["bulk_ids"] = ", ".join(
+            filtered["number"].astype(str).tolist()
+        )
 
     if st.sidebar.button("Clear"):
         clear_all()
@@ -85,49 +88,61 @@ def render_doc_generator():
     # ================= BUTTON ROW =================
     col1, col2, col3, col4, col5 = st.columns(5)
 
-    # FETCH
+    # ================= FETCH =================
     if col1.button("Fetch"):
         data = get_incident(df, inc)
+
         if data:
             st.session_state["data"] = data
             st.session_state["root"] = data["work_notes"]
             st.session_state["l2"] = data["comments"]
             st.session_state["res"] = data["resolution"]
-            status.success("Incident loaded")
+            status.success("✅ Incident loaded")
         else:
-            status.error("Incident not found")
+            status.error("❌ Incident not found")
 
-    # WORD
+    # ================= WORD =================
     if col2.button("Word"):
         if "data" in st.session_state:
             st.session_state["word"] = generate_word_doc(
                 st.session_state["data"],
                 st.session_state["root"],
                 st.session_state["l2"],
-                st.session_state["res"]
+                st.session_state["res"],
+                st.session_state.get("images")
             )
-            status.success("Word generated")
+            status.success("✅ Word generated")
 
     if "word" in st.session_state:
-        col2.download_button("⬇", st.session_state["word"], "report.docx")
+        col2.download_button(
+            "⬇",
+            st.session_state["word"],
+            file_name=f"{st.session_state['data']['number']}.docx"
+        )
 
-    # PDF
+    # ================= PDF =================
     if col3.button("PDF"):
         if "data" in st.session_state:
             st.session_state["pdf"] = generate_pdf(
                 st.session_state["data"],
                 st.session_state["root"],
                 st.session_state["l2"],
-                st.session_state["res"]
+                st.session_state["res"],
+                st.session_state.get("images")
             )
-            status.success("PDF generated")
+            status.success("✅ PDF generated")
 
     if "pdf" in st.session_state:
-        col3.download_button("⬇", st.session_state["pdf"], "report.pdf")
+        col3.download_button(
+            "⬇",
+            st.session_state["pdf"],
+            file_name=f"{st.session_state['data']['number']}.pdf"
+        )
 
-    # BULK
+    # ================= BULK =================
     if col4.button("Bulk"):
         ids = [i.strip() for i in bulk.split(",") if i.strip()]
+
         zip_buffer = BytesIO()
 
         with zipfile.ZipFile(zip_buffer, "w") as z:
@@ -139,22 +154,44 @@ def render_doc_generator():
 
         zip_buffer.seek(0)
         st.session_state["zip"] = zip_buffer
-        status.success("Bulk ready")
+        status.success("✅ Bulk ZIP ready")
 
     if "zip" in st.session_state:
         col4.download_button("⬇ ZIP", st.session_state["zip"], "reports.zip")
 
-    # PREVIEW
+    # ================= PREVIEW =================
     if col5.button("Preview"):
         if "data" in st.session_state:
-            st.json(st.session_state["data"])
+            st.write("### Preview")
 
-    # ================= TEXT + IMAGE =================
+            st.markdown("**Short Description**")
+            st.write(st.session_state["data"]["short_description"])
+
+            st.markdown("**Description**")
+            st.write(st.session_state["data"]["description"])
+
+            st.markdown("**Root Cause**")
+            st.write(st.session_state.get("root"))
+
+            st.markdown("**L2 Analysis**")
+            st.write(st.session_state.get("l2"))
+
+            st.markdown("**Resolution**")
+            st.write(st.session_state.get("res"))
+
+    # ================= TEXT =================
     st.text_area("Root Cause", key="root")
-    st.file_uploader("Root Image", type=["png","jpg"])
+    root_img = st.file_uploader("Root Image", type=["png", "jpg"])
 
     st.text_area("L2 Analysis", key="l2")
-    st.file_uploader("L2 Image", type=["png","jpg"])
+    l2_img = st.file_uploader("L2 Image", type=["png", "jpg"])
 
     st.text_area("Resolution", key="res")
-    st.file_uploader("Resolution Image", type=["png","jpg"])
+    res_img = st.file_uploader("Resolution Image", type=["png", "jpg"])
+
+    # ================= STORE IMAGES =================
+    st.session_state["images"] = {
+        "root": root_img,
+        "l2": l2_img,
+        "res": res_img
+    }
