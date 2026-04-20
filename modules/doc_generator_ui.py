@@ -158,10 +158,11 @@ def render_doc_generator():
     
     if "word_file" in st.session_state:
         st.download_button(
-            "⬇ Download Word",
-            st.session_state["word_file"],
-            f"{st.session_state['doc_data']['number']}.docx"
-        )
+        "⬇ Download Word",
+        data=st.session_state["word_file"],
+        file_name=f"{st.session_state['doc_data']['number']}.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    )
     # ================= PDF =================
     if col3.button("PDF"):
         if "doc_data" in st.session_state:
