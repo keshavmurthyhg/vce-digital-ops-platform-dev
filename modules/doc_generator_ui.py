@@ -72,27 +72,27 @@ def render_doc_generator():
 
     # ================= SIDEBAR =================
         # ---------- SIDEBAR ----------
-    st.sidebar.markdown("## 📊 Module")
+   # st.sidebar.markdown("## 📊 Module")
     
-    options = [
-        "Search Dashboard",
-        "Insights Dashboard",
-        "Word Report Generator"
-    ]
+   # options = [
+   #     "Search Dashboard",
+   #     "Insights Dashboard",
+   #     "Word Report Generator"
+ #   ]
     
     # ✅ Safe default
-    if "page" not in st.session_state or st.session_state.page not in options:
-        st.session_state.page = "Search Dashboard"
+ #   if "page" not in st.session_state or st.session_state.page not in options:
+  #      st.session_state.page = "Search Dashboard"
     
-    page = st.sidebar.selectbox(
-        "Module",
-        options,
-        index=options.index(st.session_state.page),
-        label_visibility="collapsed"
-    )
+   # page = st.sidebar.selectbox(
+    #    "Module",
+    #    options,
+     #   index=options.index(st.session_state.page),
+   #     label_visibility="collapsed"
+   # )
     
     # ✅ Persist selection
-    st.session_state.page = page
+   # st.session_state.page = page
 
     # ================= INPUT =================
     incident_number = st.text_input("Enter Incident Number")
