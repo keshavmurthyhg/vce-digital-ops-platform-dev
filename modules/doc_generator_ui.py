@@ -144,23 +144,25 @@ def render_doc_generator():
         else:
             st.warning("❌ Incident not found")
 
-    # WORD
-    with col2:
-        if st.button("Word"):
-            if "doc_data" in st.session_state:
-                st.session_state["word_file"] = generate_word_doc(
-                    st.session_state["doc_data"],
-                    st.session_state.get("root", ""),
-                    st.session_state.get("l2", ""),
-                    st.session_state.get("res", "")
-                )
-
-        if "word_file" in st.session_state:
-            st.download_button(
-                "⬇",
-                st.session_state["word_file"],
-                f"{st.session_state['doc_data']['number']}.docx"
+        # ================= WORD =================
+    if col2.button("Word"):
+        if "data" in st.session_state:
+            st.session_state["word"] = generate_word_doc(
+                st.session_state["data"],
+                st.session_state.get("root", ""),
+                st.session_state.get("l2", ""),
+                st.session_state.get("res", ""),
+                st.session_state.get("images")
             )
+            set_status("✅ Word generated")
+
+    if "word" in st.session_state:
+        col2.download_button(
+            "⬇",
+            st.session_state["word"],
+            file_name=f"{st.session_state['data']['number']}.docx"
+        )
+
 
     # PDF
     with col3:
