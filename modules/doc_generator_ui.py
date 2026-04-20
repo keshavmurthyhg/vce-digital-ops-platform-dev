@@ -8,7 +8,13 @@ def render_doc_generator():
     st.set_page_config(layout="wide")
 
     # ================= SIDEBAR =================
-       st.sidebar.title("Filters")
+    st.sidebar.title("Module")
+    module = st.sidebar.selectbox(
+        "Select Module",
+        ["Word Report Generator"]
+    )
+
+    st.sidebar.title("Filters")
 
     priority_filter = st.sidebar.multiselect(
         "Priority",
