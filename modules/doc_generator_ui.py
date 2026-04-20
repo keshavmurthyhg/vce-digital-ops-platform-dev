@@ -145,33 +145,35 @@ def render_doc_generator():
             st.warning("❌ Incident not found")
 
     # ================= WORD =================
-    with col2:
-        if st.button("Word"):
-            if "doc_data" in st.session_state:
+    if col2.button("Word"):
     
-                buffer = generate_word_doc(
-                    st.session_state["doc_data"],
-                    st.session_state.get("root", ""),
-                    st.session_state.get("l2", ""),
-                    st.session_state.get("res", "")
-                )
+        # ✅ correct key
+        if "doc_data" in st.session_state:
     
-                # ✅ Store correctly
-                st.session_state["word_file"] = buffer
-    
-                st.success("✅ Word generated")
-            else:
-                st.warning("❌ Please fetch incident first")
-    
-        # ✅ Download button (always outside button click)
-        if "word_file" in st.session_state:
-            st.download_button(
-                label="⬇ Download Word",
-                data=st.session_state["word_file"],
-                file_name=f"{st.session_state['doc_data']['number']}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            buffer = generate_word_doc(
+                st.session_state["doc_data"],
+                st.session_state.get("root", ""),
+                st.session_state.get("l2", ""),
+                st.session_state.get("res", "")
             )
-
+    
+            # ✅ store correctly
+            st.session_state["word_file"] = buffer
+    
+            st.success("✅ Word generated")
+    
+        else:
+            st.warning("❌ Please fetch incident first")
+    
+    
+    # ✅ ALWAYS OUTSIDE BUTTON
+    if "word_file" in st.session_state:
+        col2.download_button(
+            "⬇",
+            st.session_state["word_file"],
+            f"{st.session_state['doc_data']['number']}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
 
     # PDF
     with col3:
