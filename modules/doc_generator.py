@@ -71,7 +71,9 @@ def generate_word_doc(data, root="", l2="", res=""):
     title = doc.add_heading("INCIDENT REPORT", 0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     title.runs[0].font.color.rgb = RGBColor(31, 78, 121)
-
+    
+    doc.add_paragraph("_" * 60)
+    
     table = doc.add_table(rows=4, cols=4)
     table.style = "Table Grid"
 
@@ -126,9 +128,15 @@ def generate_word_doc(data, root="", l2="", res=""):
         cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
         for r in cell.paragraphs[0].runs:
             r.bold = True
-
+    from docx.shared import Inches
+    
+    desc.columns[0].width = Inches(3)
+    desc.columns[1].width = Inches(5)
     desc.rows[1].cells[0].text = clean_text(data.get("short_description"))
-    desc.rows[1].cells[1].text = clean_text(data.get("description"))
+        cell = desc.rows[1].cells[1]
+        cell.text = ""
+        p = cell.paragraphs[0]
+        p.add_run(clean_text(data.get("description") or ""))
 
     doc.add_heading("ROOT CAUSE", 1)
     doc.add_paragraph(root)
