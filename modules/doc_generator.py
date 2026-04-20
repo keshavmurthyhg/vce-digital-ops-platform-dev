@@ -119,16 +119,16 @@ def generate_word_doc(data, root, l2, res):
     table.style = "Table Grid"
 
     def fill(row, col, key, value):
-        h = table.rows[row].cells[col]
-        v = table.rows[row].cells[col + 1]
+    h = table.rows[row].cells[col]
+    v = table.rows[row].cells[col + 1]
 
-        h.text = safe_text(key.upper())
-        shade_cell(h)
+    h.text = safe_text(key.upper())
+    shade_cell(h)
 
-        for r in h.paragraphs[0].runs:
-            r.bold = True
+    for r in h.paragraphs[0].runs:
+        r.bold = True
 
-        v.text = ""
+    v.text = safe_text(value)
         p = v.paragraphs[0]
 
         if key == "Incident":
