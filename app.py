@@ -9,25 +9,26 @@ st.set_page_config(layout="wide")
 # ---------- SIDEBAR ----------
 st.sidebar.markdown("## 📊 Module")
 
-if "page" not in st.session_state:
-    st.session_state.page = "Search Dashboard"
+options = [
+    "Search Dashboard",
+    "Insights Dashboard",
+    "Word Report Generator"
+]
 
+# ✅ ALWAYS RESET INVALID VALUES
+current_page = st.session_state.get("page", "Search Dashboard")
+
+if current_page not in options:
+    current_page = "Search Dashboard"
+
+# ✅ Safe selectbox (NO .index crash)
 page = st.sidebar.selectbox(
     "Module",
-    [
-        "Search Dashboard",
-        "Insights Dashboard",
-        "Word Report Generator"
-    ],
-    index=[
-        "Search Dashboard",
-        "Insights Dashboard",
-        "Word Report Generator"
-    ].index(st.session_state.page),
-    key="page_selector"
+    options,
+    index=options.index(current_page)
 )
 
-# ✅ Persist selection
+# ✅ Store safely
 st.session_state.page = page
 
 # ---------- ROUTING ----------
