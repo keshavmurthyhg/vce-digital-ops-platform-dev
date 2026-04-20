@@ -126,14 +126,16 @@ def render_doc_generator():
         else:
             st.warning("❌ Incident not found")
 
-    # ================= WORD =================
+   
     # ================= WORD =================
     with col2:
-        word_clicked = st.button("Word")
     
-        if word_clicked:
-            if "doc_data" in st.session_state:
+        if st.button("Word", key="word_btn"):
     
+            if "doc_data" not in st.session_state:
+                st.warning("❌ Please fetch incident first")
+    
+            else:
                 try:
                     buffer = generate_word_doc(
                         st.session_state["doc_data"],
@@ -142,23 +144,26 @@ def render_doc_generator():
                         st.session_state.get("res", "")
                     )
     
-                    st.session_state["word_file"] = buffer
+                    # ✅ FORCE NEW OBJECT (important)
+                    st.session_state["word_file"] = BytesIO(buffer.getvalue())
+    
                     st.success("✅ Word generated")
+    
+                    # ✅ Force rerun so button state doesn’t reset UI
+                    st.rerun()
     
                 except Exception as e:
                     st.error(f"❌ Error: {str(e)}")
     
-            else:
-                st.warning("❌ Please fetch incident first")
     
-        # ✅ ALWAYS show download if file exists
-        if "word_file" in st.session_state:
-            st.download_button(
-                label="⬇ Download Word",
-                data=st.session_state["word_file"],
-                file_name=f"{st.session_state['doc_data']['number']}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
+    # ✅ OUTSIDE COLUMN (IMPORTANT)
+    if "word_file" in st.session_state:
+        st.download_button(
+            label="⬇ Download Word",
+            data=st.session_state["word_file"],
+            file_name=f"{st.session_state['doc_data']['number']}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
 
     # ================= PDF =================
     if col3.button("PDF"):
