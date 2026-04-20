@@ -2,12 +2,19 @@ import streamlit as st
 import pandas as pd
 from modules.snow_loader import load_snow_data
 from modules.doc_generator import generate_word_doc, generate_pdf
-import re
 from io import BytesIO
 import zipfile
+import re
 
 
-# ================= AZURE ID =================
+# ================= CLEAN SESSION =================
+def clear_all():
+    for k in list(st.session_state.keys()):
+        del st.session_state[k]
+    st.rerun()
+
+
+# ================= AZURE =================
 def extract_azure_link(text):
     if not text:
         return ""
@@ -15,49 +22,31 @@ def extract_azure_link(text):
     return match.group(1) if match else ""
 
 
-# ================= DATE FORMAT =================
-def format_date(date_val):
-    if not date_val:
-        return ""
-    try:
-        return pd.to_datetime(date_val).strftime("%d-%b-%Y")
-    except:
-        return str(date_val)
-
-
 # ================= FETCH =================
-def get_incident_from_df(df, incident_number):
+def get_incident(df, inc):
+    df["number"] = df["number"].astype(str).str.upper()
+    row = df[df["number"] == inc.upper()]
 
-    df_copy = df.copy()
+    if row.empty:
+        return None
 
-    df_copy["number"] = df_copy["number"].astype(str).str.strip().str.upper()
-    incident_number = incident_number.strip().upper()
+    r = row.iloc[0]
 
-    row = df_copy[df_copy["number"] == incident_number]
-
-    if not row.empty:
-        row = row.iloc[0]
-
-        return {
-            "number": row.get("number", ""),
-            "short_description": row.get("short description", ""),
-            "description": row.get("description", ""),
-
-            "priority": row.get("priority", ""),
-            "created_by": row.get("caller", ""),
-            "created_date": format_date(row.get("created", "")),
-            "assigned_to": row.get("assigned to", ""),
-            "resolved_date": format_date(row.get("resolved", "")),
-
-            "work_notes": row.get("work notes", ""),
-            "comments": row.get("additional comments", ""),
-            "resolution": row.get("resolution notes", ""),
-
-            "ptc_case": row.get("vendor ticket", ""),
-            "azure_bug": extract_azure_link(row.get("resolution notes", ""))
-        }
-
-    return None
+    return {
+        "number": r.get("number"),
+        "short_description": r.get("short description"),
+        "description": r.get("description"),
+        "priority": r.get("priority"),
+        "created_by": r.get("caller"),
+        "created_date": r.get("created"),
+        "assigned_to": r.get("assigned to"),
+        "resolved_date": r.get("resolved"),
+        "work_notes": r.get("work notes"),
+        "comments": r.get("additional comments"),
+        "resolution": r.get("resolution notes"),
+        "ptc_case": r.get("vendor ticket"),
+        "azure_bug": extract_azure_link(r.get("resolution notes"))
+    }
 
 
 # ================= UI =================
@@ -67,155 +56,105 @@ def render_doc_generator():
 
     df = load_snow_data()
 
-    # ================= FIX STATE COLUMN =================
-    if "state" in df.columns:
-        df["state"] = df["state"].fillna("Unknown").astype(str)
-
     # ================= SIDEBAR =================
     st.sidebar.header("Filters")
 
-    priority_filter = st.sidebar.multiselect(
-        "Priority",
-        options=df["priority"].dropna().unique()
-    )
+    priority = st.sidebar.multiselect("Priority", df["priority"].dropna().unique())
 
-    state_filter = st.sidebar.multiselect(
-        "State",
-        options=df["state"].dropna().unique() if "state" in df.columns else []
-    )
+    state = []
+    if "state" in df.columns:
+        df["state"] = df["state"].fillna("Unknown")
+        state = st.sidebar.multiselect("State", df["state"].unique())
 
-    date_filter = st.sidebar.date_input("Created Date Range", [])
+    date = st.sidebar.date_input("Created Date Range", [])
 
-    # ================= APPLY FILTER =================
-    filtered_df = df.copy()
-
-    if priority_filter:
-        filtered_df = filtered_df[filtered_df["priority"].isin(priority_filter)]
-
-    if state_filter and "state" in df.columns:
-        filtered_df = filtered_df[filtered_df["state"].isin(state_filter)]
-
-    if len(date_filter) == 2:
-        filtered_df["created"] = pd.to_datetime(filtered_df["created"], errors="coerce")
-        filtered_df = filtered_df[
-            (filtered_df["created"] >= pd.to_datetime(date_filter[0])) &
-            (filtered_df["created"] <= pd.to_datetime(date_filter[1]))
-        ]
-
-    df = filtered_df
-
-    # ================= SIDEBAR BUTTONS =================
     if st.sidebar.button("Apply Filters to Bulk"):
-        ids = df["number"].dropna().astype(str).unique()
-        st.session_state["bulk_ids"] = ", ".join(ids)
+        st.session_state["bulk_ids"] = ", ".join(df["number"].astype(str).unique())
 
     if st.sidebar.button("Clear"):
-        for key in [
-            "doc_data", "root", "l2", "res",
-            "word_file", "pdf_file", "zip_file",
-            "bulk_ids"
-        ]:
-            if key in st.session_state:
-                del st.session_state[key]
-        st.rerun()
+        clear_all()
 
     # ================= INPUT =================
-    incident_number = st.text_input("Enter Incident Number")
+    inc = st.text_input("Enter Incident Number")
 
-    bulk_ids = st.text_area(
-        "Bulk Incident Numbers (comma separated)",
-        key="bulk_ids"
-    )
+    bulk = st.text_area("Bulk Incident Numbers", key="bulk_ids")
+
+    # ================= STATUS =================
+    status = st.empty()
 
     # ================= BUTTON ROW =================
-    col1, col2, col3, col4 = st.columns(4)
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     # FETCH
     if col1.button("Fetch"):
-        data = get_incident_from_df(df, incident_number)
-
+        data = get_incident(df, inc)
         if data:
-            st.session_state["doc_data"] = data
-            st.session_state["root"] = data.get("work_notes", "")
-            st.session_state["l2"] = data.get("comments", "")
-            st.session_state["res"] = data.get("resolution", "")
-
-            st.success("✅ Incident loaded")
+            st.session_state["data"] = data
+            st.session_state["root"] = data["work_notes"]
+            st.session_state["l2"] = data["comments"]
+            st.session_state["res"] = data["resolution"]
+            status.success("Incident loaded")
         else:
-            st.warning("❌ Incident not found")
+            status.error("Incident not found")
 
     # WORD
-    with col2:
-        if st.button("Word"):
-            if "doc_data" in st.session_state:
-                st.session_state["word_file"] = generate_word_doc(
-                    st.session_state["doc_data"],
-                    st.session_state.get("root", ""),
-                    st.session_state.get("l2", ""),
-                    st.session_state.get("res", "")
-                )
-
-        if "word_file" in st.session_state:
-            st.download_button(
-                "⬇",
-                st.session_state["word_file"],
-                f"{st.session_state['doc_data']['number']}.docx"
+    if col2.button("Word"):
+        if "data" in st.session_state:
+            st.session_state["word"] = generate_word_doc(
+                st.session_state["data"],
+                st.session_state["root"],
+                st.session_state["l2"],
+                st.session_state["res"]
             )
+            status.success("Word generated")
+
+    if "word" in st.session_state:
+        col2.download_button("⬇", st.session_state["word"], "report.docx")
 
     # PDF
-    with col3:
-        if st.button("PDF"):
-            if "doc_data" in st.session_state:
-                st.session_state["pdf_file"] = generate_pdf(
-                    st.session_state["doc_data"],
-                    st.session_state.get("root", ""),
-                    st.session_state.get("l2", ""),
-                    st.session_state.get("res", "")
-                )
-
-        if "pdf_file" in st.session_state:
-            st.download_button(
-                "⬇",
-                st.session_state["pdf_file"],
-                f"{st.session_state['doc_data']['number']}.pdf"
+    if col3.button("PDF"):
+        if "data" in st.session_state:
+            st.session_state["pdf"] = generate_pdf(
+                st.session_state["data"],
+                st.session_state["root"],
+                st.session_state["l2"],
+                st.session_state["res"]
             )
+            status.success("PDF generated")
+
+    if "pdf" in st.session_state:
+        col3.download_button("⬇", st.session_state["pdf"], "report.pdf")
 
     # BULK
-    with col4:
-        if st.button("Bulk"):
+    if col4.button("Bulk"):
+        ids = [i.strip() for i in bulk.split(",") if i.strip()]
+        zip_buffer = BytesIO()
 
-            ids = [i.strip().upper() for i in bulk_ids.split(",") if i.strip()]
+        with zipfile.ZipFile(zip_buffer, "w") as z:
+            for i in ids:
+                d = get_incident(df, i)
+                if d:
+                    f = generate_word_doc(d, "", "", "")
+                    z.writestr(f"{i}.docx", f.getvalue())
 
-            zip_buffer = BytesIO()
+        zip_buffer.seek(0)
+        st.session_state["zip"] = zip_buffer
+        status.success("Bulk ready")
 
-            with zipfile.ZipFile(zip_buffer, "w") as zf:
-                for inc in ids:
-                    data = get_incident_from_df(df, inc)
-                    if data:
-                        file = generate_word_doc(data, "", "", "")
-                        zf.writestr(f"{inc}.docx", file.getvalue())
+    if "zip" in st.session_state:
+        col4.download_button("⬇ ZIP", st.session_state["zip"], "reports.zip")
 
-            zip_buffer.seek(0)
-            st.session_state["zip_file"] = zip_buffer
+    # PREVIEW
+    if col5.button("Preview"):
+        if "data" in st.session_state:
+            st.json(st.session_state["data"])
 
-        if "zip_file" in st.session_state:
-            st.download_button(
-                "⬇ ZIP",
-                st.session_state["zip_file"],
-                "incident_reports.zip"
-            )
-
-    # ================= STATUS MESSAGES =================
-    if "word_file" in st.session_state:
-        st.success("✅ Word generated")
-
-    if "pdf_file" in st.session_state:
-        st.success("✅ PDF generated")
-
-    if "zip_file" in st.session_state:
-        st.success("✅ Bulk ZIP ready")
-
-    # ================= TEXT AREAS =================
+    # ================= TEXT + IMAGE =================
     st.text_area("Root Cause", key="root")
+    st.file_uploader("Root Image", type=["png","jpg"])
+
     st.text_area("L2 Analysis", key="l2")
+    st.file_uploader("L2 Image", type=["png","jpg"])
+
     st.text_area("Resolution", key="res")
+    st.file_uploader("Resolution Image", type=["png","jpg"])
