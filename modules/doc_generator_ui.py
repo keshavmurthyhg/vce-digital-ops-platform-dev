@@ -1,7 +1,4 @@
 import streamlit as st
-from modules.doc_word import generate_word_doc
-from modules.doc_pdf import generate_pdf
-
 
 def render_doc_generator():
 
