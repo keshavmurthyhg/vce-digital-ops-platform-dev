@@ -129,7 +129,7 @@ def render_doc_generator():
    
     # ================= WORD =================
     with col2:
-    
+        st.write("DEBUG CLICK:", st.session_state.get("word_file"))
         if st.button("Word", key="word_btn"):
     
             if "doc_data" not in st.session_state:
