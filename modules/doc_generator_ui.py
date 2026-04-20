@@ -69,7 +69,7 @@ def render_doc_generator():
 
     # ================= FIX STATE COLUMN =================
     if "state" in df.columns:
-        df["state"] = df["state"].fillna("Unknown").astype(str)
+        df["state"] = df["state"].astype(str)
 
     # ================= SIDEBAR =================
     st.sidebar.header("Filters")
@@ -85,6 +85,11 @@ def render_doc_generator():
     )
 
     date_filter = st.sidebar.date_input("Created Date Range", [])
+
+    # ================= CLEAR BUTTON =================
+    if st.sidebar.button("Clear"):
+        st.session_state.clear()
+        st.rerun()
 
     # ================= APPLY FILTER =================
     filtered_df = df.copy()
@@ -104,15 +109,10 @@ def render_doc_generator():
 
     df = filtered_df
 
-    # ================= SIDEBAR BUTTONS =================
+    # ================= SIDEBAR → BULK =================
     if st.sidebar.button("Apply Filters to Bulk"):
         ids = df["number"].dropna().astype(str).unique()
         st.session_state["bulk_ids"] = ", ".join(ids)
-
-    if st.sidebar.button("Clear"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
 
     # ================= INPUT =================
     incident_number = st.text_input("Enter Incident Number")
@@ -125,7 +125,7 @@ def render_doc_generator():
     # ================= BUTTON ROW =================
     col1, col2, col3, col4 = st.columns(4)
 
-    # FETCH
+    # ================= FETCH =================
     if col1.button("Fetch"):
         data = get_incident_from_df(df, incident_number)
 
@@ -139,78 +139,69 @@ def render_doc_generator():
         else:
             st.warning("❌ Incident not found")
 
-    # WORD
-    with col2:
-        if st.button("Word"):
-            if "doc_data" in st.session_state:
-                st.session_state["word_file"] = generate_word_doc(
-                    st.session_state["doc_data"],
-                    st.session_state.get("root", ""),
-                    st.session_state.get("l2", ""),
-                    st.session_state.get("res", "")
-                )
+    # ================= TEXT AREAS =================
+    root_cause = st.text_area("Root Cause", key="root")
+    l2_analysis = st.text_area("L2 Analysis", key="l2")
+    resolution = st.text_area("Resolution", key="res")
 
-        if "word_file" in st.session_state:
-            st.download_button(
-                "⬇",
-                st.session_state["word_file"],
-                f"{st.session_state['doc_data']['number']}.docx"
+    # ================= WORD =================
+    if col2.button("Word"):
+        if "doc_data" in st.session_state:
+            st.session_state["word_file"] = generate_word_doc(
+                st.session_state["doc_data"],
+                root_cause,
+                l2_analysis,
+                resolution
             )
+            st.success("✅ Word generated")
 
-    # PDF
-    with col3:
-        if st.button("PDF"):
-            if "doc_data" in st.session_state:
-                st.session_state["pdf_file"] = generate_pdf(
-                    st.session_state["doc_data"],
-                    st.session_state.get("root", ""),
-                    st.session_state.get("l2", ""),
-                    st.session_state.get("res", "")
-                )
-
-        if "pdf_file" in st.session_state:
-            st.download_button(
-                "⬇",
-                st.session_state["pdf_file"],
-                f"{st.session_state['doc_data']['number']}.pdf"
-            )
-
-    # BULK
-    with col4:
-        if st.button("Bulk"):
-
-            ids = [i.strip().upper() for i in bulk_ids.split(",") if i.strip()]
-
-            zip_buffer = BytesIO()
-
-            with zipfile.ZipFile(zip_buffer, "w") as zf:
-                for inc in ids:
-                    data = get_incident_from_df(df, inc)
-                    if data:
-                        file = generate_word_doc(data, "", "", "")
-                        zf.writestr(f"{inc}.docx", file.getvalue())
-
-            zip_buffer.seek(0)
-            st.session_state["zip_file"] = zip_buffer
-
-        if "zip_file" in st.session_state:
-            st.download_button(
-                "⬇ ZIP",
-                st.session_state["zip_file"],
-                "incident_reports.zip"
-            )
-
-    # ================= STATUS MESSAGES =================
     if "word_file" in st.session_state:
-        st.success("✅ Word generated")
+        col2.download_button(
+            "⬇",
+            st.session_state["word_file"],
+            f"{st.session_state['doc_data']['number']}.docx"
+        )
+
+    # ================= PDF =================
+    if col3.button("PDF"):
+        if "doc_data" in st.session_state:
+            st.session_state["pdf_file"] = generate_pdf(
+                st.session_state["doc_data"],
+                root_cause,
+                l2_analysis,
+                resolution
+            )
+            st.success("✅ PDF generated")
 
     if "pdf_file" in st.session_state:
-        st.success("✅ PDF generated")
+        col3.download_button(
+            "⬇",
+            st.session_state["pdf_file"],
+            f"{st.session_state['doc_data']['number']}.pdf"
+        )
 
-    if "zip_file" in st.session_state:
+    # ================= BULK =================
+    if col4.button("Bulk"):
+
+        ids = [i.strip().upper() for i in bulk_ids.split(",") if i.strip()]
+
+        zip_buffer = BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, "w") as zf:
+            for inc in ids:
+                data = get_incident_from_df(df, inc)
+                if data:
+                    file = generate_word_doc(data, "", "", "")
+                    zf.writestr(f"{inc}.docx", file.getvalue())
+
+        zip_buffer.seek(0)
+        st.session_state["zip_file"] = zip_buffer
+
         st.success("✅ Bulk ZIP ready")
 
-    # ================= TEXT AREAS =================
-    st.text_area("Root Cause", key="root")
-    st.text_area("L2 Analysis", key="l2")
-    st.text_area("Resolution", key="res")
+    if "zip_file" in st.session_state:
+        col4.download_button(
+            "⬇ ZIP",
+            st.session_state["zip_file"],
+            "incident_reports.zip"
+        )
