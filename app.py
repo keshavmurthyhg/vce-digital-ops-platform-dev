@@ -9,6 +9,9 @@ st.set_page_config(layout="wide")
 # ---------- SIDEBAR ----------
 st.sidebar.markdown("## 📊 Module")
 
+if "page" not in st.session_state:
+    st.session_state.page = "Search Dashboard"
+
 page = st.sidebar.selectbox(
     "Module",
     [
@@ -16,8 +19,16 @@ page = st.sidebar.selectbox(
         "Insights Dashboard",
         "Word Report Generator"
     ],
-    label_visibility="collapsed"
+    index=[
+        "Search Dashboard",
+        "Insights Dashboard",
+        "Word Report Generator"
+    ].index(st.session_state.page),
+    key="page_selector"
 )
+
+# ✅ Persist selection
+st.session_state.page = page
 
 # ---------- ROUTING ----------
 if page == "Search Dashboard":
