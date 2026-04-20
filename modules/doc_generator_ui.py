@@ -127,29 +127,38 @@ def render_doc_generator():
             st.warning("❌ Incident not found")
 
     # ================= WORD =================
-    if col2.button("Word"):
-        if "doc_data" in st.session_state:
-
-            buffer = generate_word_doc(
-                st.session_state["doc_data"],
-                st.session_state.get("root", ""),
-                st.session_state.get("l2", ""),
-                st.session_state.get("res", "")
+    # ================= WORD =================
+    with col2:
+        word_clicked = st.button("Word")
+    
+        if word_clicked:
+            if "doc_data" in st.session_state:
+    
+                try:
+                    buffer = generate_word_doc(
+                        st.session_state["doc_data"],
+                        st.session_state.get("root", ""),
+                        st.session_state.get("l2", ""),
+                        st.session_state.get("res", "")
+                    )
+    
+                    st.session_state["word_file"] = buffer
+                    st.success("✅ Word generated")
+    
+                except Exception as e:
+                    st.error(f"❌ Error: {str(e)}")
+    
+            else:
+                st.warning("❌ Please fetch incident first")
+    
+        # ✅ ALWAYS show download if file exists
+        if "word_file" in st.session_state:
+            st.download_button(
+                label="⬇ Download Word",
+                data=st.session_state["word_file"],
+                file_name=f"{st.session_state['doc_data']['number']}.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
-
-            st.session_state["word_file"] = buffer
-            st.success("✅ Word generated")
-
-        else:
-            st.warning("❌ Please fetch incident first")
-
-    if "word_file" in st.session_state:
-        col2.download_button(
-            "⬇",
-            st.session_state["word_file"],
-            f"{st.session_state['doc_data']['number']}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-        )
 
     # ================= PDF =================
     if col3.button("PDF"):
