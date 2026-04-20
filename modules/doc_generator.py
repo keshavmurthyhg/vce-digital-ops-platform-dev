@@ -1,6 +1,7 @@
 from docx import Document
 from docx.shared import RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
@@ -37,6 +38,19 @@ def add_hyperlink(paragraph, url, text):
     hyperlink.set(qn("r:id"), r_id)
 
     run = OxmlElement("w:r")
+    rPr = OxmlElement("w:rPr")
+
+    # Blue + underline
+    u = OxmlElement("w:u")
+    u.set(qn("w:val"), "single")
+    rPr.append(u)
+
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), "0000FF")
+    rPr.append(color)
+
+    run.append(rPr)
+
     text_elem = OxmlElement("w:t")
     text_elem.text = text
     run.append(text_elem)
@@ -45,7 +59,46 @@ def add_hyperlink(paragraph, url, text):
     paragraph._p.append(hyperlink)
 
 
-# ================= WORD DOCUMENT =================
+# ================= WORD SHADING =================
+def shade_cell(cell, color="D9D9D9"):
+    shading = OxmlElement("w:shd")
+    shading.set(qn("w:fill"), color)
+    cell._element.get_or_add_tcPr().append(shading)
+
+
+# ================= WORD FOOTER =================
+def add_footer(doc, data):
+    from docx.enum.text import WD_TAB_ALIGNMENT
+
+    section = doc.sections[0]
+    footer = section.footer.paragraphs[0]
+    footer.text = ""
+
+    footer.add_run(data.get("number", ""))
+    footer.add_run("\t")
+
+    # PAGE FIELD
+    fldChar1 = OxmlElement('w:fldChar')
+    fldChar1.set(qn('w:fldCharType'), 'begin')
+
+    instrText = OxmlElement('w:instrText')
+    instrText.text = "PAGE"
+
+    fldChar2 = OxmlElement('w:fldChar')
+    fldChar2.set(qn('w:fldCharType'), 'end')
+
+    footer._p.append(fldChar1)
+    footer._p.append(instrText)
+    footer._p.append(fldChar2)
+
+    footer.add_run("\t" + data.get("priority", ""))
+
+    tabs = footer.paragraph_format.tab_stops
+    tabs.add_tab_stop(3000000, WD_TAB_ALIGNMENT.CENTER)
+    tabs.add_tab_stop(6000000, WD_TAB_ALIGNMENT.RIGHT)
+
+
+# ================= WORD DOC =================
 def generate_word_doc(data, root, l2, res):
 
     doc = Document()
@@ -53,7 +106,6 @@ def generate_word_doc(data, root, l2, res):
     # ===== TITLE =====
     title = doc.add_heading("INCIDENT REPORT", 0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
     run = title.runs[0]
     run.bold = True
     run.font.color.rgb = RGBColor(31, 78, 121)
@@ -63,14 +115,18 @@ def generate_word_doc(data, root, l2, res):
     table.style = "Table Grid"
 
     def fill(row, col, key, value):
-        header_cell = table.rows[row].cells[col]
-        value_cell = table.rows[row].cells[col+1]
-        for run in header_cell.paragraphs[0].runs:
-        run.bold = True
-        header_cell.text = key.upper()
-        value_cell.text = ""
+        h = table.rows[row].cells[col]
+        v = table.rows[row].cells[col+1]
 
-        p = value_cell.paragraphs[0]
+        h.text = key.upper()
+        shade_cell(h)
+
+        # Bold header
+        for r in h.paragraphs[0].runs:
+            r.bold = True
+
+        v.text = ""
+        p = v.paragraphs[0]
 
         if key == "Incident":
             add_hyperlink(
@@ -92,11 +148,6 @@ def generate_word_doc(data, root, l2, res):
             )
         else:
             p.text = str(value)
-
-        # Grey header
-        shading = OxmlElement("w:shd")
-        shading.set(qn("w:fill"), "D9D9D9")
-        header_cell._element.get_or_add_tcPr().append(shading)
 
     fill(0,0,"Incident",data.get("number"))
     fill(0,2,"Created By",data.get("created_by"))
@@ -122,10 +173,10 @@ def generate_word_doc(data, root, l2, res):
         cell = desc_table.rows[0].cells[i]
         cell.text = headers[i]
         cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        shade_cell(cell)
 
-        shading = OxmlElement("w:shd")
-        shading.set(qn("w:fill"), "D9D9D9")
-        cell._element.get_or_add_tcPr().append(shading)
+        for r in cell.paragraphs[0].runs:
+            r.bold = True
 
     desc_table.rows[1].cells[0].text = clean_text(data.get("short_description"))
     desc_table.rows[1].cells[1].text = clean_text(data.get("description"))
@@ -141,42 +192,11 @@ def generate_word_doc(data, root, l2, res):
     doc.add_paragraph(res)
 
     # ===== FOOTER =====
-    section = doc.sections[0]
-    footer = section.footer.paragraphs[0]
-
-    from docx.enum.text import WD_TAB_ALIGNMENT
-
-    section = doc.sections[0]
-    footer = section.footer.paragraphs[0]
-    footer.text = ""
-    
-    footer.add_run(data.get("number"))
-    footer.add_run("\t")
-    
-    # PAGE FIELD
-    fldChar1 = OxmlElement('w:fldChar')
-    fldChar1.set(qn('w:fldCharType'), 'begin')
-    
-    instrText = OxmlElement('w:instrText')
-    instrText.text = "PAGE"
-    
-    fldChar2 = OxmlElement('w:fldChar')
-    fldChar2.set(qn('w:fldCharType'), 'end')
-    
-    footer._p.append(fldChar1)
-    footer._p.append(instrText)
-    footer._p.append(fldChar2)
-    
-    footer.add_run("\t" + data.get("priority"))
-    
-    tabs = footer.paragraph_format.tab_stops
-    tabs.add_tab_stop(3000000, WD_TAB_ALIGNMENT.CENTER)
-    tabs.add_tab_stop(6000000, WD_TAB_ALIGNMENT.RIGHT)
+    add_footer(doc, data)
 
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
-
     return buffer
 
 
@@ -200,40 +220,27 @@ def generate_pdf(data, root, l2, res):
         return Paragraph(str(text), styles["Normal"])
 
     # TABLE 1
-    def wrap(text):
-    return Paragraph(str(text), styles["Normal"])
-
-    table_data = [
-        ["INCIDENT", wrap(data["number"]), "CREATED BY", wrap(data["created_by"])],
-        ["AZURE BUG", wrap(data["azure_bug"]), "CREATED DATE", wrap(data["created_date"])],
-        ["PTC CASE", wrap(data["ptc_case"]), "ASSIGNED TO", wrap(data["assigned_to"])],
-        ["PRIORITY", wrap(data["priority"]), "RESOLVED DATE", wrap(data["resolved_date"])]
-    ]
-    
-    table = Table(table_data, colWidths=[110, 180, 110, 180])
-    
     table_data = [
         ["INCIDENT", link(f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}", data.get("number")),
-         "CREATED BY", data.get("created_by")],
+         "CREATED BY", wrap(data.get("created_by"))],
 
         ["AZURE BUG", link(f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{data.get('azure_bug')}", data.get("azure_bug")),
-         "CREATED DATE", data.get("created_date")],
+         "CREATED DATE", wrap(data.get("created_date"))],
 
         ["PTC CASE", link(f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}", data.get("ptc_case")),
-         "ASSIGNED TO", data.get("assigned_to")],
+         "ASSIGNED TO", wrap(data.get("assigned_to"))],
 
-        ["PRIORITY", data.get("priority"),
-         "RESOLVED DATE", data.get("resolved_date")]
+        ["PRIORITY", wrap(data.get("priority")),
+         "RESOLVED DATE", wrap(data.get("resolved_date"))]
     ]
 
-    table = Table(table_data, colWidths=[100,200,100,200])
+    table = Table(table_data, colWidths=[110, 180, 110, 180])
 
     table.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
         ('BACKGROUND',(0,0),(0,-1),colors.lightgrey),
         ('BACKGROUND',(2,0),(2,-1),colors.lightgrey),
-        ('VALIGN',(0,0),(-1,-1),'TOP'),
-        ('WORDWRAP',(0,0),(-1,-1),'CJK')
+        ('VALIGN',(0,0),(-1,-1),'TOP')
     ]))
 
     elements.append(table)
