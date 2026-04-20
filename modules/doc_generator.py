@@ -196,11 +196,9 @@ def generate_word_doc(data, root, l2, res):
 
     buffer = BytesIO()
     doc.save(buffer)
-    buffer.seek(0)
-    return buffer
-
-
-
+    # ✅ CRITICAL: return fresh buffer
+    data = buffer.getvalue()
+    return BytesIO(data)
 
 # ================= PDF =================
 def generate_pdf(data, root, l2, res):
