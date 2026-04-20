@@ -127,53 +127,41 @@ def render_doc_generator():
             st.warning("❌ Incident not found")
 
    
- # ================= WORD =================
 
-with col2:
-
-    # ✅ Use separate trigger flag
-    if st.button("Word", key="word_btn"):
-        st.session_state["word_clicked"] = True
-
-# ✅ PROCESS OUTSIDE BUTTON (IMPORTANT)
-if st.session_state.get("word_clicked"):
-
-    st.write("👉 Word trigger active")   # DEBUG
-
-    if "doc_data" not in st.session_state:
-        st.warning("❌ Please fetch incident first")
-        st.session_state["word_clicked"] = False
-
-    else:
-        try:
-            st.write("👉 Generating Word...")  # DEBUG
-
-            buffer = generate_word_doc(
-                st.session_state["doc_data"],
-                st.session_state.get("root", ""),
-                st.session_state.get("l2", ""),
-                st.session_state.get("res", "")
-            )
-
-            st.session_state["word_file"] = BytesIO(buffer.getvalue())
-
-            st.success("✅ Word generated")
-
-        except Exception as e:
-            st.error(f"❌ Error: {str(e)}")
-
-        # ✅ Reset trigger
-        st.session_state["word_clicked"] = False
-
-
-# ✅ DOWNLOAD BUTTON (ALWAYS VISIBLE)
-if "word_file" in st.session_state:
-    st.download_button(
-        "⬇ Download Word",
-        st.session_state["word_file"],
-        f"{st.session_state['doc_data']['number']}.docx"
-    )
-
+    # ================= WORD =================
+    
+    word_clicked = st.button("📄 Generate Word Report")
+    
+    if word_clicked:
+    
+        st.write("👉 BUTTON CLICK WORKING")
+    
+        if "doc_data" not in st.session_state:
+            st.warning("❌ Please fetch incident first")
+    
+        else:
+            try:
+                buffer = generate_word_doc(
+                    st.session_state["doc_data"],
+                    st.session_state.get("root", ""),
+                    st.session_state.get("l2", ""),
+                    st.session_state.get("res", "")
+                )
+    
+                st.session_state["word_file"] = buffer
+    
+                st.success("✅ Word generated successfully")
+    
+            except Exception as e:
+                st.error(f"❌ Error: {str(e)}")
+    
+    
+    if "word_file" in st.session_state:
+        st.download_button(
+            "⬇ Download Word",
+            st.session_state["word_file"],
+            f"{st.session_state['doc_data']['number']}.docx"
+        )
     # ================= PDF =================
     if col3.button("PDF"):
         if "doc_data" in st.session_state:
