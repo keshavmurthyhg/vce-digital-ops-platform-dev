@@ -71,7 +71,7 @@ def render_doc_generator():
         df["state"] = df["state"].fillna("Unknown").astype(str)
 
     # ================= SIDEBAR =================
-        # ---------- SIDEBAR ----------
+
    # st.sidebar.markdown("## 📊 Module")
     
    # options = [
