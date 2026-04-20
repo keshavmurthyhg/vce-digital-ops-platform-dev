@@ -29,6 +29,7 @@ def format_date(date_val):
 def get_incident_from_df(df, incident_number):
 
     df_copy = df.copy()
+
     df_copy["number"] = df_copy["number"].astype(str).str.strip().str.upper()
     incident_number = incident_number.strip().upper()
 
@@ -66,6 +67,9 @@ def render_doc_generator():
 
     df = load_snow_data()
 
+    if "state" in df.columns:
+        df["state"] = df["state"].fillna("Unknown").astype(str)
+
     # ================= SIDEBAR =================
     st.sidebar.header("Filters")
 
@@ -81,7 +85,6 @@ def render_doc_generator():
 
     date_filter = st.sidebar.date_input("Created Date Range", [])
 
-    # APPLY FILTERS
     filtered_df = df.copy()
 
     if priority_filter:
@@ -99,11 +102,6 @@ def render_doc_generator():
 
     df = filtered_df
 
-    # 👉 Sidebar → Bulk Auto Fill
-    if st.sidebar.button("Apply Filters to Bulk"):
-        ids = df["number"].dropna().astype(str).unique()
-        st.session_state["bulk_ids"] = ", ".join(ids)
-
     # ================= INPUT =================
     incident_number = st.text_input("Enter Incident Number")
 
@@ -112,10 +110,9 @@ def render_doc_generator():
         key="bulk_ids"
     )
 
-    # ================= BUTTON ROW =================
     col1, col2, col3, col4 = st.columns(4)
 
-    # FETCH
+    # ================= FETCH =================
     if col1.button("Fetch"):
         data = get_incident_from_df(df, incident_number)
 
@@ -124,30 +121,34 @@ def render_doc_generator():
             st.session_state["root"] = data.get("work_notes", "")
             st.session_state["l2"] = data.get("comments", "")
             st.session_state["res"] = data.get("resolution", "")
+
             st.success("✅ Incident loaded")
         else:
             st.warning("❌ Incident not found")
 
-    # ================= TEXT AREAS =================
-    root_cause = st.text_area("Root Cause", key="root")
-    l2_analysis = st.text_area("L2 Analysis", key="l2")
-    resolution = st.text_area("Resolution", key="res")
-
     # ================= WORD =================
     if col2.button("Word"):
         if "doc_data" in st.session_state:
-            st.session_state["word_file"] = generate_word_doc(
+
+            buffer = generate_word_doc(
                 st.session_state["doc_data"],
-                root_cause,
-                l2_analysis,
-                resolution
+                st.session_state.get("root", ""),
+                st.session_state.get("l2", ""),
+                st.session_state.get("res", "")
             )
+
+            st.session_state["word_file"] = buffer
+            st.success("✅ Word generated")
+
+        else:
+            st.warning("❌ Please fetch incident first")
 
     if "word_file" in st.session_state:
         col2.download_button(
             "⬇",
             st.session_state["word_file"],
-            f"{st.session_state['doc_data']['number']}.docx"
+            f"{st.session_state['doc_data']['number']}.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
 
     # ================= PDF =================
@@ -155,9 +156,9 @@ def render_doc_generator():
         if "doc_data" in st.session_state:
             st.session_state["pdf_file"] = generate_pdf(
                 st.session_state["doc_data"],
-                root_cause,
-                l2_analysis,
-                resolution
+                st.session_state.get("root", ""),
+                st.session_state.get("l2", ""),
+                st.session_state.get("res", "")
             )
 
     if "pdf_file" in st.session_state:
@@ -190,3 +191,8 @@ def render_doc_generator():
             st.session_state["zip_file"],
             "incident_reports.zip"
         )
+
+    # ================= TEXT AREAS =================
+    st.text_area("Root Cause", key="root")
+    st.text_area("L2 Analysis", key="l2")
+    st.text_area("Resolution", key="res")
