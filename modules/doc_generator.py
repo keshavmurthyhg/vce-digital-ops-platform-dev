@@ -1,79 +1,102 @@
 from docx import Document
-from docx.oxml import OxmlElement
-from docx.oxml.ns import qn
-from docx.opc.constants import RELATIONSHIP_TYPE
+from docx.shared import RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 
 from io import BytesIO
 import re
 
-from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.shared import RGBColor 
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 
- 
 
-# ================= CLEAN DESCRIPTION =================
+# ================= CLEAN TEXT =================
 def clean_text(text):
     if not text:
         return ""
-    text = re.sub(
-        r"How does the user want to be contacted.*?(\+?\d[\d\s]+)",
+    return re.sub(
+        r"How does the user want.*?\d+",
         "",
         str(text),
         flags=re.IGNORECASE
-    )
-    return text.strip()
+    ).strip()
 
 
-# ================= SHADE CELL =================
-def shade_cell(cell, color="D9D9D9"):
-    tc = cell._tc
-    tcPr = tc.get_or_add_tcPr()
-    shd = OxmlElement('w:shd')
-    shd.set(qn('w:fill'), color)
-    tcPr.append(shd)
-
-
-# ================= ADD HYPERLINK =================
+# ================= WORD HYPERLINK =================
 def add_hyperlink(paragraph, url, text):
-
     part = paragraph.part
-    r_id = part.relate_to(url, RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
+    r_id = part.relate_to(
+        url,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        is_external=True
+    )
 
-    hyperlink = OxmlElement('w:hyperlink')
-    hyperlink.set(qn('r:id'), r_id)
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), r_id)
 
-    new_run = OxmlElement('w:r')
-    rPr = OxmlElement('w:rPr')
+    run = OxmlElement("w:r")
+    rPr = OxmlElement("w:rPr")
 
-    # style
-    u = OxmlElement('w:u')
-    u.set(qn('w:val'), 'single')
+    # Blue + underline
+    u = OxmlElement("w:u")
+    u.set(qn("w:val"), "single")
     rPr.append(u)
 
-    new_run.append(rPr)
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), "0000FF")
+    rPr.append(color)
 
-    text_elem = OxmlElement('w:t')
+    run.append(rPr)
+
+    text_elem = OxmlElement("w:t")
     text_elem.text = text
-    new_run.append(text_elem)
+    run.append(text_elem)
 
-    hyperlink.append(new_run)
+    hyperlink.append(run)
     paragraph._p.append(hyperlink)
 
 
-# ================= FOOTER =================
+# ================= WORD SHADING =================
+def shade_cell(cell, color="D9D9D9"):
+    shading = OxmlElement("w:shd")
+    shading.set(qn("w:fill"), color)
+    cell._element.get_or_add_tcPr().append(shading)
+
+
+# ================= WORD FOOTER =================
 def add_footer(doc, data):
+    from docx.enum.text import WD_TAB_ALIGNMENT
 
     section = doc.sections[0]
-    footer = section.footer
+    footer = section.footer.paragraphs[0]
+    footer.text = ""
 
-    p = footer.paragraphs[0]
+    footer.add_run(data.get("number", ""))
+    footer.add_run("\t")
 
-    p.text = f"{data.get('number')}    |    Priority: {data.get('priority')}"
+    # PAGE FIELD
+    fldChar1 = OxmlElement('w:fldChar')
+    fldChar1.set(qn('w:fldCharType'), 'begin')
+
+    instrText = OxmlElement('w:instrText')
+    instrText.text = "PAGE"
+
+    fldChar2 = OxmlElement('w:fldChar')
+    fldChar2.set(qn('w:fldCharType'), 'end')
+
+    footer._p.append(fldChar1)
+    footer._p.append(instrText)
+    footer._p.append(fldChar2)
+
+    footer.add_run("\t" + data.get("priority", ""))
+
+    tabs = footer.paragraph_format.tab_stops
+    tabs.add_tab_stop(3000000, WD_TAB_ALIGNMENT.CENTER)
+    tabs.add_tab_stop(6000000, WD_TAB_ALIGNMENT.RIGHT)
+
 
 # ================= WORD DOC =================
 def generate_word_doc(data, root, l2, res):
@@ -175,9 +198,6 @@ def generate_word_doc(data, root, l2, res):
     doc.save(buffer)
     buffer.seek(0)
     return buffer
-
-
-
 
 
 # ================= PDF =================
