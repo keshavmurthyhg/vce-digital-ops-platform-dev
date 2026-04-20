@@ -1,4 +1,10 @@
 from docx import Document
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+from docx.opc.constants import RELATIONSHIP_TYPE
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+
 from io import BytesIO
 import re
 
@@ -7,6 +13,7 @@ from docx.shared import RGBColor
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
+
  
 
 # ================= CLEAN DESCRIPTION =================
@@ -21,6 +28,52 @@ def clean_text(text):
     )
     return text.strip()
 
+
+# ================= SHADE CELL =================
+def shade_cell(cell, color="D9D9D9"):
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    shd = OxmlElement('w:shd')
+    shd.set(qn('w:fill'), color)
+    tcPr.append(shd)
+
+
+# ================= ADD HYPERLINK =================
+def add_hyperlink(paragraph, url, text):
+
+    part = paragraph.part
+    r_id = part.relate_to(url, RELATIONSHIP_TYPE.HYPERLINK, is_external=True)
+
+    hyperlink = OxmlElement('w:hyperlink')
+    hyperlink.set(qn('r:id'), r_id)
+
+    new_run = OxmlElement('w:r')
+    rPr = OxmlElement('w:rPr')
+
+    # style
+    u = OxmlElement('w:u')
+    u.set(qn('w:val'), 'single')
+    rPr.append(u)
+
+    new_run.append(rPr)
+
+    text_elem = OxmlElement('w:t')
+    text_elem.text = text
+    new_run.append(text_elem)
+
+    hyperlink.append(new_run)
+    paragraph._p.append(hyperlink)
+
+
+# ================= FOOTER =================
+def add_footer(doc, data):
+
+    section = doc.sections[0]
+    footer = section.footer
+
+    p = footer.paragraphs[0]
+
+    p.text = f"{data.get('number')}    |    Priority: {data.get('priority')}"
 
 # ================= WORD DOC =================
 def generate_word_doc(data, root, l2, res):
