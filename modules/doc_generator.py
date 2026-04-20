@@ -43,20 +43,48 @@ def add_hyperlink(paragraph, url, text):
 # ================= WORD =================
 def generate_word_doc(data, root, l2, res, images=None):
 
+    from docx import Document
+    from docx.shared import Inches, RGBColor
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
     doc = Document()
 
+    # ================= TITLE =================
     title = doc.add_heading("INCIDENT REPORT", 0)
     title.alignment = WD_ALIGN_PARAGRAPH.CENTER
     title.runs[0].bold = True
     title.runs[0].font.color.rgb = RGBColor(31, 78, 121)
 
+    # ================= TABLE =================
     table = doc.add_table(rows=4, cols=4)
     table.style = "Table Grid"
+
+    def add_hyperlink(paragraph, url, text):
+        part = paragraph.part
+        r_id = part.relate_to(
+            url,
+            "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+            is_external=True
+        )
+
+        hyperlink = OxmlElement("w:hyperlink")
+        hyperlink.set(qn("r:id"), r_id)
+
+        run = OxmlElement("w:r")
+        text_elem = OxmlElement("w:t")
+        text_elem.text = text
+
+        run.append(text_elem)
+        hyperlink.append(run)
+        paragraph._p.append(hyperlink)
 
     def fill(r, c, key, val):
         h = table.rows[r].cells[c]
         v = table.rows[r].cells[c+1]
 
+        # HEADER
         h.text = key.upper()
 
         shade = OxmlElement("w:shd")
@@ -68,15 +96,19 @@ def generate_word_doc(data, root, l2, res, images=None):
 
         p = v.paragraphs[0]
 
+        # LINKS (RESTORED — DO NOT TOUCH AGAIN)
         if key == "Incident":
             add_hyperlink(p,
-                f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={val}", str(val))
+                f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={val}",
+                str(val))
         elif key == "Azure Bug":
             add_hyperlink(p,
-                f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{val}", str(val))
+                f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{val}",
+                str(val))
         elif key == "PTC Case":
             add_hyperlink(p,
-                f"https://support.ptc.com/app/caseviewer/?case={val}", str(val))
+                f"https://support.ptc.com/app/caseviewer/?case={val}",
+                str(val))
         else:
             p.text = str(val)
 
@@ -91,42 +123,56 @@ def generate_word_doc(data, root, l2, res, images=None):
 
     doc.add_paragraph("")
 
-    # Description table
+    # ================= DESCRIPTION TABLE =================
     t2 = doc.add_table(rows=2, cols=2)
     t2.style = "Table Grid"
 
     t2.rows[0].cells[0].text = "SHORT DESCRIPTION"
     t2.rows[0].cells[1].text = "DESCRIPTION"
 
-    t2.rows[1].cells[0].text = clean_text(data.get("short_description"))
-    t2.rows[1].cells[1].text = clean_text(data.get("description"))
+    for i in range(2):
+        for run in t2.rows[0].cells[i].paragraphs[0].runs:
+            run.bold = True
 
-    # Sections
+    def clean(text):
+        import re
+        return re.sub(r"How does the user want.*?\d+", "", str(text), flags=re.I).strip()
+
+    t2.rows[1].cells[0].text = clean(data.get("short_description"))
+    t2.rows[1].cells[1].text = clean(data.get("description"))
+
+    # ================= ROOT =================
     doc.add_heading("ROOT CAUSE", 1)
     doc.add_paragraph(root)
+
     if images and images.get("root"):
         doc.add_picture(images["root"], width=Inches(5))
 
+    # ================= L2 =================
     doc.add_heading("L2 ANALYSIS", 1)
     doc.add_paragraph(l2)
+
     if images and images.get("l2"):
         doc.add_picture(images["l2"], width=Inches(5))
 
+    # ================= RES =================
     doc.add_heading("RESOLUTION", 1)
     doc.add_paragraph(res)
+
     if images and images.get("res"):
         doc.add_picture(images["res"], width=Inches(5))
 
-    # Footer
+    # ================= FOOTER (FIXED) =================
     section = doc.sections[0]
     footer = section.footer.paragraphs[0]
-    footer.text = f"{data.get('number')}    Page    {data.get('priority')}"
+
+    footer.text = f"{data.get('number')}        Page        {data.get('priority')}"
 
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
-    return buffer
 
+    return buffer
 
 # ================= PDF =================
 def generate_pdf(data, root, l2, res, images=None):
