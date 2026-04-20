@@ -156,13 +156,12 @@ def render_doc_generator():
             )
             set_status("✅ Word generated")
 
-    if "word" in st.session_state:
-        col2.download_button(
-            "⬇",
-            st.session_state["word"],
-            file_name=f"{st.session_state['data']['number']}.docx"
-        )
-
+    if "word_file" in st.session_state:
+            st.download_button(
+                "⬇",
+                st.session_state["word_file"],
+                f"{st.session_state['doc_data']['number']}.docx"
+            )
 
     # PDF
     with col3:
