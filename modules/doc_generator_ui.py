@@ -33,21 +33,20 @@ def render_doc_generator():
 
     # FETCH
     with col1:
-    if st.button("Fetch"):
-        st.session_state["doc_data"] = {
-            "number": incident,
-            "azure_bug": "695698",
-            "ptc_case": "18007559",
-            "priority": "Priority 4",
-            "created_by": "Jordan Bingaman",
-            "created_date": "2026-01-29",
-            "assigned_to": "Keshavamurthy Hg",
-            "resolved_date": "2026-02-16",
-            "short_description": "Edit Association button is missing",
-            "description": "Users need to be able to edit association..."
-        }
-
-        st.success("Incident loaded")
+        if st.button("Fetch"):
+            st.session_state["doc_data"] = {
+                "number": incident,
+                "azure_bug": "695698",
+                "ptc_case": "18007559",
+                "priority": "Priority 4",
+                "created_by": "Jordan Bingaman",
+                "created_date": "2026-01-29",
+                "assigned_to": "Keshavamurthy Hg",
+                "resolved_date": "2026-02-16",
+                "short_description": "Edit Association button is missing",
+                "description": "Users need to be able to edit association..."
+            }
+            st.success("Incident loaded")
 
     # WORD (SAFE — WON'T BREAK UI)
     with col2:
@@ -109,6 +108,10 @@ def render_doc_generator():
                 d = st.session_state["doc_data"]
 
                 st.markdown("### Preview")
+                st.write("Incident:", d["number"])
+                st.write("Description:", d["description"])
+            else:
+                st.warning("Fetch first")
                 st.write("Incident:", d["number"])
                 st.write("Description:", d["description"])
             else:
