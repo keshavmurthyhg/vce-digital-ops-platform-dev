@@ -148,7 +148,7 @@ def render_doc_generator():
                     st.session_state.get("res", "")
                 )
     
-                st.session_state["word_file"] = buffer
+                st.session_state["word_file"] = buffer.getvalue()
     
                 st.success("✅ Word generated successfully")
     
