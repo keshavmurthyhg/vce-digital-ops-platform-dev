@@ -9,17 +9,24 @@ import re
 
 # ✅ CLEAR FUNCTION (SAFE)
 def clear_all():
-    # Preserve ALL possible navigation + filters
-    keys_to_keep = [
-        k for k in st.session_state.keys()
-        if any(x in k.lower() for x in ["page", "nav", "menu"])
+    keys_to_clear = [
+        "data",
+        "root",
+        "l2",
+        "res",
+        "word_file",
+        "pdf_file",
+        "zip_file",
+        "images",
+        "inc_input",
+        "bulk_ids",
+        "root_img",
+        "l2_img",
+        "res_img"
     ]
 
-    # Also keep filters (important)
-    keys_to_keep += ["filter_priority", "filter_date"]
-
-    for key in list(st.session_state.keys()):
-        if key not in keys_to_keep:
+    for key in keys_to_clear:
+        if key in st.session_state:
             del st.session_state[key]
 
     st.rerun()
