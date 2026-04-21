@@ -6,15 +6,21 @@ from io import BytesIO
 import zipfile
 import re
 
+
+# ✅ SAFE CLEAR (FIXED)
 def clear_all():
-    for key in st.session_state.keys():
-        del st.session_state[key]
+    keys_to_keep = ["active_page"]  # adjust if your nav key is different
+    for key in list(st.session_state.keys()):
+        if key not in keys_to_keep:
+            del st.session_state[key]
     st.rerun()
+
 
 def extract_azure_link(text):
     if not text: return ""
     match = re.search(r"/(\d+)", str(text))
     return match.group(1) if match else ""
+
 
 def get_incident(df, inc):
     df["number"] = df["number"].astype(str).str.upper()
@@ -37,41 +43,31 @@ def get_incident(df, inc):
         "azure_bug": extract_azure_link(r.get("resolution notes"))
     }
 
+
 def render_doc_generator():
     st.title("📄 SNOW Incident Report Generator")
     df = load_snow_data()
 
     # SIDEBAR
     st.sidebar.header("Filters")
-    priority_sel = st.sidebar.multiselect("Priority", df["priority"].dropna().unique(), key="filter_priority")
-    date_range = st.sidebar.date_input("Created Date Range", [], key="filter_date")
-
+    priority_sel = st.sidebar.multiselect("Priority", df["priority"].dropna().unique())
+    
     if st.sidebar.button("Apply Filters to Bulk"):
         filtered = df.copy()
         if priority_sel:
             filtered = filtered[filtered["priority"].isin(priority_sel)]
-        st.session_state["bulk_ids"] = ", ".join(filtered["number"].astype(str).tolist())
+        st.session_state["bulk_ids"] = ", ".join(filtered["number"].astype(str))
 
-    def clear_all():
-    keys_to_keep = ["active_page"]  # keep navigation
+    if st.sidebar.button("Clear All Data"):
+        clear_all()
 
-    for key in list(st.session_state.keys()):
-        if key not in keys_to_keep:
-            del st.session_state[key]
-
-    st.rerun()
-
-    # INPUTS
-    inc = st.text_input("Enter Incident Number", key="inc_input")
+    inc = st.text_input("Enter Incident Number")
     bulk = st.text_area("Bulk Incident Numbers", key="bulk_ids")
 
-    # Layout for Buttons
-    # We use nested columns to keep action buttons and download buttons together
     col_fetch, col_word, col_pdf, col_bulk, col_prev = st.columns(5)
 
-    # FETCH
     with col_fetch:
-        if st.button("Fetch", use_container_width=True):
+        if st.button("Fetch"):
             data = get_incident(df, inc)
             if data:
                 st.session_state["data"] = data
@@ -82,35 +78,34 @@ def render_doc_generator():
             else:
                 st.error("Not found")
 
-    # WORD
     with col_word:
-        if st.button("Word", use_container_width=True):
+        if st.button("Word"):
             if "data" in st.session_state:
                 st.session_state["word_file"] = generate_word_doc(
-                    st.session_state["data"], st.session_state.get("root", ""),
-                    st.session_state.get("l2", ""), st.session_state.get("res", ""),
-                    st.session_state.get("images")
+                    st.session_state["data"],
+                    st.session_state.get("root",""),
+                    st.session_state.get("l2",""),
+                    st.session_state.get("res","")
                 )
         if "word_file" in st.session_state:
-            st.download_button("⬇ Word", st.session_state["word_file"], 
-                               file_name=f"{st.session_state['data']['number']}.docx", use_container_width=True)
+            st.download_button("⬇ Word", st.session_state["word_file"],
+                               file_name=f"{st.session_state['data']['number']}.docx")
 
-    # PDF
     with col_pdf:
-        if st.button("PDF", use_container_width=True):
+        if st.button("PDF"):
             if "data" in st.session_state:
                 st.session_state["pdf_file"] = generate_pdf(
-                    st.session_state["data"], st.session_state.get("root", ""),
-                    st.session_state.get("l2", ""), st.session_state.get("res", ""),
-                    st.session_state.get("images")
+                    st.session_state["data"],
+                    st.session_state.get("root",""),
+                    st.session_state.get("l2",""),
+                    st.session_state.get("res","")
                 )
         if "pdf_file" in st.session_state:
-            st.download_button("⬇ PDF", st.session_state["pdf_file"], 
-                               file_name=f"{st.session_state['data']['number']}.pdf", use_container_width=True)
+            st.download_button("⬇ PDF", st.session_state["pdf_file"],
+                               file_name=f"{st.session_state['data']['number']}.pdf")
 
-    # BULK
     with col_bulk:
-        if st.button("Bulk", use_container_width=True):
+        if st.button("Bulk"):
             ids = [i.strip() for i in bulk.split(",") if i.strip()]
             zip_buffer = BytesIO()
             with zipfile.ZipFile(zip_buffer, "w") as z:
@@ -120,28 +115,8 @@ def render_doc_generator():
                         f = generate_word_doc(d, "", "", "")
                         z.writestr(f"{i}.docx", f.getvalue())
             zip_buffer.seek(0)
-            st.session_state["zip_file"] = zip_buffer
-        if "zip_file" in st.session_state:
-            st.download_button("⬇ ZIP", st.session_state["zip_file"], "reports.zip", use_container_width=True)
+            st.download_button("⬇ ZIP", zip_buffer, "reports.zip")
 
-    # PREVIEW
     with col_prev:
-        show_prev = st.button("Preview", use_container_width=True)
-
-    if show_prev and "data" in st.session_state:
-        with st.expander("Report Preview", expanded=True):
-            st.write(f"**Short Description:** {st.session_state['data']['short_description']}")
-            st.write(f"**Root Cause:** {st.session_state.get('root')}")
-
-    # EDITABLE FIELDS
-    st.subheader("Edit Report Details")
-    st.text_area("Root Cause", key="root")
-    root_img = st.file_uploader("Root Image", type=["png", "jpg"], key="root_img")
-    
-    st.text_area("L2 Analysis", key="l2")
-    l2_img = st.file_uploader("L2 Image", type=["png", "jpg"], key="l2_img")
-    
-    st.text_area("Resolution", key="res")
-    res_img = st.file_uploader("Resolution Image", type=["png", "jpg"], key="res_img")
-
-    st.session_state["images"] = {"root": root_img, "l2": l2_img, "res": res_img}
+        if st.button("Preview") and "data" in st.session_state:
+            st.write(st.session_state["data"])
