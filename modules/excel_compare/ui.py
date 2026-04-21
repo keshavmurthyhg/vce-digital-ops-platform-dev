@@ -58,11 +58,13 @@ def show_excel_compare():
         # =========================
         summary = get_summary(diff_mask)
 
-        st.subheader("📊 Summary")
-        st.write(f"🔸 Total Cells: {summary['total_cells']}")
-        st.write(f"🔸 Differences: {summary['diff_cells']}")
-        st.write(f"🔸 Rows Changed: {summary['changed_rows']}")
-        st.write(f"🔸 Columns Changed: {summary['changed_cols']}")
+        st.subheader("📊 Column-wise Differences")
+        
+        for col, count in summary["column_wise"].items():
+            if count > 0:
+                st.write(f"🔸 {col}: {count}")
+        
+        st.write(f"### 🔥 Total Differences: {summary['total_diff']}")
 
         # =========================
         # PREVIEW
@@ -85,23 +87,15 @@ def show_excel_compare():
         # DOWNLOAD
         # =========================
         if compare_clicked:
-            file1_out, file2_out = generate_output(file1, file2)
-
-            name1 = os.path.splitext(filename1)[0] + "_Highlighted.xlsx"
-            name2 = os.path.splitext(filename2)[0] + "_Highlighted.xlsx"
-
-            with open(file1_out, "rb") as f:
+            zip_path, zip_name = generate_output(file1, file2)
+        
+            with open(zip_path, "rb") as f:
                 st.sidebar.download_button(
-                    f"⬇️ {name1}",
+                    "⬇️ Download Comparison (ZIP)",
                     f,
-                    name1
+                    zip_name
                 )
-
-            with open(file2_out, "rb") as f:
-                st.sidebar.download_button(
-                    f"⬇️ {name2}",
-                    f,
-                    name2
-                )
+        
+            st.sidebar.success("✅ ZIP Ready!")
 
             st.sidebar.success("✅ Files ready!")
