@@ -59,10 +59,12 @@ def show_excel_compare():
         summary = get_summary(diff_mask)
 
         st.subheader("📊 Summary")
-        st.write(f"🔸 Total Cells: {summary['total_cells']}")
-        st.write(f"🔸 Differences: {summary['diff_cells']}")
-        st.write(f"🔸 Rows Changed: {summary['changed_rows']}")
-        st.write(f"🔸 Columns Changed: {summary['changed_cols']}")
+        col1, col2, col3, col4 = st.columns(4)
+
+            col1.metric("Total Cells", summary["total_cells"])
+            col2.metric("Differences", summary["diff_cells"])
+            col3.metric("Rows Changed", summary["changed_rows"])
+            col4.metric("Columns Changed", summary["changed_cols"])
 
 
         # =========================
