@@ -17,9 +17,6 @@ options = [
     "Excel Compare"
 ]
 
-page = st.sidebar.selectbox("Select Module", options)
-st.write("Selected Page:", page)
-
 # ✅ ALWAYS RESET INVALID VALUES
 current_page = st.session_state.get("page", "Search Dashboard")
 
