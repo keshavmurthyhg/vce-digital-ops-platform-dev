@@ -3,6 +3,7 @@ import streamlit as st
 from modules.search_page import render_search_page
 from modules.doc_generator_ui import render_doc_generator
 from modules.charts_page import render_charts_page
+from modules.excel_compare.ui import show_excel_compare
 
 st.set_page_config(layout="wide")
 
@@ -13,6 +14,7 @@ options = [
     "Search Dashboard",
     "Insights Dashboard",
     "Word Report Generator"
+    "Excel Compare"
 ]
 
 # ✅ ALWAYS RESET INVALID VALUES
@@ -40,6 +42,8 @@ elif page == "Insights Dashboard":
 
 elif page == "Word Report Generator":
     render_doc_generator()
+elif page == "Excel Compare":
+        show_excel_compare()
 
 # ✅ GLOBAL CSS FIX
 st.markdown("""
