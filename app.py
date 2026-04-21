@@ -6,10 +6,10 @@ from modules.charts_page import render_charts_page
 from modules.excel_compare.ui import show_excel_compare
 
 st.set_page_config(layout="wide")
-st.write("Selected Page:", page)
+
 # ---------- SIDEBAR ----------
 st.sidebar.markdown("## 📊 Module")
-
+st.write("Selected Page:", page)
 options = [
     "Search Dashboard",
     "Insights Dashboard",
