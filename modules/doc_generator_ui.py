@@ -8,28 +8,42 @@ import re
 
 
 # ✅ CLEAR FUNCTION (SAFE)
-def clear_all():
+#def clear_all():
     # Clear generated outputs
-    for key in ["data", "word_file", "pdf_file", "zip_file", "images"]:
+  #  for key in ["data", "word_file", "pdf_file", "zip_file", "images"]:
+   #     if key in st.session_state:
+    #        del st.session_state[key]
+
+    # Reset input fields (VERY IMPORTANT)
+  #  st.session_state["inc_input"] = ""
+  #  st.session_state["bulk_ids"] = ""
+
+    # Reset text areas
+  #  st.session_state["root"] = ""
+  #  st.session_state["l2"] = ""
+  #  st.session_state["res"] = ""
+
+    # Reset uploaded images
+ #   st.session_state["root_img"] = None
+  #  st.session_state["l2_img"] = None
+  #  st.session_state["res_img"] = None
+
+ #   st.rerun()
+
+def clear_all():
+    # Keys to fully remove (important for widgets)
+    keys_to_delete = [
+        "data", "word_file", "pdf_file", "zip_file", "images",
+        "inc_input", "bulk_ids",
+        "root", "l2", "res",
+        "root_img", "l2_img", "res_img"
+    ]
+
+    for key in keys_to_delete:
         if key in st.session_state:
             del st.session_state[key]
 
-    # Reset input fields (VERY IMPORTANT)
-    st.session_state["inc_input"] = ""
-    st.session_state["bulk_ids"] = ""
-
-    # Reset text areas
-    st.session_state["root"] = ""
-    st.session_state["l2"] = ""
-    st.session_state["res"] = ""
-
-    # Reset uploaded images
-    st.session_state["root_img"] = None
-    st.session_state["l2_img"] = None
-    st.session_state["res_img"] = None
-
     st.rerun()
-
 
 def extract_azure_link(text):
     if not text: return ""
