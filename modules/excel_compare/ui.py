@@ -100,16 +100,7 @@ def show_excel_compare():
                     f,
                     zip_name
                 )
-
-            word_path = generate_word_report(section_summary, removed_rows)
-
-            with open(word_path, "rb") as f:
-                st.sidebar.download_button(
-                    "📄 Download Summary (Word)",
-                    f,
-                    "Comparison_Report.docx"
-                )
-
+            
             msg = st.sidebar.success("✅ Files Ready!")
 
             time.sleep(15)
