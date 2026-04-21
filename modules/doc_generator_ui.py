@@ -95,12 +95,11 @@ def render_doc_generator():
             data = get_incident(df, inc)
             if data:
                 st.session_state["data"] = data
-
-                if not st.session_state.get("clear_triggered"):
-                    st.session_state["root"] = data["work_notes"]
-                    st.session_state["l2"] = data["comments"]
-                    st.session_state["res"] = data["resolution"]
-
+                st.session_state["root"] = data["work_notes"]
+                st.session_state["l2"] = data["comments"]
+                st.session_state["res"] = data["resolution"]
+                
+                # reset flag AFTER successful fetch
                 st.session_state["clear_triggered"] = False
 
                 st.success("Loaded")
