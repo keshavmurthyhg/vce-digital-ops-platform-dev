@@ -180,7 +180,7 @@ def render_doc_generator():
 
     # EDITABLE FIELDS
     # EDITABLE FIELDS
-st.subheader("Edit Report Details")
+    st.subheader("Edit Report Details")
 
     # ✅ MUST be at same level (no extra indent)
     reset_id = st.session_state.get("uploader_reset", 0)
