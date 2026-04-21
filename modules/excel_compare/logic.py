@@ -157,15 +157,22 @@ def style_dataframe(df, diff_mask):
 # EXCEL OUTPUT
 # =========================
 def generate_output(file1, file2):
+    wb1 = load_workbook(file1)
     wb2 = load_workbook(file2)
+
+    ws1 = wb1.active
     ws2 = wb2.active
 
     fill_added = PatternFill(start_color="90EE90", end_color="90EE90", fill_type="solid")
     fill_modified = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
+    fill_removed = PatternFill(start_color="FF7F7F", end_color="FF7F7F", fill_type="solid")
 
     df1, df2 = compare_excels(file1, file2)
-    diff_mask2, _, _, _ = section_diff_logic(df1, df2)
+    diff_mask2, summary, total_diff, removed_rows = section_diff_logic(df1, df2)
 
+    # =========================
+    # FILE2 → ADDED + MODIFIED
+    # =========================
     for r in range(len(df2)):
         for c in range(len(df2.columns)):
             val = diff_mask2.iloc[r, c]
@@ -175,22 +182,71 @@ def generate_output(file1, file2):
             elif val == "modified":
                 ws2.cell(r + 1, c + 1).fill = fill_modified
 
-    name2 = os.path.splitext(file2.name)[0] + "_Highlighted.xlsx"
+    # =========================
+    # FILE1 → REMOVED (🔴)
+    # =========================
+    for item in removed_rows:
+        number = item["number"]
+
+        for r in range(len(df1)):
+            if normalize(df1.iloc[r, 0]) == number:
+                for c in range(len(df1.columns)):
+                    ws1.cell(r + 1, c + 1).fill = fill_removed
+
+    # =========================
+    # SAVE FILES
+    # =========================
+    base1 = os.path.splitext(file1.name)[0]
+    base2 = os.path.splitext(file2.name)[0]
+
+    name1 = f"{base1}_Removed.xlsx"
+    name2 = f"{base2}_Highlighted.xlsx"
 
     temp_dir = tempfile.mkdtemp()
+
+    path1 = os.path.join(temp_dir, name1)
     path2 = os.path.join(temp_dir, name2)
 
+    wb1.save(path1)
     wb2.save(path2)
 
+    # =========================
+    # WORD REPORT
+    # =========================
+    doc = Document()
+    doc.add_heading("Excel Comparison Summary", 0)
+
+    for section, data in summary.items():
+        if any(data.values()):
+            doc.add_paragraph(
+                f"{section} → "
+                f"Added: {data['added']} | "
+                f"Removed: {data['removed']} | "
+                f"Modified: {data['modified']}"
+            )
+
+    doc.add_heading("Removed Items", level=1)
+
+    for item in removed_rows:
+        doc.add_paragraph(f"{item['section']} → {item['number']}")
+
+    word_name = "Comparison_Report.docx"
+    word_path = os.path.join(temp_dir, word_name)
+    doc.save(word_path)
+
+    # =========================
+    # ZIP ALL FILES
+    # =========================
     date_str = datetime.now().strftime("%d%b%Y")
     zip_name = f"Excel-Compare_{date_str}.zip"
     zip_path = os.path.join(temp_dir, zip_name)
 
     with zipfile.ZipFile(zip_path, "w") as z:
+        z.write(path1, name1)
         z.write(path2, name2)
+        z.write(word_path, word_name)
 
     return zip_path, zip_name
-
 
 # =========================
 # WORD REPORT
