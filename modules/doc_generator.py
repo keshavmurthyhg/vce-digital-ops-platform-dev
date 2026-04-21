@@ -9,6 +9,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import letter
+from reportlab.platypus import KeepTogether
 
 def clean_text(text):
     if not text:
@@ -86,16 +87,32 @@ def generate_word_doc(data, root, l2, res, images=None):
             doc.add_picture(images[section[2]], width=Inches(5))
 
     # FOOTER: 3-column layout using Tab Stops
+    from docx.enum.text import WD_TAB_ALIGNMENT
     section = doc.sections[0]
     footer = section.footer.paragraphs[0]
     footer.clear()
-    # Tab 1: Center (3.25"), Tab 2: Right (6.5")
+    
     tab_stops = footer.paragraph_format.tab_stops
     tab_stops.add_tab_stop(Inches(3.25), WD_TAB_ALIGNMENT.CENTER)
     tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
     
-    run = footer.add_run(f"{data.get('number')}\tPage\t{data.get('priority')}")
-    run.font.size = Pt(10)
+    run = footer.add_run(f"{data.get('number')}\tPage ")
+    
+    # Add dynamic page number
+    fldChar1 = OxmlElement('w:fldChar')
+    fldChar1.set(qn('w:fldCharType'), 'begin')
+    
+    instrText = OxmlElement('w:instrText')
+    instrText.text = "PAGE"
+    
+    fldChar2 = OxmlElement('w:fldChar')
+    fldChar2.set(qn('w:fldCharType'), 'end')
+    
+    run._r.append(fldChar1)
+    run._r.append(instrText)
+    run._r.append(fldChar2)
+    
+    run2 = footer.add_run(f"\t{data.get('priority')}")
 
     buffer = BytesIO()
     doc.save(buffer)
@@ -124,28 +141,28 @@ def generate_pdf(data, root, l2, res, images=None):
         ["PTC CASE", wrap(data.get('ptc_case')), "ASSIGNED TO", wrap(data.get('assigned_to'))],
         ["PRIORITY", wrap(data.get('priority')), "RESOLVED DATE", wrap(data.get('resolved_date'))]
     ], colWidths=[80, 185, 80, 185])
-
-    table.setStyle(TableStyle([
+    
+        table.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
         ('BACKGROUND',(0,0),(0,-1),colors.lightgrey),
         ('BACKGROUND',(2,0),(2,-1),colors.lightgrey),
         ('FONTSIZE', (0,0), (-1,-1), 9),
     ]))
-    elements.append(table)
-    elements.append(Spacer(1,15))
+    elements.append(KeepTogether(table))
+    elements.append(Spacer(1, 15))
 
     # Table 2: Descriptions with Wrapping
     desc_table = Table([
         [Paragraph("<b>SHORT DESCRIPTION</b>", styles["Normal"]), Paragraph("<b>DESCRIPTION</b>", styles["Normal"])],
         [wrap(clean_text(data.get("short_description"))), wrap(clean_text(data.get("description")))]
     ], colWidths=[180, 350])
-
-    desc_table.setStyle(TableStyle([
+                         
+desc_table.setStyle(TableStyle([
         ('GRID', (0,0), (-1,-1), 1, colors.black),
         ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
         ('VALIGN', (0,0), (-1,-1), 'TOP')
     ]))
-    elements.append(desc_table)
+    elements.append(KeepTogether(desc_table))
     elements.append(Spacer(1, 15))
 
     for title, content, img_key in [("ROOT CAUSE", root, "root"), ("L2 ANALYSIS", l2, "l2"), ("RESOLUTION", res, "res")]:
@@ -159,9 +176,9 @@ def generate_pdf(data, root, l2, res, images=None):
     def footer(canvas, doc):
         canvas.saveState()
         canvas.setFont('Helvetica', 9)
-        canvas.drawString(40, 30, str(data.get("number")))
-        canvas.drawCentredString(300, 30, f"Page {doc.page}")
-        canvas.drawRightString(570, 30, str(data.get("priority")))
+        canvas.drawString(40, 20, str(data.get("number")))
+        canvas.drawCentredString(width / 2, 20, f"Page {doc.page}")
+        canvas.drawRightString(width - 40, 30, str(data.get("priority")))
         canvas.restoreState()
 
     doc.build(elements, onFirstPage=footer, onLaterPages=footer)
