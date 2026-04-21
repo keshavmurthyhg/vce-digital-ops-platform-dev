@@ -90,8 +90,26 @@ def section_diff_logic(df1, df2):
         rows1 = sections1.get(section, [])
         rows2 = sections2.get(section, [])
 
-        map1 = {normalize(df1.iloc[i, 0]): i for i in rows1 if normalize(df1.iloc[i, 0])}
-        map2 = {normalize(df2.iloc[i, 0]): i for i in rows2 if normalize(df2.iloc[i, 0])}
+        map1 = {}
+        map2 = {}
+
+        # ✅ SAFE BUILD MAP1
+        for i in rows1:
+            try:
+                val = normalize(df1.iloc[i, 0])
+                if val and val != "Number" and val not in map1:
+                    map1[val] = i
+            except:
+                continue
+
+        # ✅ SAFE BUILD MAP2
+        for i in rows2:
+            try:
+                val = normalize(df2.iloc[i, 0])
+                if val and val != "Number" and val not in map2:
+                    map2[val] = i
+            except:
+                continue
 
         added = set(map2.keys()) - set(map1.keys())
         removed = set(map1.keys()) - set(map2.keys())
@@ -106,15 +124,18 @@ def section_diff_logic(df1, df2):
 
         # 🟡 Modified
         for key in common:
-            i1 = map1[key]
-            i2 = map2[key]
+            try:
+                i1 = map1[key]
+                i2 = map2[key]
 
-            row1 = df1.iloc[i1]
-            row2 = df2.iloc[i2]
+                row1 = df1.iloc[i1].fillna("")
+                row2 = df2.iloc[i2].fillna("")
 
-            if not row1.equals(row2):
-                diff_mask2.iloc[i2, :] = "modified"
-                modified += 1
+                if not row1.equals(row2):
+                    diff_mask2.iloc[i2, :] = "modified"
+                    modified += 1
+            except:
+                continue
 
         summary[section] = {
             "added": len(added),
