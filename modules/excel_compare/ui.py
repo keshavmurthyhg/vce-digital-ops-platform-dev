@@ -6,15 +6,16 @@ from modules.excel_compare.logic import (
     generate_output
 )
 
+
 def show_excel_compare():
     st.title("📊 Excel Comparison Tool")
 
-    # ✅ INIT INSIDE FUNCTION (IMPORTANT)
+    # ✅ INIT uploader key properly
     if "uploader_key" not in st.session_state:
         st.session_state.uploader_key = 0
 
     # =========================
-    # ✅ SIDEBAR CONTROLS
+    # SIDEBAR
     # =========================
     st.sidebar.markdown("## ⚙️ Excel Compare")
 
@@ -23,7 +24,7 @@ def show_excel_compare():
         type=["xlsx"],
         key=f"file1_{st.session_state.uploader_key}"
     )
-    
+
     file2 = st.sidebar.file_uploader(
         "Upload Second Excel",
         type=["xlsx"],
@@ -32,37 +33,18 @@ def show_excel_compare():
 
     col1, col2 = st.sidebar.columns(2)
 
+    # ✅ CLEAR BUTTON (FIXED)
     with col1:
-    if st.button("🧹 Clear"):
+        if st.button("🧹 Clear"):
+            st.session_state.uploader_key += 1
+            st.rerun()
 
-        # 🔥 increment key FIRST
-        st.session_state.uploader_key += 1
-
-        # 🔥 explicitly remove uploader states
-        for key in list(st.session_state.keys()):
-            if key.startswith("file1_") or key.startswith("file2_"):
-                del st.session_state[key]
-
-        # keep navigation
-        page = st.session_state.get("page")
-
-        # clear everything else
-        st.session_state.clear()
-
-        # restore required values
-        st.session_state.page = page
-        st.session_state.uploader_key = st.session_state.get("uploader_key", 0)
-
-        st.rerun()
-
-    generate_clicked = False
-
+    # ✅ COMPARE BUTTON
     with col2:
-        if st.button("⚡ Compare"):
-            generate_clicked = True
+        compare_clicked = st.button("⚡ Compare")
 
     # =========================
-    # ✅ MAIN AREA (ONLY OUTPUT)
+    # MAIN AREA
     # =========================
     if file1 and file2:
         df1, df2 = compare_excels(file1, file2)
@@ -82,10 +64,8 @@ def show_excel_compare():
             styled2 = style_dataframe(df2, diff_mask)
             st.dataframe(styled2, use_container_width=True)
 
-        # =========================
-        # ✅ DOWNLOAD IN SIDEBAR
-        # =========================
-        if generate_clicked:
+        # ✅ GENERATE OUTPUT
+        if compare_clicked:
             try:
                 file1_out, file2_out = generate_output(file1, file2)
 
