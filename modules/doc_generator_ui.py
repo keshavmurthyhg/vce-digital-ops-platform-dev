@@ -31,15 +31,11 @@ import re
  #   st.rerun()
 
 def clear_all():
-    # Keys to fully remove (important for widgets)
-    keys_to_delete = [
-        "data", "word_file", "pdf_file", "zip_file", "images",
-        "inc_input", "bulk_ids",
-        "root", "l2", "res",
-        "root_img", "l2_img", "res_img"
-    ]
+    # mark reset flag
+    st.session_state["clear_triggered"] = True
 
-    for key in keys_to_delete:
+    # remove only generated outputs
+    for key in ["data", "word_file", "pdf_file", "zip_file", "images"]:
         if key in st.session_state:
             del st.session_state[key]
 
@@ -103,10 +99,14 @@ def render_doc_generator():
             data = get_incident(df, inc)
             if data:
                 st.session_state["data"] = data
+
+            if not st.session_state.get("clear_triggered"):
                 st.session_state["root"] = data["work_notes"]
                 st.session_state["l2"] = data["comments"]
                 st.session_state["res"] = data["resolution"]
-                st.success("Loaded")
+            
+            st.session_state["clear_triggered"] = False
+            
             else:
                 st.error("Not found")
 
