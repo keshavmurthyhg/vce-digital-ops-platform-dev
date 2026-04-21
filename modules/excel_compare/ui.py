@@ -47,7 +47,7 @@ def show_excel_compare():
     if file1 and file2:
         df1, df2 = compare_excels(file1, file2)
 
-        diff_mask, section_summary, total_diff = section_diff_logic(df1, df2)
+        diff_mask1, diff_mask2, section_summary, total_diff = section_diff_logic(df1, df2)
 
         # ===== SUMMARY KPI =====
         st.subheader("📊 Summary")
@@ -70,11 +70,11 @@ def show_excel_compare():
 
         with col1:
             st.markdown(f"### 📄 {file1.name}")
-            st.dataframe(style_dataframe(df1, diff_mask), use_container_width=True)
-
+            st.dataframe(style_dataframe(df1, diff_mask1), use_container_width=True)
+        
         with col2:
             st.markdown(f"### 📄 {file2.name}")
-            st.dataframe(style_dataframe(df2, diff_mask), use_container_width=True)
+            st.dataframe(style_dataframe(df2, diff_mask2), use_container_width=True)
 
         # ===== DOWNLOAD =====
         if compare_clicked:
