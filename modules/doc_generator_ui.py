@@ -9,19 +9,24 @@ import re
 
 # ✅ CLEAR FUNCTION (SAFE)
 def clear_all():
-    keys_to_clear = [
-        "data","root","l2","res",
-        "word_file","pdf_file","zip_file",
-        "images","bulk_ids",
-        "root_img","l2_img","res_img"
-    ]
-
-    for key in keys_to_clear:
+    # Clear generated outputs
+    for key in ["data", "word_file", "pdf_file", "zip_file", "images"]:
         if key in st.session_state:
             del st.session_state[key]
 
-    # reset input cleanly
+    # Reset input fields (VERY IMPORTANT)
     st.session_state["inc_input"] = ""
+    st.session_state["bulk_ids"] = ""
+
+    # Reset text areas
+    st.session_state["root"] = ""
+    st.session_state["l2"] = ""
+    st.session_state["res"] = ""
+
+    # Reset uploaded images
+    st.session_state["root_img"] = None
+    st.session_state["l2_img"] = None
+    st.session_state["res_img"] = None
 
     st.rerun()
 
