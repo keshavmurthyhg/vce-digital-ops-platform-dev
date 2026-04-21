@@ -1,8 +1,8 @@
 import streamlit as st
 
-from modules.search_page import render_search_page
-from modules.doc_generator_ui import render_doc_generator
-from modules.charts_page import render_charts_page
+from modules.search.search_page import render_search_page
+from modules.report.doc_generator_ui import render_doc_generator
+from modules.analytic.charts_page import render_charts_page
 from modules.excel_compare.ui import show_excel_compare
 
 st.set_page_config(layout="wide")
