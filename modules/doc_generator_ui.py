@@ -52,8 +52,14 @@ def render_doc_generator():
             filtered = filtered[filtered["priority"].isin(priority_sel)]
         st.session_state["bulk_ids"] = ", ".join(filtered["number"].astype(str).tolist())
 
-    if st.sidebar.button("Clear All Data"):
-        clear_all()
+    def clear_all():
+    keys_to_keep = ["active_page"]  # keep navigation
+
+    for key in list(st.session_state.keys()):
+        if key not in keys_to_keep:
+            del st.session_state[key]
+
+    st.rerun()
 
     # INPUTS
     inc = st.text_input("Enter Incident Number", key="inc_input")
