@@ -27,11 +27,15 @@ def normalize(val):
 
 
 # =========================
-# LOAD DATA
+# LOAD DATA (FIXED HERE ✅)
 # =========================
 def compare_excels(file1, file2):
     df1 = pd.read_excel(file1, header=None)
     df2 = pd.read_excel(file2, header=None)
+
+    # 🔥 IMPORTANT FIX
+    df1 = df1.reset_index(drop=True)
+    df2 = df2.reset_index(drop=True)
 
     return df1, df2
 
@@ -71,13 +75,14 @@ def extract_numbers(df, rows):
 
 
 # =========================
-# SECTION BASED DIFF
+# SECTION BASED DIFF (FIXED)
 # =========================
 def section_diff_logic(df1, df2):
     sections1 = extract_sections(df1)
     sections2 = extract_sections(df2)
 
-    diff_mask = pd.DataFrame(False, index=df1.index, columns=df1.columns)
+    diff_mask1 = pd.DataFrame(False, index=df1.index, columns=df1.columns)
+    diff_mask2 = pd.DataFrame(False, index=df2.index, columns=df2.columns)
 
     summary = {}
     total_diff = 0
@@ -99,17 +104,23 @@ def section_diff_logic(df1, df2):
 
         total_diff += len(added) + len(removed)
 
-        # highlight removed in file1
+        # 🔴 Removed → highlight in file1
         for idx in rows1:
             val = normalize(df1.iloc[idx, 0])
             if val in removed:
-                diff_mask.iloc[idx, :] = True
+                diff_mask1.iloc[idx, :] = True
 
-    return diff_mask, summary, total_diff
+        # 🟢 Added → highlight in file2
+        for idx in rows2:
+            val = normalize(df2.iloc[idx, 0])
+            if val in added:
+                diff_mask2.iloc[idx, :] = True
+
+    return diff_mask1, diff_mask2, summary, total_diff
 
 
 # =========================
-# STYLE
+# STYLE (FIXED)
 # =========================
 def style_dataframe(df, diff_mask):
     def highlight(row):
@@ -152,7 +163,6 @@ def generate_output(file1, file2):
                 ws1.cell(r, c).fill = fill
                 ws2.cell(r, c).fill = fill
 
-    # ===== FILE NAMES =====
     name1 = os.path.splitext(file1.name)[0] + "_Highlighted.xlsx"
     name2 = os.path.splitext(file2.name)[0] + "_Highlighted.xlsx"
 
@@ -164,7 +174,6 @@ def generate_output(file1, file2):
     wb1.save(path1)
     wb2.save(path2)
 
-    # ===== ZIP =====
     date_str = datetime.now().strftime("%d%b%Y")
     zip_name = f"Excel-Compare_{date_str}.zip"
     zip_path = os.path.join(temp_dir, zip_name)
