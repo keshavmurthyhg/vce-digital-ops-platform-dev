@@ -9,9 +9,22 @@ import re
 
 # ✅ CLEAR FUNCTION (FINAL WORKING)
 def clear_all():
+    # mark reset
     st.session_state["clear_triggered"] = True
 
-    # remove only generated outputs
+    # CLEAR UI FIELDS (safe way)
+    st.session_state.update({
+        "inc_input": "",
+        "bulk_ids": "",
+        "root": "",
+        "l2": "",
+        "res": "",
+        "root_img": None,
+        "l2_img": None,
+        "res_img": None
+    })
+
+    # remove generated outputs
     for key in ["data", "word_file", "pdf_file", "zip_file", "images"]:
         if key in st.session_state:
             del st.session_state[key]
