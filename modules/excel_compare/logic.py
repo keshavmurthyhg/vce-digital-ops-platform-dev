@@ -64,23 +64,28 @@ def style_dataframe(df, diff_mask):
 # SUMMARY
 # =========================
 def get_summary(diff_mask):
-    total_cells = diff_mask.size
-    diff_cells = diff_mask.sum().sum()
+    col_summary = diff_mask.sum().to_dict()
 
-    changed_rows = diff_mask.any(axis=1).sum()
-    changed_cols = diff_mask.any(axis=0).sum()
+    total_diff = int(sum(col_summary.values()))
 
     return {
-        "total_cells": total_cells,
-        "diff_cells": int(diff_cells),
-        "changed_rows": int(changed_rows),
-        "changed_cols": int(changed_cols),
+        "total_diff": total_diff,
+        "column_wise": col_summary
     }
 
 
 # =========================
 # GENERATE OUTPUT (KEEP FORMAT)
 # =========================
+import zipfile
+from datetime import datetime
+import os
+
+
+def is_empty(val):
+    return val is None or str(val).strip() == ""
+
+
 def generate_output(file1, file2):
     wb1 = load_workbook(file1)
     wb2 = load_workbook(file2)
@@ -90,22 +95,43 @@ def generate_output(file1, file2):
 
     fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
 
-    max_row = max(ws1.max_row, ws2.max_row)
-    max_col = max(ws1.max_column, ws2.max_column)
+    max_row = min(ws1.max_row, ws2.max_row)
+    max_col = min(ws1.max_column, ws2.max_column)
 
     for r in range(1, max_row + 1):
         for c in range(1, max_col + 1):
             v1 = ws1.cell(r, c).value
             v2 = ws2.cell(r, c).value
 
-            if normalize(v1) != normalize(v2):
+            # 🔥 IGNORE BOTH EMPTY
+            if is_empty(v1) and is_empty(v2):
+                continue
+
+            if str(v1).strip() != str(v2).strip():
                 ws1.cell(r, c).fill = fill
                 ws2.cell(r, c).fill = fill
 
-    temp1 = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
-    temp2 = tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx")
+    # ===== FILE NAMES =====
+    name1 = os.path.splitext(file1.name)[0] + "_Highlighted.xlsx"
+    name2 = os.path.splitext(file2.name)[0] + "_Highlighted.xlsx"
 
-    wb1.save(temp1.name)
-    wb2.save(temp2.name)
+    temp_dir = tempfile.mkdtemp()
+
+    path1 = os.path.join(temp_dir, name1)
+    path2 = os.path.join(temp_dir, name2)
+
+    wb1.save(path1)
+    wb2.save(path2)
+
+    # ===== ZIP CREATION =====
+    date_str = datetime.now().strftime("%d%b%Y")
+    zip_name = f"Excel-Compare_{date_str}.zip"
+    zip_path = os.path.join(temp_dir, zip_name)
+
+    with zipfile.ZipFile(zip_path, 'w') as z:
+        z.write(path1, name1)
+        z.write(path2, name2)
+
+    return zip_path, zip_name
 
     return temp1.name, temp2.name
