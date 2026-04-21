@@ -47,21 +47,21 @@ def show_excel_compare():
     if file1 and file2:
         df1, df2 = compare_excels(file1, file2)
 
-        diff_mask1, diff_mask2, section_summary, total_diff = section_diff_logic(df1, df2)
+        diff_mask2, section_summary, total_diff = section_diff_logic(df1, df2)
 
         # ===== SUMMARY KPI =====
-        st.subheader("📊 Summary")
+        #st.subheader("📊 Summary")
 
-        colA, colB = st.columns(2)
-        colA.metric("Total Differences", total_diff)
-        colB.metric("Sections Impacted", sum(1 for v in section_summary.values() if v["added"] or v["removed"]))
+        #colA, colB = st.columns(2)
+        #colA.metric("Total Differences", total_diff)
+        #colB.metric("Sections Impacted", sum(1 for v in section_summary.values() if v["added"] or v["removed"]))
 
         # ===== SECTION SUMMARY =====
-        st.subheader("📦 Section-wise Changes")
+        #st.subheader("📦 Section-wise Changes")
 
-        for section, data in section_summary.items():
-            if data["added"] or data["removed"]:
-                st.write(f"🔸 {section} → Added: {data['added']} | Removed: {data['removed']}")
+        #for section, data in section_summary.items():
+            #if data["added"] or data["removed"]:
+                #st.write(f"🔸 {section} → Added: {data['added']} | Removed: {data['removed']}")
 
         # ===== PREVIEW =====
         st.subheader("🔍 Preview Comparison")
@@ -69,13 +69,33 @@ def show_excel_compare():
         col1, col2 = st.columns(2)
 
         with col1:
-            st.markdown(f"### 📄 {file1.name}")
-            st.dataframe(style_dataframe(df1, diff_mask1), use_container_width=True)
+            st.markdown(f"### 📄 {file1.name} (Base)")
+            st.dataframe(df1, use_container_width=True)
         
         with col2:
-            st.markdown(f"### 📄 {file2.name}")
+            st.markdown(f"### 📄 {file2.name} (Changes)")
             st.dataframe(style_dataframe(df2, diff_mask2), use_container_width=True)
+        
+        # ===== SUMMARY KPI =====
+        
+        st.subheader("📊 Summary")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        col1.metric("Total Changes", total_diff)
+        col2.metric("Sections Impacted", sum(1 for v in section_summary.values() if any(v.values())))
+        col3.metric("Files Compared", 2)
 
+        # ===== SECTION SUMMARY =====
+        st.subheader("📦 Section-wise Changes")
+        
+        for section, data in section_summary.items():
+            if any(data.values()):
+                st.write(
+                    f"🔸 {section} → "
+                    f"🟢 {data['added']} | 🔴 {data['removed']} | 🟡 {data['modified']}"
+                )
+        
         # ===== DOWNLOAD =====
         if compare_clicked:
             zip_path, zip_name = generate_output(file1, file2)
