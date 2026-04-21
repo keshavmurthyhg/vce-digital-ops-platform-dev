@@ -95,21 +95,21 @@ def render_doc_generator():
 
     # FETCH (UNCHANGED)
     with col_fetch:
-    if st.button("Fetch", use_container_width=True):
-        data = get_incident(df, inc)
-        if data:
-            st.session_state["data"] = data
-
-            if not st.session_state.get("clear_triggered"):
-                st.session_state["root"] = data["work_notes"]
-                st.session_state["l2"] = data["comments"]
-                st.session_state["res"] = data["resolution"]
-
-            st.session_state["clear_triggered"] = False
-
-            st.success("Loaded")
-        else:
-            st.error("Not found")
+        if st.button("Fetch", use_container_width=True):
+            data = get_incident(df, inc)
+            if data:
+                st.session_state["data"] = data
+    
+                if not st.session_state.get("clear_triggered"):
+                    st.session_state["root"] = data["work_notes"]
+                    st.session_state["l2"] = data["comments"]
+                    st.session_state["res"] = data["resolution"]
+    
+                st.session_state["clear_triggered"] = False
+    
+                st.success("Loaded")
+            else:
+                st.error("Not found")
 
     # WORD (UNCHANGED)
     with col_word:
