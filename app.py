@@ -13,9 +13,11 @@ st.sidebar.markdown("## 📊 Module")
 options = [
     "Search Dashboard",
     "Insights Dashboard",
-    "Word Report Generator"
+    "Word Report Generator",
     "Excel Compare"
 ]
+
+page = st.sidebar.selectbox("Select Module", options)
 
 # ✅ ALWAYS RESET INVALID VALUES
 current_page = st.session_state.get("page", "Search Dashboard")
