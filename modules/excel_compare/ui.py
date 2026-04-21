@@ -6,11 +6,12 @@ from modules.excel_compare.logic import (
     generate_output
 )
 
-if "uploader_key" not in st.session_state:
-    st.session_state.uploader_key = 0
-    
 def show_excel_compare():
     st.title("📊 Excel Comparison Tool")
+
+    # ✅ INIT INSIDE FUNCTION (IMPORTANT)
+    if "uploader_key" not in st.session_state:
+        st.session_state.uploader_key = 0
 
     # =========================
     # ✅ SIDEBAR CONTROLS
@@ -31,17 +32,28 @@ def show_excel_compare():
 
     col1, col2 = st.sidebar.columns(2)
 
-    # ✅ SAFE CLEAR (DO NOT REMOVE PAGE)
     with col1:
-        if st.button("🧹 Clear"):
-            st.session_state.uploader_key += 1   # 🔥 resets uploader
-            keys_to_keep = ["page", "uploader_key"]
-    
-            for key in list(st.session_state.keys()):
-                if key not in keys_to_keep:
-                    del st.session_state[key]
-            st.sidebar.success("🧹 Cleared successfully!")
-            st.rerun()
+    if st.button("🧹 Clear"):
+
+        # 🔥 increment key FIRST
+        st.session_state.uploader_key += 1
+
+        # 🔥 explicitly remove uploader states
+        for key in list(st.session_state.keys()):
+            if key.startswith("file1_") or key.startswith("file2_"):
+                del st.session_state[key]
+
+        # keep navigation
+        page = st.session_state.get("page")
+
+        # clear everything else
+        st.session_state.clear()
+
+        # restore required values
+        st.session_state.page = page
+        st.session_state.uploader_key = st.session_state.get("uploader_key", 0)
+
+        st.rerun()
 
     generate_clicked = False
 
