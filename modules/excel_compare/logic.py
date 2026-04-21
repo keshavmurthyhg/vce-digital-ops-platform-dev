@@ -5,6 +5,7 @@ import tempfile
 import zipfile
 import os
 from datetime import datetime
+from docx import Document
 
 
 SECTION_HEADERS = [
@@ -27,13 +28,12 @@ def normalize(val):
 
 
 # =========================
-# LOAD DATA (FIXED HERE ✅)
+# LOAD DATA
 # =========================
 def compare_excels(file1, file2):
     df1 = pd.read_excel(file1, header=None)
     df2 = pd.read_excel(file2, header=None)
 
-    # 🔥 IMPORTANT FIX
     df1 = df1.reset_index(drop=True)
     df2 = df2.reset_index(drop=True)
 
@@ -61,21 +61,7 @@ def extract_sections(df):
 
 
 # =========================
-# EXTRACT NUMBERS
-# =========================
-def extract_numbers(df, rows):
-    numbers = set()
-
-    for idx in rows:
-        val = normalize(df.iloc[idx, 0])
-        if val and val != "Number":
-            numbers.add(val)
-
-    return numbers
-
-
-# =========================
-# SECTION BASED DIFF (FIXED)
+# DIFF LOGIC (FINAL)
 # =========================
 def section_diff_logic(df1, df2):
     sections1 = extract_sections(df1)
@@ -85,6 +71,7 @@ def section_diff_logic(df1, df2):
 
     summary = {}
     total_diff = 0
+    removed_rows_data = []
 
     for section in SECTION_HEADERS:
         rows1 = sections1.get(section, [])
@@ -93,23 +80,15 @@ def section_diff_logic(df1, df2):
         map1 = {}
         map2 = {}
 
-        # ✅ SAFE BUILD MAP1
         for i in rows1:
-            try:
-                val = normalize(df1.iloc[i, 0])
-                if val and val != "Number" and val not in map1:
-                    map1[val] = i
-            except:
-                continue
+            val = normalize(df1.iloc[i, 0])
+            if val and val != "Number" and val not in map1:
+                map1[val] = i
 
-        # ✅ SAFE BUILD MAP2
         for i in rows2:
-            try:
-                val = normalize(df2.iloc[i, 0])
-                if val and val != "Number" and val not in map2:
-                    map2[val] = i
-            except:
-                continue
+            val = normalize(df2.iloc[i, 0])
+            if val and val != "Number" and val not in map2:
+                map2[val] = i
 
         added = set(map2.keys()) - set(map1.keys())
         removed = set(map1.keys()) - set(map2.keys())
@@ -122,20 +101,26 @@ def section_diff_logic(df1, df2):
             idx = map2[key]
             diff_mask2.iloc[idx, :] = "added"
 
-        # 🟡 Modified
+        # 🔴 Removed
+        for key in removed:
+            removed_rows_data.append({
+                "section": section,
+                "number": key
+            })
+
+        # 🟡 Modified (column-level)
         for key in common:
-            try:
-                i1 = map1[key]
-                i2 = map2[key]
+            i1 = map1[key]
+            i2 = map2[key]
 
-                row1 = df1.iloc[i1].fillna("")
-                row2 = df2.iloc[i2].fillna("")
+            row1 = df1.iloc[i1].fillna("")
+            row2 = df2.iloc[i2].fillna("")
 
-                if not row1.equals(row2):
-                    diff_mask2.iloc[i2, :] = "modified"
-                    modified += 1
-            except:
-                continue
+            if not row1.equals(row2):
+                for col in df2.columns:
+                    if normalize(row1[col]) != normalize(row2[col]):
+                        diff_mask2.loc[i2, col] = "modified"
+                modified += 1
 
         summary[section] = {
             "added": len(added),
@@ -145,11 +130,11 @@ def section_diff_logic(df1, df2):
 
         total_diff += len(added) + len(removed) + modified
 
-    return diff_mask2, summary, total_diff
+    return diff_mask2, summary, total_diff, removed_rows_data
 
 
 # =========================
-# STYLE (FIXED)
+# STYLE
 # =========================
 def style_dataframe(df, diff_mask):
     def highlight(row):
@@ -158,9 +143,9 @@ def style_dataframe(df, diff_mask):
             val = diff_mask.loc[row.name, col]
 
             if val == "added":
-                styles.append("background-color: #90EE90")  # green
+                styles.append("background-color: #90EE90")
             elif val == "modified":
-                styles.append("background-color: #FFD700")  # yellow
+                styles.append("background-color: #FFD700")
             else:
                 styles.append("")
         return styles
@@ -171,10 +156,6 @@ def style_dataframe(df, diff_mask):
 # =========================
 # EXCEL OUTPUT
 # =========================
-def is_empty(val):
-    return val is None or str(val).strip() == ""
-
-
 def generate_output(file1, file2):
     wb2 = load_workbook(file2)
     ws2 = wb2.active
@@ -183,7 +164,7 @@ def generate_output(file1, file2):
     fill_modified = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
 
     df1, df2 = compare_excels(file1, file2)
-    diff_mask2, _, _ = section_diff_logic(df1, df2)
+    diff_mask2, _, _, _ = section_diff_logic(df1, df2)
 
     for r in range(len(df2)):
         for c in range(len(df2.columns)):
@@ -209,3 +190,31 @@ def generate_output(file1, file2):
         z.write(path2, name2)
 
     return zip_path, zip_name
+
+
+# =========================
+# WORD REPORT
+# =========================
+def generate_word_report(summary, removed_rows):
+    doc = Document()
+
+    doc.add_heading("Excel Comparison Summary", 0)
+
+    doc.add_heading("Section-wise Changes", level=1)
+
+    for section, data in summary.items():
+        if any(data.values()):
+            doc.add_paragraph(
+                f"{section} → Added: {data['added']} | "
+                f"Removed: {data['removed']} | Modified: {data['modified']}"
+            )
+
+    doc.add_heading("Removed Items", level=1)
+
+    for item in removed_rows:
+        doc.add_paragraph(f"{item['section']} → {item['number']}")
+
+    temp_path = os.path.join(tempfile.mkdtemp(), "Comparison_Report.docx")
+    doc.save(temp_path)
+
+    return temp_path
