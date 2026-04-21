@@ -1,16 +1,18 @@
 import streamlit as st
+import os
 from modules.excel_compare.logic import (
     compare_excels,
     get_diff_mask,
     style_dataframe,
-    generate_output
+    generate_output,
+    get_summary
 )
 
 
 def show_excel_compare():
     st.title("📊 Excel Comparison Tool")
 
-    # ✅ INIT uploader key properly
+    # INIT
     if "uploader_key" not in st.session_state:
         st.session_state.uploader_key = 0
 
@@ -33,57 +35,73 @@ def show_excel_compare():
 
     col1, col2 = st.sidebar.columns(2)
 
-    # ✅ CLEAR BUTTON (FIXED)
     with col1:
         if st.button("🧹 Clear"):
             st.session_state.uploader_key += 1
             st.rerun()
 
-    # ✅ COMPARE BUTTON
     with col2:
         compare_clicked = st.button("⚡ Compare")
 
     # =========================
-    # MAIN AREA
+    # MAIN
     # =========================
     if file1 and file2:
+        filename1 = file1.name
+        filename2 = file2.name
+
         df1, df2 = compare_excels(file1, file2)
         diff_mask = get_diff_mask(df1, df2)
 
+        # =========================
+        # SUMMARY
+        # =========================
+        summary = get_summary(diff_mask)
+
+        st.subheader("📊 Summary")
+        st.write(f"🔸 Total Cells: {summary['total_cells']}")
+        st.write(f"🔸 Differences: {summary['diff_cells']}")
+        st.write(f"🔸 Rows Changed: {summary['changed_rows']}")
+        st.write(f"🔸 Columns Changed: {summary['changed_cols']}")
+
+        # =========================
+        # PREVIEW
+        # =========================
         st.subheader("🔍 Preview Comparison")
 
         colA, colB = st.columns(2)
 
         with colA:
-            st.markdown("### 📄 File 1")
+            st.markdown(f"### 📄 {filename1}")
             styled1 = style_dataframe(df1, diff_mask)
             st.dataframe(styled1, use_container_width=True)
 
         with colB:
-            st.markdown("### 📄 File 2")
+            st.markdown(f"### 📄 {filename2}")
             styled2 = style_dataframe(df2, diff_mask)
             st.dataframe(styled2, use_container_width=True)
 
-        # ✅ GENERATE OUTPUT
+        # =========================
+        # DOWNLOAD
+        # =========================
         if compare_clicked:
-            try:
-                file1_out, file2_out = generate_output(file1, file2)
+            file1_out, file2_out = generate_output(file1, file2)
 
-                st.sidebar.success("✅ Generated!")
+            name1 = os.path.splitext(filename1)[0] + "_Highlighted.xlsx"
+            name2 = os.path.splitext(filename2)[0] + "_Highlighted.xlsx"
 
-                with open(file1_out, "rb") as f:
-                    st.sidebar.download_button(
-                        "⬇️ File 1 Highlighted",
-                        f,
-                        "file1_highlighted.xlsx"
-                    )
+            with open(file1_out, "rb") as f:
+                st.sidebar.download_button(
+                    f"⬇️ {name1}",
+                    f,
+                    name1
+                )
 
-                with open(file2_out, "rb") as f:
-                    st.sidebar.download_button(
-                        "⬇️ File 2 Highlighted",
-                        f,
-                        "file2_highlighted.xlsx"
-                    )
+            with open(file2_out, "rb") as f:
+                st.sidebar.download_button(
+                    f"⬇️ {name2}",
+                    f,
+                    name2
+                )
 
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+            st.sidebar.success("✅ Files ready!")
