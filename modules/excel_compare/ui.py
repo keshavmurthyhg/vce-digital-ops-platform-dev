@@ -4,8 +4,7 @@ from modules.excel_compare.logic import (
     compare_excels,
     section_diff_logic,
     style_dataframe,
-    generate_output,
-    generate_word_report
+    generate_output
 )
 
 
@@ -15,9 +14,7 @@ def show_excel_compare():
     if "uploader_key" not in st.session_state:
         st.session_state.uploader_key = 0
 
-    # =========================
     # SIDEBAR
-    # =========================
     st.sidebar.markdown("## ⚙️ Excel Compare")
 
     file1 = st.sidebar.file_uploader(
@@ -42,36 +39,33 @@ def show_excel_compare():
     with col2:
         compare_clicked = st.button("⚡ Compare")
 
-    # =========================
     # MAIN
-    # =========================
     if file1 and file2:
         df1, df2 = compare_excels(file1, file2)
 
-        diff_mask2, section_summary, total_diff, removed_rows = section_diff_logic(df1, df2)
+        diff_mask1, diff_mask2, section_summary, total_diff, removed_rows = section_diff_logic(df1, df2)
 
-        # ===== PREVIEW =====
+        # PREVIEW
         st.subheader("🔍 Preview Comparison")
 
         col1, col2 = st.columns(2)
 
         with col1:
             st.markdown(f"### 📄 {file1.name} (Base)")
-            st.dataframe(df1, use_container_width=True)
+            st.dataframe(style_dataframe(df1, diff_mask1), use_container_width=True)
 
         with col2:
             st.markdown(f"### 📄 {file2.name} (Changes)")
             st.dataframe(style_dataframe(df2, diff_mask2), use_container_width=True)
 
-        # ===== SUMMARY =====
+        # SUMMARY
         st.subheader("📊 Summary")
 
         col1, col2 = st.columns(2)
-
         col1.metric("Total Changes", total_diff)
         col2.metric("Sections Impacted", sum(1 for v in section_summary.values() if any(v.values())))
 
-        # ===== SECTION DETAILS =====
+        # SECTION DETAILS
         st.subheader("📦 Section-wise Changes")
 
         for section, data in section_summary.items():
@@ -81,7 +75,7 @@ def show_excel_compare():
                     f"🟢 {data['added']} | 🔴 {data['removed']} | 🟡 {data['modified']}"
                 )
 
-        # ===== REMOVED PANEL =====
+        # REMOVED PANEL
         st.subheader("🔴 Removed Items")
 
         if removed_rows:
@@ -90,7 +84,7 @@ def show_excel_compare():
         else:
             st.info("No removed items")
 
-        # ===== DOWNLOAD =====
+        # DOWNLOAD
         if compare_clicked:
             zip_path, zip_name = generate_output(file1, file2)
 
@@ -100,8 +94,7 @@ def show_excel_compare():
                     f,
                     zip_name
                 )
-            
-            msg = st.sidebar.success("✅ Files Ready!")
 
+            msg = st.sidebar.success("✅ Files Ready!")
             time.sleep(15)
             msg.empty()
