@@ -79,13 +79,11 @@ def show_excel_compare():
         # ===== SUMMARY KPI =====
         
         st.subheader("📊 Summary")
-        
-        col1, col2, col3 = st.columns(3)
-        
+        col1, col2 = st.columns(2)
+
         col1.metric("Total Changes", total_diff)
         col2.metric("Sections Impacted", sum(1 for v in section_summary.values() if any(v.values())))
-        col3.metric("Files Compared", 2)
-
+        
         # ===== SECTION SUMMARY =====
         st.subheader("📦 Section-wise Changes")
         
