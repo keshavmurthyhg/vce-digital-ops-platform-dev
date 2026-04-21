@@ -9,20 +9,17 @@ import re
 
 # ✅ CLEAR FUNCTION (FINAL WORKING)
 def clear_all():
-    # mark reset
     st.session_state["clear_triggered"] = True
 
-    # CLEAR UI FIELDS (safe way)
-    st.session_state.update({
-        "inc_input": "",
-        "bulk_ids": "",
-        "root": "",
-        "l2": "",
-        "res": "",
-        "root_img": None,
-        "l2_img": None,
-        "res_img": None
-    })
+    # Reset text inputs safely
+    st.session_state["inc_input"] = ""
+    st.session_state["bulk_ids"] = ""
+    st.session_state["root"] = ""
+    st.session_state["l2"] = ""
+    st.session_state["res"] = ""
+
+    # ❌ DO NOT TOUCH file_uploader keys
+    # (root_img, l2_img, res_img)
 
     # remove generated outputs
     for key in ["data", "word_file", "pdf_file", "zip_file", "images"]:
