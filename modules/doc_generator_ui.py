@@ -7,12 +7,21 @@ import zipfile
 import re
 
 
-# ✅ FIXED CLEAR FUNCTION (SAFE)
+# ✅ CLEAR FUNCTION (SAFE)
 def clear_all():
-    keys_to_keep = ["active_page"]  # keep navigation intact
+    # Preserve ALL possible navigation + filters
+    keys_to_keep = [
+        k for k in st.session_state.keys()
+        if any(x in k.lower() for x in ["page", "nav", "menu"])
+    ]
+
+    # Also keep filters (important)
+    keys_to_keep += ["filter_priority", "filter_date"]
+
     for key in list(st.session_state.keys()):
         if key not in keys_to_keep:
             del st.session_state[key]
+
     st.rerun()
 
 
