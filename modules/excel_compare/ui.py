@@ -4,7 +4,8 @@ from modules.excel_compare.logic import (
     compare_excels,
     section_diff_logic,
     style_dataframe,
-    generate_output
+    generate_output,
+    generate_word_report
 )
 
 
@@ -47,21 +48,7 @@ def show_excel_compare():
     if file1 and file2:
         df1, df2 = compare_excels(file1, file2)
 
-        diff_mask2, section_summary, total_diff = section_diff_logic(df1, df2)
-
-        # ===== SUMMARY KPI =====
-        #st.subheader("📊 Summary")
-
-        #colA, colB = st.columns(2)
-        #colA.metric("Total Differences", total_diff)
-        #colB.metric("Sections Impacted", sum(1 for v in section_summary.values() if v["added"] or v["removed"]))
-
-        # ===== SECTION SUMMARY =====
-        #st.subheader("📦 Section-wise Changes")
-
-        #for section, data in section_summary.items():
-            #if data["added"] or data["removed"]:
-                #st.write(f"🔸 {section} → Added: {data['added']} | Removed: {data['removed']}")
+        diff_mask2, section_summary, total_diff, removed_rows = section_diff_logic(df1, df2)
 
         # ===== PREVIEW =====
         st.subheader("🔍 Preview Comparison")
@@ -71,29 +58,38 @@ def show_excel_compare():
         with col1:
             st.markdown(f"### 📄 {file1.name} (Base)")
             st.dataframe(df1, use_container_width=True)
-        
+
         with col2:
             st.markdown(f"### 📄 {file2.name} (Changes)")
             st.dataframe(style_dataframe(df2, diff_mask2), use_container_width=True)
-        
-        # ===== SUMMARY KPI =====
-        
+
+        # ===== SUMMARY =====
         st.subheader("📊 Summary")
+
         col1, col2 = st.columns(2)
 
         col1.metric("Total Changes", total_diff)
         col2.metric("Sections Impacted", sum(1 for v in section_summary.values() if any(v.values())))
-        
-        # ===== SECTION SUMMARY =====
+
+        # ===== SECTION DETAILS =====
         st.subheader("📦 Section-wise Changes")
-        
+
         for section, data in section_summary.items():
             if any(data.values()):
                 st.write(
                     f"🔸 {section} → "
                     f"🟢 {data['added']} | 🔴 {data['removed']} | 🟡 {data['modified']}"
                 )
-        
+
+        # ===== REMOVED PANEL =====
+        st.subheader("🔴 Removed Items")
+
+        if removed_rows:
+            for item in removed_rows:
+                st.write(f"{item['section']} → {item['number']}")
+        else:
+            st.info("No removed items")
+
         # ===== DOWNLOAD =====
         if compare_clicked:
             zip_path, zip_name = generate_output(file1, file2)
@@ -105,7 +101,16 @@ def show_excel_compare():
                     zip_name
                 )
 
-            msg = st.sidebar.success("✅ ZIP Ready!")
+            word_path = generate_word_report(section_summary, removed_rows)
+
+            with open(word_path, "rb") as f:
+                st.sidebar.download_button(
+                    "📄 Download Summary (Word)",
+                    f,
+                    "Comparison_Report.docx"
+                )
+
+            msg = st.sidebar.success("✅ Files Ready!")
 
             time.sleep(15)
             msg.empty()
