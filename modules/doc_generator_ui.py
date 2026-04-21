@@ -10,24 +10,18 @@ import re
 # ✅ CLEAR FUNCTION (SAFE)
 def clear_all():
     keys_to_clear = [
-        "data",
-        "root",
-        "l2",
-        "res",
-        "word_file",
-        "pdf_file",
-        "zip_file",
-        "images",
-        "inc_input",
-        "bulk_ids",
-        "root_img",
-        "l2_img",
-        "res_img"
+        "data","root","l2","res",
+        "word_file","pdf_file","zip_file",
+        "images","bulk_ids",
+        "root_img","l2_img","res_img"
     ]
 
     for key in keys_to_clear:
         if key in st.session_state:
             del st.session_state[key]
+
+    # reset input cleanly
+    st.session_state["inc_input"] = ""
 
     st.rerun()
 
