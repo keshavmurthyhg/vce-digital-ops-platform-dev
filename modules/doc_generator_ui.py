@@ -11,15 +11,15 @@ import re
 def clear_all():
     st.session_state["clear_triggered"] = True
 
-    # Reset text inputs safely
+    # 🔥 force new uploader keys
+    st.session_state["uploader_reset"] = st.session_state.get("uploader_reset", 0) + 1
+
+    # reset text fields
     st.session_state["inc_input"] = ""
     st.session_state["bulk_ids"] = ""
     st.session_state["root"] = ""
     st.session_state["l2"] = ""
     st.session_state["res"] = ""
-
-    # ❌ DO NOT TOUCH file_uploader keys
-    # (root_img, l2_img, res_img)
 
     # remove generated outputs
     for key in ["data", "word_file", "pdf_file", "zip_file", "images"]:
@@ -179,17 +179,34 @@ def render_doc_generator():
             st.write(f"**Root Cause:** {st.session_state.get('root')}")
 
     # EDITABLE FIELDS
-    st.subheader("Edit Report Details")
+    # EDITABLE FIELDS
+st.subheader("Edit Report Details")
 
+    # ✅ MUST be at same level (no extra indent)
+    reset_id = st.session_state.get("uploader_reset", 0)
+    
     st.text_area("Root Cause", key="root")
-    root_img = st.file_uploader("Root Image", type=["png", "jpg"], key="root_img")
-
+    root_img = st.file_uploader(
+        "Root Image",
+        type=["png", "jpg"],
+        key=f"root_img_{reset_id}"
+    )
+    
     st.text_area("L2 Analysis", key="l2")
-    l2_img = st.file_uploader("L2 Image", type=["png", "jpg"], key="l2_img")
-
+    l2_img = st.file_uploader(
+        "L2 Image",
+        type=["png", "jpg"],
+        key=f"l2_img_{reset_id}"
+    )
+    
     st.text_area("Resolution", key="res")
-    res_img = st.file_uploader("Resolution Image", type=["png", "jpg"], key="res_img")
-
+    res_img = st.file_uploader(
+        "Resolution Image",
+        type=["png", "jpg"],
+        key=f"res_img_{reset_id}"
+    )
+    
+    # store images
     st.session_state["images"] = {
         "root": root_img,
         "l2": l2_img,
