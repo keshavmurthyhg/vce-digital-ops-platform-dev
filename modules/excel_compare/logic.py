@@ -2,11 +2,24 @@ import pandas as pd
 from openpyxl import load_workbook
 from openpyxl.styles import PatternFill
 import tempfile
+import zipfile
+import os
+from datetime import datetime
 
 
-# =========================
-# CLEAN VALUES
-# =========================
+SECTION_HEADERS = [
+    "New Parts",
+    "Revised Parts",
+    "New Documents",
+    "Revised Documents",
+    "Non Production / Obsolete / RG4 Parts",
+    "Structure Changes",
+    "Line Number Changes",
+    "Associated sBOMs",
+    "Serial No. / Effectivity"
+]
+
+
 def normalize(val):
     if pd.isna(val):
         return ""
@@ -14,41 +27,89 @@ def normalize(val):
 
 
 # =========================
-# COMPARE USING KEY COLUMN
+# LOAD DATA
 # =========================
-def compare_excels(file1, file2, key_column="Number"):
-    df1 = pd.read_excel(file1)
-    df2 = pd.read_excel(file2)
-
-    if key_column in df1.columns and key_column in df2.columns:
-        df1 = df1.set_index(key_column)
-        df2 = df2.set_index(key_column)
-
-    # Align based on key
-    df1, df2 = df1.align(df2, join="outer", axis=0)
+def compare_excels(file1, file2):
+    df1 = pd.read_excel(file1, header=None)
+    df2 = pd.read_excel(file2, header=None)
 
     return df1, df2
 
 
 # =========================
-# DIFF MASK (IGNORE BLANKS)
+# SECTION DETECTION
 # =========================
-def get_diff_mask(df1, df2):
-    mask = pd.DataFrame(False, index=df1.index, columns=df1.columns)
+def extract_sections(df):
+    sections = {}
+    current_section = None
 
-    for col in df1.columns:
-        for idx in df1.index:
-            v1 = normalize(df1.at[idx, col]) if idx in df1.index else ""
-            v2 = normalize(df2.at[idx, col]) if idx in df2.index else ""
+    for idx, row in df.iterrows():
+        first_val = normalize(row.iloc[0])
 
-            if v1 != v2:
-                mask.at[idx, col] = True
+        if first_val in SECTION_HEADERS:
+            current_section = first_val
+            sections[current_section] = []
 
-    return mask
+        elif current_section:
+            sections[current_section].append(idx)
+
+    return sections
 
 
 # =========================
-# STYLE DATAFRAME
+# EXTRACT NUMBERS
+# =========================
+def extract_numbers(df, rows):
+    numbers = set()
+
+    for idx in rows:
+        val = normalize(df.iloc[idx, 0])
+        if val and val != "Number":
+            numbers.add(val)
+
+    return numbers
+
+
+# =========================
+# SECTION BASED DIFF
+# =========================
+def section_diff_logic(df1, df2):
+    sections1 = extract_sections(df1)
+    sections2 = extract_sections(df2)
+
+    diff_mask = pd.DataFrame(False, index=df1.index, columns=df1.columns)
+
+    summary = {}
+    total_diff = 0
+
+    for section in SECTION_HEADERS:
+        rows1 = sections1.get(section, [])
+        rows2 = sections2.get(section, [])
+
+        set1 = extract_numbers(df1, rows1)
+        set2 = extract_numbers(df2, rows2)
+
+        added = set2 - set1
+        removed = set1 - set2
+
+        summary[section] = {
+            "added": len(added),
+            "removed": len(removed)
+        }
+
+        total_diff += len(added) + len(removed)
+
+        # highlight removed in file1
+        for idx in rows1:
+            val = normalize(df1.iloc[idx, 0])
+            if val in removed:
+                diff_mask.iloc[idx, :] = True
+
+    return diff_mask, summary, total_diff
+
+
+# =========================
+# STYLE
 # =========================
 def style_dataframe(df, diff_mask):
     def highlight(row):
@@ -61,30 +122,8 @@ def style_dataframe(df, diff_mask):
 
 
 # =========================
-# SUMMARY
+# EXCEL OUTPUT
 # =========================
-def get_summary(diff_mask):
-    total_cells = diff_mask.size
-    diff_cells = diff_mask.sum().sum()
-
-    changed_rows = diff_mask.any(axis=1).sum()
-    changed_cols = diff_mask.any(axis=0).sum()
-
-    return {
-        "total_cells": total_cells,
-        "diff_cells": int(diff_cells),
-        "changed_rows": int(changed_rows),
-        "changed_cols": int(changed_cols),
-    }
-
-# =========================
-# GENERATE OUTPUT (KEEP FORMAT)
-# =========================
-import zipfile
-from datetime import datetime
-import os
-
-
 def is_empty(val):
     return val is None or str(val).strip() == ""
 
@@ -106,11 +145,10 @@ def generate_output(file1, file2):
             v1 = ws1.cell(r, c).value
             v2 = ws2.cell(r, c).value
 
-            # 🔥 IGNORE BOTH EMPTY
             if is_empty(v1) and is_empty(v2):
                 continue
 
-            if str(v1).strip() != str(v2).strip():
+            if normalize(v1) != normalize(v2):
                 ws1.cell(r, c).fill = fill
                 ws2.cell(r, c).fill = fill
 
@@ -126,15 +164,13 @@ def generate_output(file1, file2):
     wb1.save(path1)
     wb2.save(path2)
 
-    # ===== ZIP CREATION =====
+    # ===== ZIP =====
     date_str = datetime.now().strftime("%d%b%Y")
     zip_name = f"Excel-Compare_{date_str}.zip"
     zip_path = os.path.join(temp_dir, zip_name)
 
-    with zipfile.ZipFile(zip_path, 'w') as z:
+    with zipfile.ZipFile(zip_path, "w") as z:
         z.write(path1, name1)
         z.write(path2, name2)
 
     return zip_path, zip_name
-
-    return temp1.name, temp2.name
