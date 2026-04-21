@@ -57,12 +57,12 @@ def show_excel_compare():
         # SUMMARY
         # =========================
         st.subheader("📊 Summary")
-            col1, col2, col3, col4 = st.columns(4)
+         col1, col2, col3, col4 = st.columns(4)
 
-            col1.metric("Total Cells", summary["total_cells"])
-            col2.metric("Differences", summary["diff_cells"])
-            col3.metric("Rows Changed", summary["changed_rows"])
-            col4.metric("Columns Changed", summary["changed_cols"])
+        col1.metric("Total Cells", summary["total_cells"])
+        col2.metric("Differences", summary["diff_cells"])
+        col3.metric("Rows Changed", summary["changed_rows"])
+        col4.metric("Columns Changed", summary["changed_cols"])   
 
 
         # =========================
