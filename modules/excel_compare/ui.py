@@ -58,13 +58,12 @@ def show_excel_compare():
         # =========================
         summary = get_summary(diff_mask)
 
-        st.subheader("📊 Column-wise Differences")
-        
-        for col, count in summary["column_wise"].items():
-            if count > 0:
-                st.write(f"🔸 {col}: {count}")
-        
-        st.write(f"### 🔥 Total Differences: {summary['total_diff']}")
+        st.subheader("📊 Summary")
+        st.write(f"🔸 Total Cells: {summary['total_cells']}")
+        st.write(f"🔸 Differences: {summary['diff_cells']}")
+        st.write(f"🔸 Rows Changed: {summary['changed_rows']}")
+        st.write(f"🔸 Columns Changed: {summary['changed_cols']}")
+
 
         # =========================
         # PREVIEW
