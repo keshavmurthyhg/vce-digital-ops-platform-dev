@@ -9,7 +9,7 @@ st.set_page_config(layout="wide")
 
 # ---------- SIDEBAR ----------
 st.sidebar.markdown("## 📊 Module")
-st.write("Selected Page:", page)
+
 options = [
     "Search Dashboard",
     "Insights Dashboard",
@@ -18,6 +18,7 @@ options = [
 ]
 
 page = st.sidebar.selectbox("Select Module", options)
+st.write("Selected Page:", page)
 
 # ✅ ALWAYS RESET INVALID VALUES
 current_page = st.session_state.get("page", "Search Dashboard")
