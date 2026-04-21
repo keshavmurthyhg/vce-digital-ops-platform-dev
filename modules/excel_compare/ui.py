@@ -56,8 +56,6 @@ def show_excel_compare():
         # =========================
         # SUMMARY
         # =========================
-        summary = get_summary(diff_mask)
-
         st.subheader("📊 Summary")
         col1, col2, col3, col4 = st.columns(4)
 
