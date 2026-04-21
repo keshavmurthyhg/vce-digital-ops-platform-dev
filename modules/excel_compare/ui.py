@@ -27,3 +27,22 @@ def show_excel_compare():
 
             except Exception as e:
                 st.error(f"Error: {str(e)}")
+
+    if st.button("🧹 Clear"):
+        st.session_state.clear()
+        st.rerun()
+
+    if file1 and file2:
+        df1, df2 = compare_excels(file1, file2)
+    
+        st.subheader("🔍 Preview Comparison")
+    
+        col1, col2 = st.columns(2)
+    
+        with col1:
+            st.markdown("### 📄 File 1")
+            st.dataframe(df1, use_container_width=True)
+    
+        with col2:
+            st.markdown("### 📄 File 2")
+            st.dataframe(df2, use_container_width=True)
