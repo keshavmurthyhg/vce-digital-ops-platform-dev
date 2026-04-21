@@ -64,15 +64,18 @@ def style_dataframe(df, diff_mask):
 # SUMMARY
 # =========================
 def get_summary(diff_mask):
-    col_summary = diff_mask.sum().to_dict()
+    total_cells = diff_mask.size
+    diff_cells = diff_mask.sum().sum()
 
-    total_diff = int(sum(col_summary.values()))
+    changed_rows = diff_mask.any(axis=1).sum()
+    changed_cols = diff_mask.any(axis=0).sum()
 
     return {
-        "total_diff": total_diff,
-        "column_wise": col_summary
+        "total_cells": total_cells,
+        "diff_cells": int(diff_cells),
+        "changed_rows": int(changed_rows),
+        "changed_cols": int(changed_cols),
     }
-
 
 # =========================
 # GENERATE OUTPUT (KEEP FORMAT)
