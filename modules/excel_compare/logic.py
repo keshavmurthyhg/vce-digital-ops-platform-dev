@@ -114,8 +114,8 @@ def section_diff_logic(df1, df2):
 def style_dataframe(df, diff_mask):
     def highlight(row):
         return [
-            "background-color: yellow" if diff_mask.iloc[row.name, i] else ""
-            for i in range(len(row))
+            "background-color: yellow" if diff_mask.loc[row.name, col] else ""
+            for col in df.columns
         ]
 
     return df.style.apply(highlight, axis=1)
