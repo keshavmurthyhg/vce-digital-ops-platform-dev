@@ -7,278 +7,232 @@ from modules.search.data_loader import load_data
 from modules.search.search import apply_search
 from modules.search.kpi import calculate_kpi
 
-st.set_page_config(layout="wide")
 
-# ================= CSS =================
-st.markdown("""
-<style>
+def render():
 
-/* GLOBAL */
-.block-container { padding-top: 1rem !important; }
+    st.set_page_config(layout="wide")
 
-/* TABLE */
-table { width:100%; border-collapse: collapse; }
-th { text-align:center !important; padding:6px !important; background:#f5f5f5; font-size:13px;}
-td { padding:6px !important; font-size:13px; white-space:nowrap !important; }
+    st.title("Ops Insight Dashboard")
 
-/* DESCRIPTION */
-td:nth-child(3), th:nth-child(3) {
-    max-width: 420px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+    df, last_refresh = load_data()
 
-/* PRIORITY */
-td:nth-child(4), th:nth-child(4) { width:130px; }
+    # ---------- PRIORITY CLEAN ----------
+    def clean_priority(row):
+        if row["Source"] == "PTC":
+            m = re.search(r"Severity\s*([1-3])", str(row["Priority"]))
+            return f"Severity {m.group(1)}" if m else ""
+        return row["Priority"]
 
-/* DATE */
-td:nth-child(7), th:nth-child(7),
-td:nth-child(9), th:nth-child(9) { min-width:110px; }
+    df["Priority"] = df.apply(clean_priority, axis=1)
 
-/* KPI */
-[data-testid="stMetricValue"] { font-size:13px !important; }
+    # ---------- SIDEBAR ----------
+    with st.sidebar.expander("📂 Source", True):
+        cols = st.columns(2)
 
-/* STATUS */
-.status-open {color:red;font-weight:600;}
-.status-closed {color:green;font-weight:600;}
-.status-cancel {color:gray;font-weight:600;}
+        all_src = cols[0].checkbox("ALL", True)
+        azure = cols[1].checkbox("AZURE", all_src)
+        snow = cols[0].checkbox("SNOW", all_src)
+        ptc = cols[1].checkbox("PTC", all_src)
 
-/* TOOLBAR ALIGN */
-div[data-testid="stHorizontalBlock"] {
-    align-items: flex-end;
-}
+        sources = ["AZURE", "SNOW", "PTC"] if all_src else []
+        if not all_src:
+            if azure:
+                sources.append("AZURE")
+            if snow:
+                sources.append("SNOW")
+            if ptc:
+                sources.append("PTC")
 
-/* INPUT + BUTTON HEIGHT */
-input { height:38px !important; }
-button { height:38px !important; }
+        if not sources:
+            st.stop()
 
-/* ONLY PAGINATION DROPDOWN COMPACT */
-div[data-testid="column"]:nth-child(4) div[data-baseweb="select"],
-div[data-testid="column"]:nth-child(5) div[data-baseweb="select"] {
-    min-width:70px !important;
-    max-width:85px !important;
-}
+    filtered = df[df["Source"].isin(sources)].copy()
 
-/* SIDEBAR FONT */
-section[data-testid="stSidebar"] label {
-    font-size:12px !important;
-}
+    # ---------- FILTER ----------
+    with st.sidebar.expander("🎯 Filters", True):
+        status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
+        priority = st.multiselect("Priority", sorted(filtered["Priority"].dropna().unique()))
 
-</style>
-""", unsafe_allow_html=True)
+    if status:
+        filtered = filtered[filtered["Status"].isin(status)]
+    if priority:
+        filtered = filtered[filtered["Priority"].isin(priority)]
 
-# ================= TITLE =================
-st.title("Ops Insight Dashboard")
+    # ---------- DATE FILTER (ADVANCED) ----------
+    with st.sidebar.expander("📅 Date Filter", True):
 
-# ================= LOAD =================
-df, last_refresh = load_data()
+        date_column = st.selectbox(
+            "Select Date Field",
+            ["Created Date", "Resolved Date"]
+        )
 
-# ================= PRIORITY FIX =================
-def clean_priority(row):
-    if row["Source"] == "PTC":
-        m = re.search(r"Severity\s*([1-3])", str(row["Priority"]))
-        return f"Severity {m.group(1)}" if m else ""
-    return row["Priority"]
+        mode = st.radio(
+            "Filter Type",
+            ["No Filter", "Date Range", "By Year", "Quick Select"]
+        )
 
-df["Priority"] = df.apply(clean_priority, axis=1)
+        temp_dates = df[date_column]
 
-# ================= SIDEBAR =================
-st.sidebar.markdown("## 📊 Menu")
-st.sidebar.selectbox("", ["Search Tool"])
+        min_date = temp_dates.min()
+        max_date = temp_dates.max()
 
-with st.sidebar.expander("📂 Source", True):
-    cols = st.columns(2)
+        selected_year = None
+        date_range = None
+        quick_option = None
 
-    all_src = cols[0].checkbox("ALL", True)
-    azure = cols[1].checkbox("AZURE", all_src)
-    snow = cols[0].checkbox("SNOW", all_src)
-    ptc = cols[1].checkbox("PTC", all_src)
+        if mode == "Date Range":
+            date_range = st.date_input(
+                "Select Date Range",
+                value=(min_date, max_date),
+                min_value=min_date,
+                max_value=max_date
+            )
 
-    if all_src:
-        sources = ["AZURE","SNOW","PTC"]
-    else:
-        sources = []
-        if azure: sources.append("AZURE")
-        if snow: sources.append("SNOW")
-        if ptc: sources.append("PTC")
+        elif mode == "By Year":
+            years = sorted(temp_dates.dt.year.dropna().unique())
+            selected_year = st.selectbox("Select Year", years)
 
-    if not sources:
-        st.stop()
+        elif mode == "Quick Select":
+            quick_option = st.selectbox(
+                "Quick Options",
+                ["Last 7 Days", "Last 30 Days", "This Month"]
+            )
 
-# ================= FILTER =================
-filtered = df[df["Source"].isin(sources)].copy()
+    # ---------- APPLY DATE FILTER ----------
+    if mode != "No Filter":
 
-# SESSION STATE FOR FILTER RESET
-if "status_filter" not in st.session_state:
-    st.session_state.status_filter = []
-if "priority_filter" not in st.session_state:
-    st.session_state.priority_filter = []
+        filtered[date_column] = filtered[date_column]
 
-with st.sidebar.expander("🎯 Filters", True):
-    status = st.multiselect(
-        "Status",
-        sorted(filtered["Status"].dropna().unique()),
-        key="sidebar_status"
-    )
+        if mode == "Date Range" and date_range and len(date_range) == 2:
+            start_date, end_date = date_range
 
-    priority = st.multiselect(
-        "Priority",
-        sorted(filtered["Priority"].dropna().unique()),
-        key="sidebar_priority"
-    )
+            filtered = filtered[
+                (filtered[date_column] >= pd.to_datetime(start_date)) &
+                (filtered[date_column] <= pd.to_datetime(end_date))
+            ]
 
-if status:
-    filtered = filtered[filtered["Status"].isin(status)]
-if priority:
-    filtered = filtered[filtered["Priority"].isin(priority)]
+        elif mode == "By Year" and selected_year:
+            filtered = filtered[
+                filtered[date_column].dt.year == selected_year
+            ]
 
-# ================= TOOLBAR =================
-def clear_all():
-    st.session_state.toolbar_search = ""
-    st.session_state.toolbar_page_number = 1
-    st.session_state.toolbar_page_size = 10
-    st.session_state.sidebar_status = []
-    st.session_state.sidebar_priority = []
+        elif mode == "Quick Select" and quick_option:
+            today = pd.Timestamp.today()
 
-if "toolbar_search" not in st.session_state:
-    st.session_state.toolbar_search = ""
+            if quick_option == "Last 7 Days":
+                start_date = today - pd.Timedelta(days=7)
 
-col1, col2, col3, col4, col5, col6 = st.columns([5,1,2,1.5,1.5,2])
+            elif quick_option == "Last 30 Days":
+                start_date = today - pd.Timedelta(days=30)
 
-# SEARCH
-with col1:
-    search_value = st.text_input(
-        "🔎 Search",
-        value=st.session_state.toolbar_search,
-        key="toolbar_search"
-    )
+            elif quick_option == "This Month":
+                start_date = today.replace(day=1)
 
-# CLEAR
-with col2:
-    st.markdown("<div style='margin-top:30px'></div>", unsafe_allow_html=True)
-    st.button("❌", on_click=clear_all)
+            filtered = filtered[
+                filtered[date_column] >= start_date
+            ]
 
-# APPLY SEARCH
-filtered = apply_search(filtered, search_value)
+    # ---------- CLEAR FUNCTION ----------
+    def clear_all():
+        st.session_state["search_box"] = ""
+        st.session_state["page"] = 1
+        st.session_state["rows"] = 10
 
-# ================= DATA =================
-df_display = filtered.copy().reset_index(drop=True)
-df_display.insert(0, "SL No", range(1, len(df_display)+1))
+    # ---------- TOOLBAR ----------
+    col1, col2, col3, col4, col5, col6 = st.columns([5, 1, 2, 1.5, 1.5, 2])
 
-total_rows = len(df_display)
+    with col1:
+        search_value = st.text_input("🔎 Search", key="search_box")
 
-# RESULTS + SOURCE COUNTS
-with col3:
+    with col2:
+        st.markdown("<div style='margin-top:30px'></div>", unsafe_allow_html=True)
+        st.button("❌", on_click=clear_all)
+
+    filtered = apply_search(filtered, search_value)
+
+    df_display = filtered.reset_index(drop=True)
+    df_display.insert(0, "SL No", range(1, len(df_display) + 1))
+
+    total_rows = len(df_display)
+
+    # ---------- RESULT COUNT ----------
     vc = filtered["Source"].value_counts()
-    st.markdown(f"""
-    <div style="margin-top:8px">
-        <b>{total_rows}</b> Results<br>
-        <span style="font-size:11px">
-        AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}
-        </span>
-    </div>
-    """, unsafe_allow_html=True)
 
-# ROWS
-with col4:
-    page_size = st.selectbox(
-        "Rows",
-        [10,20,50,100],
-        key="toolbar_page_size"
-    )
+    with col3:
+        st.markdown(f"<b>{total_rows}</b> Results", unsafe_allow_html=True)
+        st.markdown(
+            f"<div style='font-size:12px;'>"
+            f"AZURE: {vc.get('AZURE',0)} | "
+            f"SNOW: {vc.get('SNOW',0)} | "
+            f"PTC: {vc.get('PTC',0)}"
+            f"</div>",
+            unsafe_allow_html=True
+        )
 
-# PAGE
-total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
+    with col4:
+        page_size = st.selectbox("Rows", [10, 20, 50, 100], key="rows")
 
-with col5:
-    page = st.selectbox(
-        "Page",
-        list(range(1, total_pages + 1)),
-        key="toolbar_page_number"
-    )
+    total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
 
-# DOWNLOAD
-with col6:
-    st.markdown("<div style='margin-top:30px;text-align:right'>", unsafe_allow_html=True)
+    with col5:
+        page = st.selectbox("Page", list(range(1, total_pages + 1)), key="page")
 
-    def to_excel(df):
-        buffer = io.BytesIO()
-        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-            df.to_excel(writer, index=False)
-        return buffer.getvalue()
+    with col6:
+        st.markdown("<div style='margin-top:28px'></div>", unsafe_allow_html=True)
 
-    st.download_button("📥 Download", to_excel(filtered), "ops_data.xlsx")
+        def to_excel(df):
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False)
+            return buffer.getvalue()
 
-    st.markdown("</div>", unsafe_allow_html=True)
+        st.download_button("📥 Download", to_excel(filtered), "ops_data.xlsx")
 
-# PAGINATION
-start = (page - 1) * page_size
-end = start + page_size
-page_df = df_display.iloc[start:end]
+    # ---------- PAGINATION ----------
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_df = df_display.iloc[start:end]
 
-# ================= CLEAN DATA =================
-def clean(x):
-    return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
+    # ---------- DATE FORMAT ----------
+    for col in ["Created Date", "Resolved Date"]:
+        if col in page_df:
+            page_df[col] = page_df[col].dt.strftime("%d-%b-%y")
 
-for col in ["Created By","Assigned To"]:
-    if col in page_df:
-        page_df[col] = page_df[col].apply(clean)
+    page_df = page_df.fillna("")
 
-for col in ["Created Date","Resolved Date"]:
-    if col in page_df:
-        page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%Y")
+    # ---------- LINK ----------
+    def make_link(row):
+        num = str(row.get("Number", ""))
+        src = row.get("Source", "")
 
-page_df["Description"] = page_df["Description"].apply(
-    lambda x: x[:90] + "..." if len(str(x)) > 90 else x
-)
+        if src == "SNOW":
+            url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
+        elif src == "PTC":
+            url = f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
+        elif src == "AZURE":
+            url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
+        else:
+            url = ""
 
-page_df = page_df.fillna("")
+        if url:
+            return f'<a href="{url}" target="_blank">Open</a>'
+        return ""
 
-# STATUS COLOR
-def format_status(v):
-    v = str(v).lower()
-    if "open" in v or "active" in v:
-        return f'<span class="status-open">{v}</span>'
-    if "closed" in v:
-        return f'<span class="status-closed">{v}</span>'
-    if "cancel" in v:
-        return f'<span class="status-cancel">{v}</span>'
-    return v
+    page_df["Open"] = page_df.apply(make_link, axis=1)
 
-page_df["Status"] = page_df["Status"].apply(format_status)
+    # ---------- TABLE ----------
+    st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-# LINK
-def make_link(row):
-    num = str(row["Number"])
-    src = row["Source"]
+    # ---------- KPI ----------
+    with st.sidebar.expander("📈 KPI", True):
+        kpi = calculate_kpi(filtered)
 
-    if src == "SNOW":
-        url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
-    elif src == "PTC":
-        url = f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
-    elif src == "AZURE":
-        url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
-    else:
-        url = ""
+        c1, c2 = st.columns(2)
+        c1.metric("Total", kpi["total"])
+        c2.metric("Open", kpi["open"])
 
-    return f'<a href="{url}" target="_blank">Open</a>' if url else ""
+        c3, c4 = st.columns(2)
+        c3.metric("Closed", kpi["closed"])
+        c4.metric("Cancelled", kpi["cancelled"])
 
-page_df["Open"] = page_df.apply(make_link, axis=1)
-
-# ================= TABLE =================
-st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
-
-# ================= KPI =================
-with st.sidebar.expander("📈 KPI", True):
-    kpi = calculate_kpi(filtered)
-
-    c1,c2 = st.columns(2)
-    c1.metric("Total", kpi["total"])
-    c2.metric("Open", kpi["open"])
-
-    c3,c4 = st.columns(2)
-    c3.metric("Closed", kpi["closed"])
-    c4.metric("Cancelled", kpi["cancelled"])
-
-# ================= FOOTER =================
-st.caption(f"Last refreshed: {last_refresh}")
+    st.caption(f"Last refreshed: {last_refresh}")
