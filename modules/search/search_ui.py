@@ -21,10 +21,15 @@ def render():
     # ✅ Load mapping
     mapping_df = load_or_create_mapping(df)
     
+    # ✅ Normalize BEFORE mapping
+    mapping_df["Group"] = mapping_df["Group"].astype(str).str.strip().str.upper()
+    
+    # ✅ Create map
     group_map = dict(zip(mapping_df["Name"], mapping_df["Group"]))
     
-    df["Assigned Group"] = df["Assigned To"].map(group_map).fillna("Unassigned")
-    df["Created Group"] = df["Created By"].map(group_map).fillna("Unassigned")
+    # ✅ Apply mapping
+    df["Assigned Group"] = df["Assigned To"].map(group_map).fillna("UNASSIGNED")
+    df["Created Group"] = df["Created By"].map(group_map).fillna("UNASSIGNED")
     
     # ---------- PRIORITY CLEAN ----------
     def clean_priority(row):
@@ -63,25 +68,38 @@ def render():
         edited_mapping = st.data_editor(
             mapping_df,
             num_rows="dynamic",
-            use_container_width=True
+            use_container_width=True,
+            disabled=["Name"],  # prevent editing name
+            column_config={
+                "Name": st.column_config.TextColumn("User", disabled=True),
+                "Group": st.column_config.SelectboxColumn(
+                    "Group",
+                    options=["L1", "L2", "L3", "AOM", "Unassigned"]
+                )
+            }
         )
-    
+
         if st.button("💾 Save Groups"):
-            save_mapping(edited_mapping)
-            st.success("Mapping saved!")
+                save_mapping(edited_mapping)
+                st.success("Mapping saved!")
 
     # ---------- FILTER ----------
     with st.sidebar.expander("🎯 Filters", True):
         status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
         priority = st.multiselect("Priority", sorted(filtered["Priority"].dropna().unique()))
-        group = st.multiselect("Group",sorted(filtered["Assigned Group"].dropna().unique()))
+        
+        GROUP_ORDER = ["L1", "L2", "L3", "AOM", "UNASSIGNED"]
+        group_options = [g for g in GROUP_ORDER if g in mapping_df["Group"].unique()]
         
     if status:
         filtered = filtered[filtered["Status"].isin(status)]
     if priority:
         filtered = filtered[filtered["Priority"].isin(priority)]
     if group:
-        filtered = filtered[filtered["Assigned Group"].isin(group)]
+            filtered[
+                (filtered["Assigned Group"].isin(group)) |
+                (filtered["Created Group"].isin(group))
+            ]
 
     # ---------- DATE FILTER (ADVANCED) ----------
     with st.sidebar.expander("📅 Date Filter", True):
