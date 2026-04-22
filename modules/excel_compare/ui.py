@@ -8,7 +8,7 @@ from modules.excel_compare.logic import (
 )
 
 
-def render()::
+def render():
     st.title("📊 Excel Comparison Tool")
 
     if "uploader_key" not in st.session_state:
