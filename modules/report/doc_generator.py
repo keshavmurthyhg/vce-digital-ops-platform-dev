@@ -203,7 +203,7 @@ def generate_pdf(data, root, l2, res, images=None):
          "ASSIGNED TO", wrap(data.get('assigned_to'))],
         ["PRIORITY", wrap(data.get('priority')),
          "RESOLVED DATE", wrap(format_date(data.get('resolved_date')))]
-    ], colWidths=[100,165,100,165])
+    ], colWidths=[100,160,100,160])
 
     table.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
