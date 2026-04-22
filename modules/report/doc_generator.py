@@ -224,7 +224,7 @@ def generate_pdf(data, root, l2, res, images=None):
     ])
     
     elements.append(line)
-    elements.append(Spacer(1, 10))  # small gap before table
+    elements.append(Spacer(1, -6))  # small gap before table
 
     def link(url, text):
         return Paragraph(f'<link href="{url}">{text}</link>', styles["Normal"])
