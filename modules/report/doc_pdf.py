@@ -4,7 +4,13 @@ from reportlab.lib.pagesizes import letter
 from io import BytesIO
 
 
-def generate_pdf(data, root, l2, res, images=None):
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import letter
+from io import BytesIO
+
+
+def generate_pdf(data, root, l2, res, images=None, full_df=None):
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -19,14 +25,19 @@ def generate_pdf(data, root, l2, res, images=None):
     elements.append(Paragraph(f"Priority: {data.get('priority')}", styles["Normal"]))
 
     elements.append(Spacer(1, 10))
-    elements.append(Paragraph("ROOT CAUSE", styles["Heading2"]))
-    elements.append(Paragraph(root or "", styles["Normal"]))
 
-    elements.append(Paragraph("L2 ANALYSIS", styles["Heading2"]))
-    elements.append(Paragraph(l2 or "", styles["Normal"]))
+    for title, content, img_key in [
+        ("ROOT CAUSE", root, "root"),
+        ("L2 ANALYSIS", l2, "l2"),
+        ("RESOLUTION", res, "res"),
+    ]:
+        elements.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
+        elements.append(Paragraph(content or "", styles["Normal"]))
 
-    elements.append(Paragraph("RESOLUTION", styles["Heading2"]))
-    elements.append(Paragraph(res or "", styles["Normal"]))
+        if images and images.get(img_key):
+            elements.append(Image(images[img_key], width=400, height=200))
+
+        elements.append(Spacer(1, 10))
 
     doc.build(elements)
 
