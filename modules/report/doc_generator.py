@@ -219,7 +219,7 @@ def generate_pdf(data, root, l2, res, images=None):
          "ASSIGNED TO", wrap(data.get('assigned_to'))],
         ["PRIORITY", wrap(data.get('priority')),
          "RESOLVED DATE", wrap(format_date(data.get('resolved_date')))]
-    ], colWidths=[100,160,100,160])
+    ], colWidths=[90,160,90,160])
 
     table.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
@@ -238,7 +238,7 @@ def generate_pdf(data, root, l2, res, images=None):
         ["SHORT DESCRIPTION","DESCRIPTION"],
         [wrap(clean_text(data.get("short_description"))),
          wrap(clean_text(data.get("description")))]
-    ], colWidths=[260,260])
+    ], colWidths=[250,250])
 
     desc_table.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
@@ -265,7 +265,7 @@ def generate_pdf(data, root, l2, res, images=None):
     # FOOTER
     def footer(canvas, doc):
         width, _ = letter
-        canvas.setFont('Helvetica',9)
+        canvas.setFont('Calibri',9)
         canvas.drawString(40,20,str(data.get("number")))
         canvas.drawCentredString(width/2,20,f"Page {doc.page}")
         canvas.drawRightString(width-40,20,str(data.get("priority")))
