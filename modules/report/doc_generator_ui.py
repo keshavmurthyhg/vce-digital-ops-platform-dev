@@ -76,9 +76,9 @@ def get_incident(df, inc):
         "resolved_date": str(r.get("resolved")).split()[0],
         "work_notes": r.get("work notes", ""),
         "comments": r.get("additional comments", ""),
-        "resolution": r.get("resolution notes", ""),
+        "RESOLUTION & RECOMMENDATION": r.get("RESOLUTION & RECOMMENDATION notes", ""),
         "ptc_case": r.get("vendor ticket"),
-        "azure_bug": extract_azure_link(r.get("resolution notes"))
+        "azure_bug": extract_azure_link(r.get("RESOLUTION & RECOMMENDATION notes"))
     }
 
 
@@ -126,6 +126,7 @@ def render_doc_generator():
                 
                 auto_root = build_root_cause(data["work_notes"])
                 auto_l2 = build_l2_analysis(data["comments"])
+                auto_res = build_RESOLUTION & RECOMMENDATION(data["RESOLUTION & RECOMMENDATION"])
                 
                 st.session_state["root"] = merge_with_user_input(
                     auto_root, st.session_state.get("root")
@@ -135,7 +136,9 @@ def render_doc_generator():
                     auto_l2, st.session_state.get("l2")
                 )
                 
-                st.session_state["res"] = data["resolution"]
+                st.session_state["res"] = merge_with_user_input(
+                    auto_res, st.session_state.get("res")
+                )
                 
                 # reset flag AFTER successful fetch
                 st.session_state["clear_triggered"] = False
@@ -223,7 +226,7 @@ def render_doc_generator():
     if show_prev and "data" in st.session_state:
         with st.expander("Report Preview", expanded=True):
             st.write(f"**Short Description:** {st.session_state['data']['short_description']}")
-            st.write(f"**Root Cause:** {st.session_state.get('root')}")
+            st.write(f"**PROBLEM STATEMENT & ROOT CAUSE:** {st.session_state.get('root')}")
 
     # EDITABLE FIELDS
     # EDITABLE FIELDS
@@ -232,7 +235,7 @@ def render_doc_generator():
     # ✅ MUST be at same level (no extra indent)
     reset_id = st.session_state.get("uploader_reset", 0)
     
-    st.text_area("Root Cause", key="root")
+    st.text_area("PROBLEM STATEMENT & ROOT CAUSE", key="root")
     root_imgs = st.file_uploader(
         "Root Images",
         type=["png", "jpg"],
@@ -240,7 +243,7 @@ def render_doc_generator():
         key=f"root_img_{reset_id}"
     )
        
-    st.text_area("L2 Analysis", key="l2")
+    st.text_area("TECHNICAL ANALYSIS", key="l2")
     l2_imgs = st.file_uploader(
         "L2 Images",
         type=["png", "jpg"],
@@ -248,9 +251,9 @@ def render_doc_generator():
         key=f"l2_img_{reset_id}"
     )
     
-    st.text_area("Resolution", key="res")
+    st.text_area("RESOLUTION & RECOMMENDATION", key="res")
     res_imgs = st.file_uploader(
-        "Resolution Images",
+        "RESOLUTION & RECOMMENDATION Images",
         type=["png", "jpg"],
         accept_multiple_files=True,
         key=f"res_img_{reset_id}"
