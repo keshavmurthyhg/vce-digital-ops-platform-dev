@@ -125,83 +125,83 @@ def render_doc_generator():
 
     # WORD
     with col_word:
-    if st.button("Word", use_container_width=True):
-        if "data" in st.session_state:
-            data = st.session_state["data"]
-            incident_no = data.get("number", "incident")
-
-            doc_bytes = generate_word_doc(
-                data,
-                st.session_state.get("root", ""),
-                st.session_state.get("l2", ""),
-                st.session_state.get("res", ""),
-                st.session_state.get("images")
-            )
-
-            st.markdown(
-                auto_download(
-                    doc_bytes,
-                    f"{incident_no}.docx",
-                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                ),
-                unsafe_allow_html=True
-            )
+        if st.button("Word", use_container_width=True):
+            if "data" in st.session_state:
+                data = st.session_state["data"]
+                incident_no = data.get("number", "incident")
+    
+                doc_bytes = generate_word_doc(
+                    data,
+                    st.session_state.get("root", ""),
+                    st.session_state.get("l2", ""),
+                    st.session_state.get("res", ""),
+                    st.session_state.get("images")
+                )
+    
+                st.markdown(
+                    auto_download(
+                        doc_bytes,
+                        f"{incident_no}.docx",
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    ),
+                    unsafe_allow_html=True
+                )
 
     # PDF
     with col_pdf:
-    if st.button("PDF", use_container_width=True):
-        if "data" in st.session_state:
-            data = st.session_state["data"]
-            incident_no = data.get("number", "incident")
-
-            pdf_bytes = generate_pdf(
-                data,
-                st.session_state.get("root", ""),
-                st.session_state.get("l2", ""),
-                st.session_state.get("res", ""),
-                st.session_state.get("images")
-            )
-
+        if st.button("PDF", use_container_width=True):
+            if "data" in st.session_state:
+                data = st.session_state["data"]
+                incident_no = data.get("number", "incident")
+    
+                pdf_bytes = generate_pdf(
+                    data,
+                    st.session_state.get("root", ""),
+                    st.session_state.get("l2", ""),
+                    st.session_state.get("res", ""),
+                    st.session_state.get("images")
+                )
+    
+                st.markdown(
+                    auto_download(
+                        pdf_bytes,
+                        f"{incident_no}.pdf",
+                        "application/pdf"
+                    ),
+                    unsafe_allow_html=True
+                )
+    # BULK
+    with col_bulk:
+        if st.button("Bulk", use_container_width=True):
+            ids = [i.strip() for i in bulk.split(",") if i.strip()]
+    
+            zip_buffer = BytesIO()
+            current_date = get_formatted_date()
+    
+            with zipfile.ZipFile(zip_buffer, "w") as z:
+                for i in ids:
+                    d = get_incident(df, i)
+                    if d:
+                        inc_id = d.get("number", "incident")
+    
+                        word_bytes = generate_word_doc(d, "", "", "", None)
+                        pdf_bytes = generate_pdf(d, "", "", "", None)
+    
+                        z.writestr(f"{inc_id}.docx", word_bytes)
+                        z.writestr(f"{inc_id}.pdf", pdf_bytes)
+    
+            zip_buffer.seek(0)
+    
+            zip_filename = f"Closure-document_{current_date}.zip"
+    
             st.markdown(
                 auto_download(
-                    pdf_bytes,
-                    f"{incident_no}.pdf",
-                    "application/pdf"
+                    zip_buffer.read(),
+                    zip_filename,
+                    "application/zip"
                 ),
                 unsafe_allow_html=True
             )
-    # BULK
-    with col_bulk:
-    if st.button("Bulk", use_container_width=True):
-        ids = [i.strip() for i in bulk.split(",") if i.strip()]
-
-        zip_buffer = BytesIO()
-        current_date = get_formatted_date()
-
-        with zipfile.ZipFile(zip_buffer, "w") as z:
-            for i in ids:
-                d = get_incident(df, i)
-                if d:
-                    inc_id = d.get("number", "incident")
-
-                    word_bytes = generate_word_doc(d, "", "", "", None)
-                    pdf_bytes = generate_pdf(d, "", "", "", None)
-
-                    z.writestr(f"{inc_id}.docx", word_bytes)
-                    z.writestr(f"{inc_id}.pdf", pdf_bytes)
-
-        zip_buffer.seek(0)
-
-        zip_filename = f"Closure-document_{current_date}.zip"
-
-        st.markdown(
-            auto_download(
-                zip_buffer.read(),
-                zip_filename,
-                "application/zip"
-            ),
-            unsafe_allow_html=True
-        )
 
     # PREVIEW
     with col_prev:
