@@ -4,7 +4,7 @@ import zipfile
 import re
 
 from modules.report.snow_loader import load_snow_data
-from modules.report.doc_generator import generate_word, generate_pdf_report
+from modules.report.doc_generator import generate_word_doc, generate_pdf
 
 
 # ---------------- CLEAR ---------------- #
