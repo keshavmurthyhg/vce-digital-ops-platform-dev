@@ -162,9 +162,9 @@ def generate_word_doc(data, root, l2, res, images=None):
 
     # SECTIONS
     section_map = {
-        "ROOT CAUSE": (root, images.get("root")),
-        "L2 ANALYSIS": (l2, images.get("l2")),
-        "RESOLUTION": (res, images.get("res")),
+        "PROBLEM STATEMENT & ROOT CAUSE": (root, images.get("root")),
+        "TECHNICAL ANALYSIS": (l2, images.get("l2")),
+        "RESOLUTION & RECOMMENDATION": (res, images.get("res")),
     }
 
     for title, (content, imgs) in section_map.items():
@@ -223,7 +223,25 @@ def add_images_pdf(elements, image_list):
         except Exception as e:
             print("PDF image error:", e)
 
+def add_bullets(elements, content, styles):
+    if not content:
+        elements.append(Paragraph("-", styles["Normal"]))
+        return
 
+    lines = content.split("\n")
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        # remove "-"
+        if line.startswith("-"):
+            line = line[1:].strip()
+
+        elements.append(Paragraph(f"• {line}", styles["Normal"]))
+        elements.append(Spacer(1, 4))
+        
 def generate_pdf(data, root, l2, res, images=None):
     images = safe_images(images)
 
@@ -289,9 +307,9 @@ def generate_pdf(data, root, l2, res, images=None):
         add_images_pdf(elements, imgs)
         elements.append(Spacer(1,15))
 
-    section("ROOT CAUSE", root, images.get("root"))
-    section("L2 ANALYSIS", l2, images.get("l2"))
-    section("RESOLUTION", res, images.get("res"))
+    section("PROBLEM STATEMENT & ROOT CAUSE", root, images.get("root"))
+    section("TECHNICAL ANALYSIS", l2, images.get("l2"))
+    section("RESOLUTION & RECOMMENDATION", res, images.get("res"))
 
     # FOOTER
     def footer(canvas, doc):
