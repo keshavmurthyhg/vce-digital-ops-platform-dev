@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
-from modules.snow_loader import load_snow_data
-from modules.doc_generator import generate_word_doc, generate_pdf
+from modules.report.snow_loader import load_snow_data
+from modules.report.doc_generator import generate_word_doc, generate_pdf
 from io import BytesIO
 import zipfile
 import re
