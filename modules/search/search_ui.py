@@ -267,7 +267,7 @@ def render():
     <head>
     <style>
     body {{
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Calibri", Roboto, sans-serif;
         font-size: 14px;
     }}
     
