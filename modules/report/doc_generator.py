@@ -199,9 +199,18 @@ def generate_pdf(data, root, l2, res, images=None):
         topMargin=40,
         bottomMargin=50
     )
-
+    
+    from reportlab.lib.styles import ParagraphStyle
+    
+    title_style = ParagraphStyle(
+        name="TitleCenter",
+        parent=styles["Title"],
+        alignment=1,
+        spaceAfter=2   # 🔥 reduces gap below title
+    )
+    
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
-    elements.append(Spacer(1, 6))
+    elements.append(Spacer(1, 2))
     
     from reportlab.platypus import Table
     from reportlab.lib import colors
