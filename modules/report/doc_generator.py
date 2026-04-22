@@ -138,13 +138,36 @@ def generate_word_doc(data, root, l2, res, images=None):
         p.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     # ---------- SECTIONS ----------
-    for title, content in [("ROOT CAUSE", root), ("L2 ANALYSIS", l2), ("RESOLUTION", res)]:
+    def add_images(doc, image_list):
+        if not image_list:
+            return
+    
+        from docx.shared import Inches
+    
+        for img in image_list:
+            try:
+                doc.add_picture(img, width=Inches(5.5))
+                doc.add_paragraph("")  # spacing
+            except:
+                pass
+    
+    
+    section_map = {
+        "ROOT CAUSE": (root, images.get("root") if images else []),
+        "L2 ANALYSIS": (l2, images.get("l2") if images else []),  # ✅ FIXED
+        "RESOLUTION": (res, images.get("res") if images else [])
+    }
+    
+    for title, (content, imgs) in section_map.items():
         h = doc.add_heading(title, 1)
         h.alignment = WD_ALIGN_PARAGRAPH.LEFT
-
+    
         p = doc.add_paragraph(content or "-")
         p.paragraph_format.space_after = Inches(0.15)
-
+    
+        # ✅ Correct placement
+        add_images(doc, imgs)
+    
     # ---------- FOOTER ----------
     section = doc.sections[0]
     footer = section.footer.paragraphs[0]
