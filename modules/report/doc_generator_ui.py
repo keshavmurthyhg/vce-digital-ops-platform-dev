@@ -7,8 +7,25 @@ import zipfile
 import re
 
 
+# ✅ CLEAR FUNCTION (FINAL WORKING)
 def clear_all():
-    st.session_state.clear()
+    st.session_state["clear_triggered"] = True
+
+    # 🔥 force new uploader keys
+    st.session_state["uploader_reset"] = st.session_state.get("uploader_reset", 0) + 1
+
+    # reset text fields
+    st.session_state["inc_input"] = ""
+    st.session_state["bulk_ids"] = ""
+    st.session_state["root"] = ""
+    st.session_state["l2"] = ""
+    st.session_state["res"] = ""
+
+    # remove generated outputs
+    for key in ["data", "word_file", "pdf_file", "zip_file", "images"]:
+        if key in st.session_state:
+            del st.session_state[key]
+
     st.rerun()
 
 
@@ -44,63 +61,153 @@ def get_incident(df, inc):
 
 def render_doc_generator():
     st.title("📄 SNOW Incident Report Generator")
-
     df = load_snow_data()
 
-    inc = st.text_input("Enter Incident Number")
-    col1, col2, col3 = st.columns(3)
+    # SIDEBAR
+    st.sidebar.header("Filters")
+    priority_sel = st.sidebar.multiselect(
+        "Priority", df["priority"].dropna().unique(), key="filter_priority"
+    )
+    date_range = st.sidebar.date_input(
+        "Created Date Range", [], key="filter_date"
+    )
 
-    # FETCH
-    with col1:
-        if st.button("Fetch"):
+    if st.sidebar.button("Apply Filters to Bulk"):
+        filtered = df.copy()
+        if priority_sel:
+            filtered = filtered[filtered["priority"].isin(priority_sel)]
+        st.session_state["bulk_ids"] = ", ".join(
+            filtered["number"].astype(str).tolist()
+        )
+
+    if st.sidebar.button("Clear All Data"):
+        clear_all()
+
+    # INPUTS
+    inc = st.text_input("Enter Incident Number", key="inc_input")
+    bulk = st.text_area("Bulk Incident Numbers", key="bulk_ids")
+
+    col_fetch, col_word, col_pdf, col_bulk, col_prev = st.columns(5)
+
+    # ✅ FIXED FETCH BLOCK (INDENTATION + CLEAR LOGIC)
+    with col_fetch:
+        if st.button("Fetch", use_container_width=True):
             data = get_incident(df, inc)
             if data:
                 st.session_state["data"] = data
                 st.session_state["root"] = data["work_notes"]
                 st.session_state["l2"] = data["comments"]
                 st.session_state["res"] = data["resolution"]
+                
+                # reset flag AFTER successful fetch
+                st.session_state["clear_triggered"] = False
+
                 st.success("Loaded")
             else:
                 st.error("Not found")
 
     # WORD
-    with col2:
-        if st.button("Generate Word"):
+    with col_word:
+        if st.button("Word", use_container_width=True):
             if "data" in st.session_state:
-                st.session_state["word"] = generate_word_doc(
+                st.session_state["word_file"] = generate_word_doc(
                     st.session_state["data"],
-                    st.session_state.get("root"),
-                    st.session_state.get("l2"),
-                    st.session_state.get("res")
+                    st.session_state.get("root", ""),
+                    st.session_state.get("l2", ""),
+                    st.session_state.get("res", ""),
+                    st.session_state.get("images")
                 )
+
+        if "word_file" in st.session_state:
+            st.download_button(
+                "⬇ Word",
+                st.session_state["word_file"],
+                file_name=f"{st.session_state['data']['number']}.docx",
+                use_container_width=True
+            )
 
     # PDF
-    with col3:
-        if st.button("Generate PDF"):
+    with col_pdf:
+        if st.button("PDF", use_container_width=True):
             if "data" in st.session_state:
-                st.session_state["pdf"] = generate_pdf(
+                st.session_state["pdf_file"] = generate_pdf(
                     st.session_state["data"],
-                    st.session_state.get("root"),
-                    st.session_state.get("l2"),
-                    st.session_state.get("res")
+                    st.session_state.get("root", ""),
+                    st.session_state.get("l2", ""),
+                    st.session_state.get("res", ""),
+                    st.session_state.get("images")
                 )
 
-    # DOWNLOADS
-    if "word" in st.session_state:
-        st.download_button("⬇ Download Word",
-            st.session_state["word"],
-            file_name=f"{st.session_state['data']['number']}.docx")
+        if "pdf_file" in st.session_state:
+            st.download_button(
+                "⬇ PDF",
+                st.session_state["pdf_file"],
+                file_name=f"{st.session_state['data']['number']}.pdf",
+                use_container_width=True
+            )
 
-    if "pdf" in st.session_state:
-        st.download_button("⬇ Download PDF",
-            st.session_state["pdf"],
-            file_name=f"{st.session_state['data']['number']}.pdf")
+    # BULK
+    with col_bulk:
+        if st.button("Bulk", use_container_width=True):
+            ids = [i.strip() for i in bulk.split(",") if i.strip()]
+            zip_buffer = BytesIO()
+            with zipfile.ZipFile(zip_buffer, "w") as z:
+                for i in ids:
+                    d = get_incident(df, i)
+                    if d:
+                        f = generate_word_doc(d, "", "", "")
+                        z.writestr(f"{i}.docx", f.getvalue())
+            zip_buffer.seek(0)
+            st.session_state["zip_file"] = zip_buffer
 
-    # EDIT FIELDS
-    st.subheader("Edit Content")
+        if "zip_file" in st.session_state:
+            st.download_button(
+                "⬇ ZIP",
+                st.session_state["zip_file"],
+                "reports.zip",
+                use_container_width=True
+            )
+
+    # PREVIEW
+    with col_prev:
+        show_prev = st.button("Preview", use_container_width=True)
+
+    if show_prev and "data" in st.session_state:
+        with st.expander("Report Preview", expanded=True):
+            st.write(f"**Short Description:** {st.session_state['data']['short_description']}")
+            st.write(f"**Root Cause:** {st.session_state.get('root')}")
+
+    # EDITABLE FIELDS
+    # EDITABLE FIELDS
+    st.subheader("Edit Report Details")
+
+    # ✅ MUST be at same level (no extra indent)
+    reset_id = st.session_state.get("uploader_reset", 0)
+    
     st.text_area("Root Cause", key="root")
+    root_img = st.file_uploader(
+        "Root Image",
+        type=["png", "jpg"],
+        key=f"root_img_{reset_id}"
+    )
+    
     st.text_area("L2 Analysis", key="l2")
+    l2_img = st.file_uploader(
+        "L2 Image",
+        type=["png", "jpg"],
+        key=f"l2_img_{reset_id}"
+    )
+    
     st.text_area("Resolution", key="res")
-
-    if st.button("Clear"):
-        clear_all()
+    res_img = st.file_uploader(
+        "Resolution Image",
+        type=["png", "jpg"],
+        key=f"res_img_{reset_id}"
+    )
+    
+    # store images
+    st.session_state["images"] = {
+        "root": root_img,
+        "l2": l2_img,
+        "res": res_img
+    }
