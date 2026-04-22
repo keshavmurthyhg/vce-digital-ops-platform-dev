@@ -6,9 +6,9 @@ def render():
 
     # existing charts code here
 
-    from modules.data_loader import load_data
-    from modules.search import apply_search
-    from modules.kpi import calculate_kpi
+    from modules.search.data_loader import load_data
+    from modules.search.search import apply_search
+    from modules.search.kpi import calculate_kpi
     
     
     def render_charts_page():
