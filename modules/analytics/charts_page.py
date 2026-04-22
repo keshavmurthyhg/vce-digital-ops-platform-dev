@@ -10,14 +10,27 @@ def render():
 
     st.title("📊 Ops Insights - Trends & Metrics")
 
-    # ---------- LOAD ----------
     df, last_refresh = load_data()
 
     if df.empty:
         st.warning("No data available")
         return
 
-    # ---------- FILTER (NO SIDEBAR) ----------
+    # ---------- SIDEBAR CHART NAV ----------
+    st.sidebar.markdown("## 📊 Chart View")
+
+    chart_type = st.sidebar.radio(
+        "Select Chart",
+        [
+            "Daily Trend",
+            "Source Distribution",
+            "Status Distribution",
+            "Priority Distribution",
+            "Monthly Heatmap"
+        ]
+    )
+
+    # ---------- FILTERS (TOP) ----------
     st.subheader("Filters")
 
     col1, col2 = st.columns(2)
@@ -53,43 +66,47 @@ def render():
         filtered["Created Date"], errors="coerce"
     )
 
-    # ---------- DAILY TREND ----------
-    st.subheader("📈 Tickets Trend (Daily)")
+    # =========================================================
+    # 🎯 SHOW ONLY SELECTED CHART
+    # =========================================================
 
-    daily = (
-        filtered
-        .groupby(filtered["Created Date"].dt.date)
-        .size()
-        .reset_index(name="Count")
-        .sort_values("Created Date")
-    )
+    if chart_type == "Daily Trend":
+        st.subheader("📈 Tickets Trend (Daily)")
 
-    st.line_chart(daily.set_index("Created Date"))
+        daily = (
+            filtered
+            .groupby(filtered["Created Date"].dt.date)
+            .size()
+            .reset_index(name="Count")
+            .sort_values("Created Date")
+        )
 
-    # ---------- SOURCE ----------
-    st.subheader("📊 Tickets by Source")
-    st.bar_chart(filtered["Source"].value_counts())
+        st.line_chart(daily.set_index("Created Date"))
 
-    # ---------- STATUS ----------
-    st.subheader("📊 Tickets by Status")
-    st.bar_chart(filtered["Status"].value_counts())
+    elif chart_type == "Source Distribution":
+        st.subheader("📊 Tickets by Source")
+        st.bar_chart(filtered["Source"].value_counts())
 
-    # ---------- PRIORITY ----------
-    st.subheader("📊 Tickets by Priority")
-    st.bar_chart(filtered["Priority"].value_counts())
+    elif chart_type == "Status Distribution":
+        st.subheader("📊 Tickets by Status")
+        st.bar_chart(filtered["Status"].value_counts())
 
-    # ---------- HEATMAP ----------
-    st.subheader("🔥 Monthly Trend by Source")
+    elif chart_type == "Priority Distribution":
+        st.subheader("📊 Tickets by Priority")
+        st.bar_chart(filtered["Priority"].value_counts())
 
-    filtered["Month"] = filtered["Created Date"].dt.to_period("M").astype(str)
+    elif chart_type == "Monthly Heatmap":
+        st.subheader("🔥 Monthly Trend by Source")
 
-    heatmap = (
-        filtered
-        .groupby(["Month", "Source"])
-        .size()
-        .unstack(fill_value=0)
-    )
+        filtered["Month"] = filtered["Created Date"].dt.to_period("M").astype(str)
 
-    st.dataframe(heatmap, use_container_width=True)
+        heatmap = (
+            filtered
+            .groupby(["Month", "Source"])
+            .size()
+            .unstack(fill_value=0)
+        )
+
+        st.dataframe(heatmap, use_container_width=True)
 
     st.caption(f"Last refreshed: {last_refresh}")
