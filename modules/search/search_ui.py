@@ -244,27 +244,24 @@ def render():
 
     page_df["Open"] = page_df.apply(make_link, axis=1)
     
-    # ❌ REMOVE internal columns from display
+    # ---------- CLEAN DISPLAY TABLE DATA ----------
+
+    # Remove internal columns
     page_df = page_df.drop(columns=["Assigned Group", "Created Group"], errors="ignore")
     
-    # ---------- CLEAN DISPLAY DATA ----------
+    # Shorten Description BEFORE rendering
     def shorten_text(text, limit=50):
         text = str(text)
-        return text if len(text) <= limit else text[:limit] + "..."
+        short = text[:limit] + "..." if len(text) > limit else text
+        return f'<span title="{text}">{short}</span>'
     
     if "Description" in page_df.columns:
         page_df["Description"] = page_df["Description"].apply(shorten_text)
-
-    #def shorten_text(text, limit=50):
-       # text = str(text)
-      #  short = text[:limit] + "..." if len(text) > limit else text
-      #  return f'<span title="{text}">{short}</span>'
-
-    # ---------- TABLE ----------
-    #st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
-
+    
+    # Convert to HTML
     table_html = page_df.to_html(escape=False, index=False)
-
+    
+    # Clean CSS (NO comments inside)
     styled_html = f"""
     <style>
     table {{
@@ -273,7 +270,7 @@ def render():
     }}
     
     th {{
-        text-align: center !important;
+        text-align: center;
         white-space: nowrap;
     }}
     
@@ -282,19 +279,18 @@ def render():
         white-space: nowrap;
     }}
     
-    td:nth-child(3) {{  /* Description column */
-        text-align: left !important;
-        white-space: nowrap;
+    td:nth-child(3) {{
+        text-align: left;
         max-width: 400px;
         overflow: hidden;
         text-overflow: ellipsis;
     }}
     </style>
-    
     {table_html}
     """
     
-    st.write(styled_html, unsafe_allow_html=True)
+    # IMPORTANT: render correctly
+    st.markdown(styled_html, unsafe_allow_html=True)
     
     # ---------- KPI ----------
     with st.sidebar.expander("📈 KPI", True):
