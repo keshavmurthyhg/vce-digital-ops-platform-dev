@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import re
 import io
+import streamlit.components.v1 as components
 
 from modules.search.data_loader import load_data
 from modules.search.search import apply_search
@@ -244,12 +245,11 @@ def render():
 
     page_df["Open"] = page_df.apply(make_link, axis=1)
     
-    # ---------- CLEAN DISPLAY TABLE DATA ----------
+   
 
-    # Remove internal columns
+    # ---------- CLEAN DISPLAY DATA ----------
     page_df = page_df.drop(columns=["Assigned Group", "Created Group"], errors="ignore")
     
-    # Shorten Description BEFORE rendering
     def shorten_text(text, limit=50):
         text = str(text)
         short = text[:limit] + "..." if len(text) > limit else text
@@ -261,17 +261,25 @@ def render():
     # Convert to HTML
     table_html = page_df.to_html(escape=False, index=False)
     
-    # Clean CSS (NO comments inside)
-    styled_html = f"""
+    # FULL HTML (IMPORTANT)
+    html_content = f"""
+    <html>
+    <head>
     <style>
     table {{
         width: 100%;
         border-collapse: collapse;
+        font-size: 13px;
+    }}
+    
+    th, td {{
+        border: 1px solid #ddd;
+        padding: 6px;
     }}
     
     th {{
         text-align: center;
-        white-space: nowrap;
+        background-color: #f2f2f2;
     }}
     
     td {{
@@ -286,11 +294,14 @@ def render():
         text-overflow: ellipsis;
     }}
     </style>
+    </head>
+    <body>
     {table_html}
+    </body>
+    </html>
     """
     
-    # IMPORTANT: render correctly
-    st.markdown(styled_html, unsafe_allow_html=True)
+    components.html(html_content, height=500, scrolling=True)
     
     # ---------- KPI ----------
     with st.sidebar.expander("📈 KPI", True):
