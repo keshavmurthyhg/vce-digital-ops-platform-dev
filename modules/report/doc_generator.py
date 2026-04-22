@@ -225,7 +225,7 @@ def generate_pdf(data, root, l2, res, images=None):
     ])
     
     elements.append(line)
-    elements.append(Spacer(1, 6))
+    elements.append(Spacer(1, 4))
     
     def link(url, text):
         return Paragraph(f'<link href="{url}">{text}</link>', styles["Normal"])
