@@ -116,70 +116,7 @@ def render():
     filtered = df[df["Source"].isin(sources)].copy()
     filtered = apply_search(filtered, search_value)
 
-    # ---------- DATE FILTER ----------
-    with st.expander("📅 Date Filter", True):
     
-        date_column = st.selectbox(
-            "Select Date Field",
-            ["Created Date", "Resolved Date"]
-        )
-    
-        mode = st.radio(
-            "Filter Type",
-            ["No Filter", "Date Range", "By Year", "Quick Select"]
-        )
-    
-        # Ensure datetime
-        filtered[date_column] = pd.to_datetime(
-            filtered[date_column], errors="coerce"
-        )
-    
-        temp_dates = filtered[date_column].dropna()
-    
-        if not temp_dates.empty:
-    
-            if mode == "Date Range":
-                date_range = st.date_input(
-                    "Select Date Range",
-                    value=(temp_dates.min(), temp_dates.max())
-                )
-    
-                if len(date_range) == 2:
-                    start, end = date_range
-                    filtered = filtered[
-                        (filtered[date_column] >= pd.to_datetime(start)) &
-                        (filtered[date_column] <= pd.to_datetime(end))
-                    ]
-    
-            elif mode == "By Year":
-                years = sorted(temp_dates.dt.year.unique())
-                selected_year = st.selectbox("Select Year", years)
-    
-                filtered = filtered[
-                    filtered[date_column].dt.year == selected_year
-                ]
-    
-            elif mode == "Quick Select":
-    
-                quick_option = st.selectbox(
-                    "Quick Options",
-                    ["Last 7 Days", "Last 30 Days", "This Month"]
-                )
-    
-                today = pd.Timestamp.today()
-    
-                if quick_option == "Last 7 Days":
-                    start = today - pd.Timedelta(days=7)
-    
-                elif quick_option == "Last 30 Days":
-                    start = today - pd.Timedelta(days=30)
-    
-                elif quick_option == "This Month":
-                    start = today.replace(day=1)
-    
-                filtered = filtered[
-                    filtered[date_column] >= start
-                ]
     # ---------- KPI ----------
     kpi = calculate_kpi(filtered)
 
