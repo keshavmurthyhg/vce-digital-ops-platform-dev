@@ -1,91 +1,136 @@
 import re
 
-# ---------------- CLEAN TEXT ---------------- #
+# ---------------- CLEAN ---------------- #
 
-def clean_lines(text):
+def clean_text(text):
     if not text:
-        return []
+        return ""
 
-    lines = str(text).split("\n")
-    cleaned = []
+    # remove timestamps
+    text = re.sub(r"\d{4}-\d{2}-\d{2}.*?-", "", text)
 
-    for line in lines:
-        # remove timestamps
-        line = re.sub(r"\d{4}-\d{2}-\d{2}.*?-", "", line)
+    # remove names
+    text = re.sub(r"[A-Za-z]+\s+[A-Za-z]+\s*\(.*?\)", "", text)
 
-        # remove names (rough)
-        line = re.sub(r"-?\s*[A-Za-z]+\s+[A-Za-z]+\s*\(.*?\)\s*-", "", line)
+    # remove attachments
+    text = re.sub(r"Attachment:.*", "", text, flags=re.I)
 
-        # remove "Attachment:"
-        line = re.sub(r"Attachment:.*", "", line, flags=re.I)
-
-        # remove empty noise
-        line = line.strip()
-
-        if line and len(line) > 5:
-            cleaned.append(line)
-
-    return cleaned
+    return text
 
 
-# ---------------- GROUP LOGIC ---------------- #
+def split_lines(text):
+    return [l.strip() for l in text.split("\n") if l.strip()]
 
-def group_meaningful_points(lines):
-    """
-    Convert raw lines into meaningful grouped statements
-    """
 
-    points = []
+# ---------------- KEYWORD DETECTION ---------------- #
 
-    buffer = ""
-
-    for line in lines:
-        # If line looks like continuation → append
-        if len(line) < 80:
-            buffer += " " + line
-        else:
-            if buffer:
-                points.append(buffer.strip())
-                buffer = ""
-            points.append(line)
-
-    if buffer:
-        points.append(buffer.strip())
-
-    return points
+def contains_any(line, keywords):
+    return any(k.lower() in line.lower() for k in keywords)
 
 
 # ---------------- ROOT CAUSE ---------------- #
 
 def build_root_cause(work_notes):
-    lines = clean_lines(work_notes)
+    text = clean_text(work_notes)
+    lines = split_lines(text)
 
-    if not lines:
-        return "- Issue identified as system limitation."
+    causes = []
+    permissions = []
+    system = []
 
-    grouped = group_meaningful_points(lines)
+    for l in lines:
+        if contains_any(l, ["permission", "acl", "access"]):
+            permissions.append(l)
+        elif contains_any(l, ["blocked", "validator", "delegate"]):
+            system.append(l)
+        else:
+            causes.append(l)
 
-    # 🔥 Transform into proper RCA style
     bullets = []
-    for g in grouped:
-        bullets.append(f"- {g}")
+
+    if permissions:
+        bullets.append(
+            "- The issue is primarily caused by access control restrictions, where required permissions are not granted for the affected objects."
+        )
+
+    if system:
+        bullets.append(
+            "- System-level restrictions such as validators or OOTB delegates are preventing the expected functionality."
+        )
+
+    if causes:
+        bullets.append(
+            "- The functionality is not available in the current context due to system design limitations or configuration gaps."
+        )
+
+    if not bullets:
+        bullets.append("- The issue is caused by a system limitation requiring further validation.")
 
     return "\n".join(bullets)
 
 
-# ---------------- L2 ANALYSIS ---------------- #
+# ---------------- TECHNICAL ANALYSIS ---------------- #
 
 def build_l2_analysis(comments):
-    lines = clean_lines(comments)
+    text = clean_text(comments)
+    lines = split_lines(text)
 
-    if not lines:
-        return "- Issue analyzed and validated."
+    validation = []
+    findings = []
+    vendor = []
 
-    grouped = group_meaningful_points(lines)
+    for l in lines:
+        if contains_any(l, ["validated", "tested", "verified"]):
+            validation.append(l)
+        elif contains_any(l, ["ptc", "vendor", "case"]):
+            vendor.append(l)
+        else:
+            findings.append(l)
 
     bullets = []
-    for g in grouped:
-        bullets.append(f"- {g}")
+
+    if validation:
+        bullets.append(
+            "- The issue was reproduced and validated across multiple scenarios to confirm consistent behavior."
+        )
+
+    if findings:
+        bullets.append(
+            "- Analysis confirms that the functionality behaves differently based on permission levels and object states."
+        )
+
+    if vendor:
+        bullets.append(
+            "- Vendor engagement has been initiated, and the issue is under review for a permanent fix in future releases."
+        )
+
+    bullets.append(
+        "- Current behavior aligns with system constraints and requires controlled configuration changes for resolution."
+    )
+
+    return "\n".join(bullets)
+
+
+# ---------------- RESOLUTION ---------------- #
+
+def build_resolution(resolution_text):
+    text = clean_text(resolution_text)
+
+    bullets = []
+
+    if "azure" in text.lower():
+        bullets.append(
+            "- A feature/bug has been logged in Azure DevOps to address the identified limitation."
+        )
+
+    if "permission" in text.lower():
+        bullets.append(
+            "- Granting appropriate permissions enables the required functionality under supported scenarios."
+        )
+
+    bullets.append(
+        "- The incident has been closed based on current system behavior and agreed resolution."
+    )
 
     return "\n".join(bullets)
 
