@@ -73,7 +73,8 @@ def render():
     with st.sidebar.expander("🎯 Filters", True):
         status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
         priority = st.multiselect("Priority", sorted(filtered["Priority"].dropna().unique()))
-
+        group = st.multiselect("Group",sorted(filtered["Assigned Group"].dropna().unique()))
+        
     if status:
         filtered = filtered[filtered["Status"].isin(status)]
     if priority:
