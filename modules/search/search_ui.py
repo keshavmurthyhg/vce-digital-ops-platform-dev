@@ -266,10 +266,14 @@ def render():
     <html>
     <head>
     <style>
+    body {{
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-size: 14px;
+    }}
+    
     table {{
         width: 100%;
         border-collapse: collapse;
-        font-size: 13px;
     }}
     
     th, td {{
