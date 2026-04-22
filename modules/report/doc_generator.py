@@ -174,7 +174,7 @@ def generate_word_doc(data, root, l2, res, images=None):
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
-    return buffer
+    return buffer.getvalue()
 
 # ---------------- PDF ---------------- #
 
@@ -256,4 +256,4 @@ def generate_pdf(data, root, l2, res, images=None):
 
     doc.build(elements, onFirstPage=footer, onLaterPages=footer)
     buffer.seek(0)
-    return buffer
+    return buffer.getvalue()
