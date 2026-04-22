@@ -169,7 +169,16 @@ def generate_word_doc(data, root, l2, res, images=None):
 
     for title, (content, imgs) in section_map.items():
         doc.add_heading(title, 1)
-        doc.add_paragraph(content or "-")
+        for line in (content or "-").split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+        
+            if line.startswith("-"):
+                line = line[1:].strip()
+        
+            p = doc.add_paragraph(line)
+            p.style = "List Bullet"
         add_images_word(doc, imgs)
 
     # FOOTER
@@ -302,7 +311,9 @@ def generate_pdf(data, root, l2, res, images=None):
     def section(title, content, imgs):
         elements.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
         elements.append(Spacer(1,6))
-        elements.append(wrap(content or "-"))
+    
+        add_bullets(elements, content, styles)  # ✅ FIXED
+    
         elements.append(Spacer(1,10))
         add_images_pdf(elements, imgs)
         elements.append(Spacer(1,15))
