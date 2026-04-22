@@ -95,8 +95,8 @@ def render():
         group_options = [g for g in GROUP_ORDER if g in mapping_df["Group"].unique()]
         
     if status:
-    filtered = filtered[filtered["Status"].isin(status)]
-
+        filtered = filtered[filtered["Status"].isin(status)]
+    
     if priority:
         filtered = filtered[filtered["Priority"].isin(priority)]
     
