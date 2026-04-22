@@ -1,11 +1,28 @@
 import streamlit as st
 import pandas as pd
+import zipfile
+import re
+import base64
+
 from modules.report.snow_loader import load_snow_data
 from modules.report.doc_generator import generate_word_doc, generate_pdf
 from io import BytesIO
-import zipfile
-import re
+from datetime import datetime
 
+#============ Date formate ====================
+def get_formatted_date():
+    return datetime.now().strftime("%d-%b-%Y")  # 23-Apr-2026
+
+#============ Auto Dounload ====================
+def auto_download(file_bytes, filename, mime):
+    b64 = base64.b64encode(file_bytes).decode()
+    href = f"""
+        <a id="download_link" href="data:{mime};base64,{b64}" download="{filename}"></a>
+        <script>
+            document.getElementById('download_link').click();
+        </script>
+    """
+    return href
 
 # ✅ CLEAR FUNCTION (FINAL WORKING)
 def clear_all():
@@ -108,65 +125,83 @@ def render_doc_generator():
 
     # WORD
     with col_word:
-        if st.button("Word", use_container_width=True):
-            if "data" in st.session_state:
-                st.session_state["word_file"] = generate_word_doc(
-                    st.session_state["data"],
-                    st.session_state.get("root", ""),
-                    st.session_state.get("l2", ""),
-                    st.session_state.get("res", ""),
-                    st.session_state.get("images")
-                )
+    if st.button("Word", use_container_width=True):
+        if "data" in st.session_state:
+            data = st.session_state["data"]
+            incident_no = data.get("number", "incident")
 
-        if "word_file" in st.session_state:
-            st.download_button(
-                "⬇ Word",
-                st.session_state["word_file"],
-                file_name=f"{st.session_state['data']['number']}.docx",
-                use_container_width=True
+            doc_bytes = generate_word_doc(
+                data,
+                st.session_state.get("root", ""),
+                st.session_state.get("l2", ""),
+                st.session_state.get("res", ""),
+                st.session_state.get("images")
+            )
+
+            st.markdown(
+                auto_download(
+                    doc_bytes,
+                    f"{incident_no}.docx",
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                ),
+                unsafe_allow_html=True
             )
 
     # PDF
     with col_pdf:
-        if st.button("PDF", use_container_width=True):
-            if "data" in st.session_state:
-                st.session_state["pdf_file"] = generate_pdf(
-                    st.session_state["data"],
-                    st.session_state.get("root", ""),
-                    st.session_state.get("l2", ""),
-                    st.session_state.get("res", ""),
-                    st.session_state.get("images")
-                )
+    if st.button("PDF", use_container_width=True):
+        if "data" in st.session_state:
+            data = st.session_state["data"]
+            incident_no = data.get("number", "incident")
 
-        if "pdf_file" in st.session_state:
-            st.download_button(
-                "⬇ PDF",
-                st.session_state["pdf_file"],
-                file_name=f"{st.session_state['data']['number']}.pdf",
-                use_container_width=True
+            pdf_bytes = generate_pdf(
+                data,
+                st.session_state.get("root", ""),
+                st.session_state.get("l2", ""),
+                st.session_state.get("res", ""),
+                st.session_state.get("images")
             )
 
+            st.markdown(
+                auto_download(
+                    pdf_bytes,
+                    f"{incident_no}.pdf",
+                    "application/pdf"
+                ),
+                unsafe_allow_html=True
+            )
     # BULK
     with col_bulk:
-        if st.button("Bulk", use_container_width=True):
-            ids = [i.strip() for i in bulk.split(",") if i.strip()]
-            zip_buffer = BytesIO()
-            with zipfile.ZipFile(zip_buffer, "w") as z:
-                for i in ids:
-                    d = get_incident(df, i)
-                    if d:
-                        f = generate_word_doc(d, "", "", "")
-                        z.writestr(f"{i}.docx", f.getvalue())
-            zip_buffer.seek(0)
-            st.session_state["zip_file"] = zip_buffer
+    if st.button("Bulk", use_container_width=True):
+        ids = [i.strip() for i in bulk.split(",") if i.strip()]
 
-        if "zip_file" in st.session_state:
-            st.download_button(
-                "⬇ ZIP",
-                st.session_state["zip_file"],
-                "reports.zip",
-                use_container_width=True
-            )
+        zip_buffer = BytesIO()
+        current_date = get_formatted_date()
+
+        with zipfile.ZipFile(zip_buffer, "w") as z:
+            for i in ids:
+                d = get_incident(df, i)
+                if d:
+                    inc_id = d.get("number", "incident")
+
+                    word_bytes = generate_word_doc(d, "", "", "", None)
+                    pdf_bytes = generate_pdf(d, "", "", "", None)
+
+                    z.writestr(f"{inc_id}.docx", word_bytes)
+                    z.writestr(f"{inc_id}.pdf", pdf_bytes)
+
+        zip_buffer.seek(0)
+
+        zip_filename = f"Closure-document_{current_date}.zip"
+
+        st.markdown(
+            auto_download(
+                zip_buffer.read(),
+                zip_filename,
+                "application/zip"
+            ),
+            unsafe_allow_html=True
+        )
 
     # PREVIEW
     with col_prev:
