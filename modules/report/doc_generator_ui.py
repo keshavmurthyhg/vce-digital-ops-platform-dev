@@ -9,6 +9,12 @@ from modules.report.doc_generator import generate_word_doc, generate_pdf
 from io import BytesIO
 from datetime import datetime
 
+from modules.report.analysis_builder import (
+    build_root_cause,
+    build_l2_analysis,
+    merge_with_user_input
+)
+
 #============ Date formate ====================
 def get_formatted_date():
     return datetime.now().strftime("%d-%b-%Y")  # 23-Apr-2026
