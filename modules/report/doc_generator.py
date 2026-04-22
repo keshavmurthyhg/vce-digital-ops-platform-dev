@@ -265,7 +265,7 @@ def generate_pdf(data, root, l2, res, images=None):
     # FOOTER
     def footer(canvas, doc):
         width, _ = letter
-        canvas.setFont('Calibri',9)
+        canvas.setFont('Helvetica',9)
         canvas.drawString(40,20,str(data.get("number")))
         canvas.drawCentredString(width/2,20,f"Page {doc.page}")
         canvas.drawRightString(width-40,20,str(data.get("priority")))
