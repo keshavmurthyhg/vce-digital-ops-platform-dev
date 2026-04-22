@@ -212,16 +212,21 @@ def generate_pdf(data, root, l2, res, images=None):
         spaceAfter=-6   # 🔥 key line
     )
     
-    elements.append(Paragraph("<b>INCIDENT REPORT</b>", title_style))
+   # Title
+    elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
     
-    line = Table([[""]], colWidths=[page_width])
+    # 🔥 CONTROL GAP HERE (THIS is what you need)
+    elements.append(Spacer(1, -8))   # move line UP
+    
+    # Line (fixed width for now as you wanted)
+    line = Table([[""]], colWidths=[500])
     line.setStyle([
         ("LINEBELOW", (0, 0), (-1, -1), 1, colors.black)
-        ("TOPPADDING", (0, 0), (-1, -1), -6) 
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0)
     ])
     
     elements.append(line)
+    
+    # Gap before table
     elements.append(Spacer(1, 6))
     
     def link(url, text):
