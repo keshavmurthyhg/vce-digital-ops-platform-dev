@@ -85,27 +85,54 @@ def render():
 
     # ---------- FILTER ----------
     with st.sidebar.expander("🎯 Filters", True):
-        status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
-        priority = st.multiselect("Priority", sorted(filtered["Priority"].dropna().unique()))
-    
-        GROUP_ORDER = ["L1", "L2", "L3", "AOM", "UNASSIGNED"]
 
-        group_options = [g for g in GROUP_ORDER if g in mapping_df["Group"].unique()]
-        
-        group = st.multiselect("Group", group_options)
-        group = group if 'group' in locals() else []
-        
-    if status:
-        filtered = filtered[filtered["Status"].isin(status)]
+        with st.form("filter_form"):
     
-    if priority:
-        filtered = filtered[filtered["Priority"].isin(priority)]
+            status = st.multiselect(
+                "Status",
+                sorted(df["Status"].dropna().unique())
+            )
     
-    if group:
-        filtered = filtered[
-            (filtered["Assigned Group"].isin(group)) |
-            (filtered["Created Group"].isin(group))
-        ]
+            priority = st.multiselect(
+                "Priority",
+                sorted(df["Priority"].dropna().unique())
+            )
+    
+            group_options = sorted(mapping_df["Group"].dropna().unique())
+    
+            group = st.multiselect("Group", group_options)
+    
+            submitted = st.form_submit_button("🔍 Apply Filters")
+    
+        # ✅ Initialize once
+        if "filters" not in st.session_state:
+            st.session_state.filters = {
+                "status": [],
+                "priority": [],
+                "group": []
+            }
+    
+        # ✅ Update only on submit
+        if submitted:
+            st.session_state.filters = {
+                "status": status,
+                "priority": priority,
+                "group": group
+            }
+        
+        filters = st.session_state.filters
+    
+        if filters["status"]:
+            filtered = filtered[filtered["Status"].isin(filters["status"])]
+        
+        if filters["priority"]:
+            filtered = filtered[filtered["Priority"].isin(filters["priority"])]
+        
+        if filters["group"]:
+            filtered = filtered[
+                (filtered["Assigned Group"].isin(filters["group"])) |
+                (filtered["Created Group"].isin(filters["group"]))
+            ]
 
     # ---------- DATE FILTER (ADVANCED) ----------
     with st.sidebar.expander("📅 Date Filter", True):
@@ -183,7 +210,12 @@ def render():
 
     # ---------- CLEAR FUNCTION ----------
     def clear_all():
-        st.session_state["search_box"] = ""
+        st.session_state["search"] = ""
+        st.session_state["filters"] = {
+            "status": [],
+            "priority": [],
+            "group": []
+        }
         st.session_state["page"] = 1
         st.session_state["rows"] = 10
 
@@ -191,7 +223,19 @@ def render():
     col1, col2, col3, col4, col5, col6 = st.columns([5, 1, 2, 1.5, 1.5, 2])
 
     with col1:
-        search_value = st.text_input("🔎 Search", key="search_box")
+        with st.form("search_form"):
+            search_input = st.text_input("🔎 Search")
+            search_submit = st.form_submit_button("Search")
+    
+    # Store in session
+    if "search" not in st.session_state:
+        st.session_state.search = ""
+    
+    if search_submit:
+        st.session_state.search = search_input
+    
+    search_value = st.session_state.search
+    filtered = apply_search(filtered, search_value)
 
     with col2:
         st.markdown("<div style='margin-top:30px'></div>", unsafe_allow_html=True)
