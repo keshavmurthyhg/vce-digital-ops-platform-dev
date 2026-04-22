@@ -12,14 +12,15 @@ from datetime import datetime
 from modules.report.analysis_builder import (
     build_root_cause,
     build_l2_analysis,
+    build_resolution,   # ✅ ADDED
     merge_with_user_input
 )
 
-#============ Date formate ====================
+#============ Date format ====================
 def get_formatted_date():
-    return datetime.now().strftime("%d-%b-%Y")  # 23-Apr-2026
+    return datetime.now().strftime("%d-%b-%Y")
 
-#============ Auto Dounload ====================
+#============ Auto Download ====================
 def auto_download(file_bytes, filename, mime):
     b64 = base64.b64encode(file_bytes).decode()
     href = f"""
@@ -30,21 +31,17 @@ def auto_download(file_bytes, filename, mime):
     """
     return href
 
-# ✅ CLEAR FUNCTION (FINAL WORKING)
+#============ CLEAR FUNCTION ====================
 def clear_all():
     st.session_state["clear_triggered"] = True
-
-    # 🔥 force new uploader keys
     st.session_state["uploader_reset"] = st.session_state.get("uploader_reset", 0) + 1
 
-    # reset text fields
     st.session_state["inc_input"] = ""
     st.session_state["bulk_ids"] = ""
     st.session_state["root"] = ""
     st.session_state["l2"] = ""
     st.session_state["res"] = ""
 
-    # remove generated outputs
     for key in ["data", "word_file", "pdf_file", "zip_file", "images"]:
         if key in st.session_state:
             del st.session_state[key]
@@ -64,7 +61,9 @@ def get_incident(df, inc):
     row = df[df["number"] == inc.upper()]
     if row.empty:
         return None
+
     r = row.iloc[0]
+
     return {
         "number": r.get("number"),
         "short_description": r.get("short description"),
@@ -76,37 +75,32 @@ def get_incident(df, inc):
         "resolved_date": str(r.get("resolved")).split()[0],
         "work_notes": r.get("work notes", ""),
         "comments": r.get("additional comments", ""),
-        "RESOLUTION & RECOMMENDATION": r.get("RESOLUTION & RECOMMENDATION notes", ""),
+        "resolution": r.get("RESOLUTION & RECOMMENDATION notes", ""),  # ✅ FIXED KEY
         "ptc_case": r.get("vendor ticket"),
         "azure_bug": extract_azure_link(r.get("RESOLUTION & RECOMMENDATION notes"))
     }
 
 
 def render_doc_generator():
-    
+
+    # SAFE INIT
     for key in ["root", "l2", "res", "images"]:
         if key not in st.session_state:
             st.session_state[key] = "" if key != "images" else {"root": [], "l2": [], "res": []}
-        
+
     st.title("📄 SNOW Incident Report Generator")
     df = load_snow_data()
 
     # SIDEBAR
     st.sidebar.header("Filters")
-    priority_sel = st.sidebar.multiselect(
-        "Priority", df["priority"].dropna().unique(), key="filter_priority"
-    )
-    date_range = st.sidebar.date_input(
-        "Created Date Range", [], key="filter_date"
-    )
+    priority_sel = st.sidebar.multiselect("Priority", df["priority"].dropna().unique())
+    date_range = st.sidebar.date_input("Created Date Range", [])
 
     if st.sidebar.button("Apply Filters to Bulk"):
         filtered = df.copy()
         if priority_sel:
             filtered = filtered[filtered["priority"].isin(priority_sel)]
-        st.session_state["bulk_ids"] = ", ".join(
-            filtered["number"].astype(str).tolist()
-        )
+        st.session_state["bulk_ids"] = ", ".join(filtered["number"].astype(str).tolist())
 
     if st.sidebar.button("Clear All Data"):
         clear_all()
@@ -117,42 +111,32 @@ def render_doc_generator():
 
     col_fetch, col_word, col_pdf, col_bulk, col_prev = st.columns(5)
 
-    # ✅ FIXED FETCH BLOCK (INDENTATION + CLEAR LOGIC)
+    # ================= FETCH =================
     with col_fetch:
         if st.button("Fetch", use_container_width=True):
             data = get_incident(df, inc)
+
             if data:
                 st.session_state["data"] = data
-                
+
                 auto_root = build_root_cause(data["work_notes"])
                 auto_l2 = build_l2_analysis(data["comments"])
-                auto_res = build_RESOLUTION & RECOMMENDATION(data["RESOLUTION & RECOMMENDATION"])
-                
-                st.session_state["root"] = merge_with_user_input(
-                    auto_root, st.session_state.get("root")
-                )
-                
-                st.session_state["l2"] = merge_with_user_input(
-                    auto_l2, st.session_state.get("l2")
-                )
-                
-                st.session_state["res"] = merge_with_user_input(
-                    auto_res, st.session_state.get("res")
-                )
-                
-                # reset flag AFTER successful fetch
-                st.session_state["clear_triggered"] = False
+                auto_res = build_resolution(data["resolution"])   # ✅ FIXED
+
+                st.session_state["root"] = merge_with_user_input(auto_root, st.session_state.get("root"))
+                st.session_state["l2"] = merge_with_user_input(auto_l2, st.session_state.get("l2"))
+                st.session_state["res"] = merge_with_user_input(auto_res, st.session_state.get("res"))
 
                 st.success("Loaded")
             else:
                 st.error("Not found")
 
-    # WORD
+    # ================= WORD =================
     with col_word:
         if "data" in st.session_state:
             data = st.session_state["data"]
             incident_no = data.get("number", "incident")
-    
+
             doc_bytes = generate_word_doc(
                 data,
                 st.session_state.get("root", ""),
@@ -160,7 +144,7 @@ def render_doc_generator():
                 st.session_state.get("res", ""),
                 st.session_state.get("images")
             )
-    
+
             st.download_button(
                 "Word",
                 data=doc_bytes,
@@ -169,12 +153,12 @@ def render_doc_generator():
                 use_container_width=True
             )
 
-    # PDF
+    # ================= PDF =================
     with col_pdf:
         if "data" in st.session_state:
             data = st.session_state["data"]
             incident_no = data.get("number", "incident")
-    
+
             pdf_bytes = generate_pdf(
                 data,
                 st.session_state.get("root", ""),
@@ -182,7 +166,7 @@ def render_doc_generator():
                 st.session_state.get("res", ""),
                 st.session_state.get("images")
             )
-    
+
             st.download_button(
                 "PDF",
                 data=pdf_bytes,
@@ -190,27 +174,27 @@ def render_doc_generator():
                 mime="application/pdf",
                 use_container_width=True
             )
-    # BULK
+
+    # ================= BULK =================
     with col_bulk:
         ids = [i.strip() for i in bulk.split(",") if i.strip()]
-    
+
         zip_buffer = BytesIO()
-        current_date = get_formatted_date()
-    
+
         with zipfile.ZipFile(zip_buffer, "w") as z:
             for i in ids:
                 d = get_incident(df, i)
                 if d:
                     inc_id = d.get("number", "incident")
-    
+
                     word_bytes = generate_word_doc(d, "", "", "", None)
                     pdf_bytes = generate_pdf(d, "", "", "", None)
-    
+
                     z.writestr(f"{inc_id}.docx", word_bytes)
                     z.writestr(f"{inc_id}.pdf", pdf_bytes)
-    
+
         zip_buffer.seek(0)
-    
+
         st.download_button(
             "Bulk",
             data=zip_buffer,
@@ -219,47 +203,20 @@ def render_doc_generator():
             use_container_width=True
         )
 
-    # PREVIEW
-    with col_prev:
-        show_prev = st.button("Preview", use_container_width=True)
-
-    if show_prev and "data" in st.session_state:
-        with st.expander("Report Preview", expanded=True):
-            st.write(f"**Short Description:** {st.session_state['data']['short_description']}")
-            st.write(f"**PROBLEM STATEMENT & ROOT CAUSE:** {st.session_state.get('root')}")
-
-    # EDITABLE FIELDS
-    # EDITABLE FIELDS
+    # ================= EDIT =================
     st.subheader("Edit Report Details")
 
-    # ✅ MUST be at same level (no extra indent)
     reset_id = st.session_state.get("uploader_reset", 0)
-    
+
     st.text_area("PROBLEM STATEMENT & ROOT CAUSE", key="root")
-    root_imgs = st.file_uploader(
-        "Root Images",
-        type=["png", "jpg"],
-        accept_multiple_files=True,
-        key=f"root_img_{reset_id}"
-    )
-       
+    root_imgs = st.file_uploader("Root Images", type=["png", "jpg"], accept_multiple_files=True, key=f"root_{reset_id}")
+
     st.text_area("TECHNICAL ANALYSIS", key="l2")
-    l2_imgs = st.file_uploader(
-        "L2 Images",
-        type=["png", "jpg"],
-        accept_multiple_files=True,
-        key=f"l2_img_{reset_id}"
-    )
-    
+    l2_imgs = st.file_uploader("L2 Images", type=["png", "jpg"], accept_multiple_files=True, key=f"l2_{reset_id}")
+
     st.text_area("RESOLUTION & RECOMMENDATION", key="res")
-    res_imgs = st.file_uploader(
-        "RESOLUTION & RECOMMENDATION Images",
-        type=["png", "jpg"],
-        accept_multiple_files=True,
-        key=f"res_img_{reset_id}"
-    )
-    
-    # store images
+    res_imgs = st.file_uploader("Resolution Images", type=["png", "jpg"], accept_multiple_files=True, key=f"res_{reset_id}")
+
     st.session_state["images"] = {
         "root": root_imgs or [],
         "l2": l2_imgs or [],
