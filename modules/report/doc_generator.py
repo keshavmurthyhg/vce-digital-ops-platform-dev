@@ -6,7 +6,7 @@ from docx.oxml.ns import qn
 from io import BytesIO
 import re
 
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import letter
@@ -18,32 +18,21 @@ def clean_text(text):
     return re.sub(r"How does the user want.*?\d+", "", str(text), flags=re.I).strip()
 
 
-# ---------- WORD ---------- #
+# ---------------- WORD ---------------- #
 
 def add_hyperlink(paragraph, url, text):
     part = paragraph.part
-    r_id = part.relate_to(
-        url,
+    r_id = part.relate_to(url,
         "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
-        is_external=True
-    )
+        is_external=True)
 
     hyperlink = OxmlElement("w:hyperlink")
     hyperlink.set(qn("r:id"), r_id)
 
     run = OxmlElement("w:r")
-
-    # blue color
-    rPr = OxmlElement("w:rPr")
-    color = OxmlElement("w:color")
-    color.set(qn("w:val"), "0000FF")
-    rPr.append(color)
-    run.append(rPr)
-
-    t = OxmlElement("w:t")
-    t.text = str(text)
-    run.append(t)
-
+    text_elem = OxmlElement("w:t")
+    text_elem.text = text
+    run.append(text_elem)
     hyperlink.append(run)
     paragraph._p.append(hyperlink)
 
@@ -56,13 +45,10 @@ def set_cell_bg(cell):
 
 
 def generate_word_doc(data, root, l2, res, images=None):
-
     doc = Document()
 
-    # TITLE
     doc.add_heading("INCIDENT REPORT", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # MAIN TABLE
     table = doc.add_table(rows=4, cols=4)
     table.style = "Table Grid"
     table.autofit = False
@@ -78,21 +64,18 @@ def generate_word_doc(data, root, l2, res, images=None):
 
         p = h.paragraphs[0]
         p.text = key.upper()
+        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
         for run in p.runs:
             run.bold = True
         set_cell_bg(h)
 
         p = v.paragraphs[0]
-
         if key == "Incident":
-            add_hyperlink(p,
-                f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={val}", val)
+            add_hyperlink(p, f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={val}", str(val))
         elif key == "Azure Bug":
-            add_hyperlink(p,
-                f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{val}", val)
+            add_hyperlink(p, f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{val}", str(val))
         elif key == "PTC Case":
-            add_hyperlink(p,
-                f"https://support.ptc.com/app/caseviewer/?case={val}", val)
+            add_hyperlink(p, f"https://support.ptc.com/app/caseviewer/?case={val}", str(val))
         else:
             p.text = str(val)
 
@@ -107,15 +90,20 @@ def generate_word_doc(data, root, l2, res, images=None):
 
     doc.add_paragraph("")
 
-    # DESCRIPTION TABLE
     t2 = doc.add_table(rows=2, cols=2)
     t2.style = "Table Grid"
+    t2.autofit = False
+
+    for row in t2.rows:
+        row.cells[0].width = Inches(3)
+        row.cells[1].width = Inches(3)
 
     headers = ["SHORT DESCRIPTION", "DESCRIPTION"]
     for i, text in enumerate(headers):
         cell = t2.rows[0].cells[i]
         p = cell.paragraphs[0]
         p.text = text
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         for run in p.runs:
             run.bold = True
         set_cell_bg(cell)
@@ -123,28 +111,18 @@ def generate_word_doc(data, root, l2, res, images=None):
     t2.rows[1].cells[0].text = clean_text(data.get("short_description"))
     t2.rows[1].cells[1].text = clean_text(data.get("description"))
 
-    # SECTIONS + IMAGES
-    sections = [
-        ("ROOT CAUSE", root, "root"),
-        ("L2 ANALYSIS", l2, "l2"),
-        ("RESOLUTION", res, "res"),
-    ]
-
-    for title, content, key in sections:
+    for title, content in [("ROOT CAUSE", root), ("L2 ANALYSIS", l2), ("RESOLUTION", res)]:
         doc.add_heading(title, 1)
         doc.add_paragraph(content or "")
 
-        if images and images.get(key):
-            doc.add_picture(images[key], width=Inches(4.5))
-
-    # FOOTER
+    # FOOTER FIX
     section = doc.sections[0]
     footer = section.footer.paragraphs[0]
     footer.clear()
 
     tab_stops = footer.paragraph_format.tab_stops
-    tab_stops.add_tab_stop(Inches(3.2), WD_TAB_ALIGNMENT.CENTER)
-    tab_stops.add_tab_stop(Inches(6.0), WD_TAB_ALIGNMENT.RIGHT)
+    tab_stops.add_tab_stop(Inches(3.25), WD_TAB_ALIGNMENT.CENTER)
+    tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
 
     run = footer.add_run(f"{data.get('number')}\tPage ")
 
@@ -165,13 +143,13 @@ def generate_word_doc(data, root, l2, res, images=None):
 
     buffer = BytesIO()
     doc.save(buffer)
-    return buffer.getvalue()
+    buffer.seek(0)
+    return buffer
 
 
-# ---------- PDF ---------- #
+# ---------------- PDF ---------------- #
 
 def generate_pdf(data, root, l2, res, images=None):
-
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
     styles = getSampleStyleSheet()
@@ -203,6 +181,8 @@ def generate_pdf(data, root, l2, res, images=None):
         ('BACKGROUND',(2,0),(2,-1),colors.lightgrey),
         ('FONTNAME',(0,0),(0,-1),'Helvetica-Bold'),
         ('FONTNAME',(2,0),(2,-1),'Helvetica-Bold'),
+        ('ALIGN',(0,0),(0,-1),'LEFT'),
+        ('ALIGN',(2,0),(2,-1),'LEFT'),
     ]))
 
     elements.append(table)
@@ -211,21 +191,16 @@ def generate_pdf(data, root, l2, res, images=None):
     desc_table = Table([
         ["SHORT DESCRIPTION","DESCRIPTION"],
         [wrap(clean_text(data.get("short_description"))), wrap(clean_text(data.get("description")))]
-    ])
+    ], colWidths=[260,260])
 
     desc_table.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
         ('BACKGROUND',(0,0),(-1,0),colors.lightgrey),
+        ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),
+        ('ALIGN',(0,0),(-1,0),'CENTER'),
     ]))
 
     elements.append(desc_table)
-    elements.append(Spacer(1,15))
-
-    # SECTIONS
-    for title, content in [("ROOT CAUSE", root), ("L2 ANALYSIS", l2), ("RESOLUTION", res)]:
-        elements.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
-        elements.append(Paragraph(content or "", styles["Normal"]))
-        elements.append(Spacer(1,10))
 
     def footer(canvas, doc):
         width, _ = letter
@@ -235,5 +210,5 @@ def generate_pdf(data, root, l2, res, images=None):
         canvas.drawRightString(width-40,20,str(data.get("priority")))
 
     doc.build(elements, onFirstPage=footer, onLaterPages=footer)
-
-    return buffer.getvalue()
+    buffer.seek(0)
+    return buffer
