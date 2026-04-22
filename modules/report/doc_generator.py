@@ -205,27 +205,25 @@ def generate_pdf(data, root, l2, res, images=None):
     from reportlab.lib import colors
     from reportlab.lib.pagesizes import letter
     
-    # Title style
     title_style = ParagraphStyle(
         name="TitleCenter",
         parent=styles["Title"],
         alignment=1,
-        spaceAfter=-8
+        spaceAfter=0
     )
     
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", title_style))
     
-    # Dynamic width line
-    page_width = letter[0] - (doc.leftMargin + doc.rightMargin)
-    
     line = Table([[""]], colWidths=[page_width])
     line.setStyle([
-        ("LINEBELOW", (0, 0), (-1, -1), 1, colors.black)
+        ("LINEBELOW", (0, 0), (-1, -1), 1, colors.black),
+        ("TOPPADDING", (0, 0), (-1, -1), -6),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0)
     ])
     
     elements.append(line)
-    elements.append(Spacer(1, 10))  # small gap before table
-
+    elements.append(Spacer(1, 6))
+    
     def link(url, text):
         return Paragraph(f'<link href="{url}">{text}</link>', styles["Normal"])
 
