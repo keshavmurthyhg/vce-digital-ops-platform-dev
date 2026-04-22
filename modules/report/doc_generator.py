@@ -216,10 +216,10 @@ def generate_pdf(data, root, l2, res, images=None):
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
     
     # 🔥 CONTROL GAP HERE (THIS is what you need)
-    elements.append(Spacer(1, -8))   # move line UP
+    elements.append(Spacer(1, -3))   # move line UP
     
     # Line (fixed width for now as you wanted)
-    line = Table([[""]], colWidths=[500])
+    line = Table([[""]], colWidths=[520])
     line.setStyle([
         ("LINEBELOW", (0, 0), (-1, -1), 1, colors.black)
     ])
