@@ -194,9 +194,9 @@ def generate_pdf(data, root, l2, res, images=None):
     doc = SimpleDocTemplate(
         buffer,
         pagesize=letter,
-        rightMargin=50,
-        leftMargin=50,
-        topMargin=50,
+        rightMargin=40,
+        leftMargin=40,
+        topMargin=40,
         bottomMargin=50
     )
 
