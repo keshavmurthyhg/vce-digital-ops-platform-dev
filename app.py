@@ -25,4 +25,4 @@ elif page == "Report":
     report_ui()
 
 elif page == "Excel Compare":
-    excel_ui()
+    excel_compare_ui()
