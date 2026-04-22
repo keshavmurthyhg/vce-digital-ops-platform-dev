@@ -186,7 +186,7 @@ def generate_pdf(data, root, l2, res, images=None):
     from io import BytesIO
 
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    
     styles = getSampleStyleSheet()
 
     elements = []
@@ -213,6 +213,9 @@ def generate_pdf(data, root, l2, res, images=None):
     )
     
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", title_style))
+    
+    # Calculate page width
+    page_width = letter[0] - (doc.leftMargin + doc.rightMargin)
     
     line = Table([[""]], colWidths=[page_width])
     line.setStyle([
