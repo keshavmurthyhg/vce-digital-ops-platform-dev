@@ -1,100 +1,74 @@
 import streamlit as st
-import time
-from modules.excel_compare.logic import (
-    compare_excels,
-    section_diff_logic,
-    style_dataframe,
-    generate_output
-)
+import pandas as pd
+from io import BytesIO
+import zipfile
+
+from modules.excel_compare.logic import compare_excels
 
 
-def show_excel_compare():
-    st.title("📊 Excel Comparison Tool")
+def render():
 
-    if "uploader_key" not in st.session_state:
-        st.session_state.uploader_key = 0
+    st.title("📊 Excel Compare Tool")
 
-    # SIDEBAR
-    st.sidebar.markdown("## ⚙️ Excel Compare")
+    col1, col2 = st.columns(2)
 
-    file1 = st.sidebar.file_uploader(
-        "Upload First Excel",
-        type=["xlsx"],
-        key=f"file1_{st.session_state.uploader_key}"
-    )
+    old_file = col1.file_uploader("Upload OLD file", type=["xlsx"])
+    new_file = col2.file_uploader("Upload NEW file", type=["xlsx"])
 
-    file2 = st.sidebar.file_uploader(
-        "Upload Second Excel",
-        type=["xlsx"],
-        key=f"file2_{st.session_state.uploader_key}"
-    )
+    key_column = st.text_input("Key Column (e.g., Part Number)")
 
-    col1, col2 = st.sidebar.columns(2)
+    if old_file and new_file and key_column:
 
-    with col1:
-        if st.button("🧹 Clear"):
-            st.session_state.uploader_key += 1
-            st.rerun()
+        old_df, new_df, added, removed, modified = compare_excels(
+            old_file, new_file, key_column
+        )
 
-    with col2:
-        compare_clicked = st.button("⚡ Compare")
+        st.success("Comparison complete")
 
-    # MAIN
-    if file1 and file2:
-        df1, df2 = compare_excels(file1, file2)
+        # ---------- KPI ----------
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Added", len(added))
+        c2.metric("Removed", len(removed))
+        c3.metric("Modified", len(modified))
 
-        diff_mask1, diff_mask2, section_summary, total_diff, removed_rows = section_diff_logic(df1, df2)
+        # ---------- PREVIEW ----------
+        tab1, tab2, tab3 = st.tabs(["Added", "Removed", "Modified"])
 
-        # PREVIEW
-        st.subheader("🔍 Preview Comparison")
+        with tab1:
+            st.dataframe(added)
 
-        col1, col2 = st.columns(2)
+        with tab2:
+            st.dataframe(removed)
 
-        with col1:
-            st.markdown(f"### 📄 {file1.name} (Base)")
-            st.dataframe(style_dataframe(df1, diff_mask1), use_container_width=True)
+        with tab3:
+            st.dataframe(modified)
 
-        with col2:
-            st.markdown(f"### 📄 {file2.name} (Changes)")
-            st.dataframe(style_dataframe(df2, diff_mask2), use_container_width=True)
+        # ---------- EXPORT ----------
+        if st.button("Download Results (ZIP)"):
 
-        # SUMMARY
-        st.subheader("📊 Summary")
+            zip_buffer = BytesIO()
 
-        col1, col2 = st.columns(2)
-        col1.metric("Total Changes", total_diff)
-        col2.metric("Sections Impacted", sum(1 for v in section_summary.values() if any(v.values())))
+            with zipfile.ZipFile(zip_buffer, "w") as z:
 
-        # SECTION DETAILS
-        st.subheader("📦 Section-wise Changes")
+                # Added
+                buf1 = BytesIO()
+                added.to_excel(buf1, index=False)
+                z.writestr("added.xlsx", buf1.getvalue())
 
-        for section, data in section_summary.items():
-            if any(data.values()):
-                st.write(
-                    f"🔸 {section} → "
-                    f"🟢 {data['added']} | 🔴 {data['removed']} | 🟡 {data['modified']}"
-                )
+                # Removed
+                buf2 = BytesIO()
+                removed.to_excel(buf2, index=False)
+                z.writestr("removed.xlsx", buf2.getvalue())
 
-        # REMOVED PANEL
-        st.subheader("🔴 Removed Items")
+                # Modified
+                buf3 = BytesIO()
+                modified.to_excel(buf3, index=False)
+                z.writestr("modified.xlsx", buf3.getvalue())
 
-        if removed_rows:
-            for item in removed_rows:
-                st.write(f"{item['section']} → {item['number']}")
-        else:
-            st.info("No removed items")
+            zip_buffer.seek(0)
 
-        # DOWNLOAD
-        if compare_clicked:
-            zip_path, zip_name = generate_output(file1, file2)
-
-            with open(zip_path, "rb") as f:
-                st.sidebar.download_button(
-                    "⬇️ Download Comparison (ZIP)",
-                    f,
-                    zip_name
-                )
-
-            msg = st.sidebar.success("✅ Files Ready!")
-            time.sleep(15)
-            msg.empty()
+            st.download_button(
+                "⬇ Download ZIP",
+                zip_buffer,
+                file_name="excel_compare_results.zip"
+            )
