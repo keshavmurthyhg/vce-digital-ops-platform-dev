@@ -7,15 +7,19 @@ from io import BytesIO
 from datetime import datetime
 import re
 
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import letter
+
+
+# ---------------- COMMON ---------------- #
 
 def clean_text(text):
     if not text:
         return ""
     return re.sub(r"How does the user want.*?\d+", "", str(text), flags=re.I).strip()
+
 
 def format_date(date_str):
     if not date_str:
@@ -25,13 +29,23 @@ def format_date(date_str):
     except:
         return str(date_str)
 
+
+def safe_images(images):
+    """Ensure images always valid dict"""
+    if not isinstance(images, dict):
+        return {"root": [], "l2": [], "res": []}
+    return images
+
+
 # ---------------- WORD ---------------- #
 
 def add_hyperlink(paragraph, url, text):
     part = paragraph.part
-    r_id = part.relate_to(url,
+    r_id = part.relate_to(
+        url,
         "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
-        is_external=True)
+        is_external=True,
+    )
 
     hyperlink = OxmlElement("w:hyperlink")
     hyperlink.set(qn("r:id"), r_id)
@@ -51,12 +65,31 @@ def set_cell_bg(cell):
     tcPr.append(shd)
 
 
-def generate_word_doc(data, root, l2, res, images=None):
-    doc = Document()
+def add_images_word(doc, image_list):
+    if not image_list:
+        return
 
+    for img in image_list:
+        try:
+            if hasattr(img, "read"):
+                img_bytes = BytesIO(img.read())
+                img.seek(0)
+            else:
+                img_bytes = img
+
+            doc.add_picture(img_bytes, width=Inches(5.5))
+            doc.add_paragraph("")
+        except Exception as e:
+            print("Word image error:", e)
+
+
+def generate_word_doc(data, root, l2, res, images=None):
+    images = safe_images(images)
+
+    doc = Document()
     doc.add_heading("INCIDENT REPORT", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # ---------- HEADER TABLE ----------
+    # HEADER TABLE
     table = doc.add_table(rows=4, cols=4)
     table.style = "Table Grid"
 
@@ -64,27 +97,23 @@ def generate_word_doc(data, root, l2, res, images=None):
     table.autofit = True
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-    # ✅ FULL WIDTH FUNCTION
     def set_table_full_width(table):
         tbl = table._element
         tblPr = tbl.xpath("./w:tblPr")[0]
 
-        tblW = OxmlElement('w:tblW')
-        tblW.set(qn('w:type'), 'pct')
-        tblW.set(qn('w:w'), "5000")
-
+        tblW = OxmlElement("w:tblW")
+        tblW.set(qn("w:type"), "pct")
+        tblW.set(qn("w:w"), "5000")
         tblPr.append(tblW)
 
     set_table_full_width(table)
 
-    # ---------- FILL FUNCTION ----------
     def fill(r, c, key, val):
         h = table.rows[r].cells[c]
         v = table.rows[r].cells[c + 1]
 
         p = h.paragraphs[0]
         p.text = key.upper()
-        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
         for run in p.runs:
             run.bold = True
         set_cell_bg(h)
@@ -99,7 +128,6 @@ def generate_word_doc(data, root, l2, res, images=None):
         else:
             p.text = str(val or "")
 
-    # ---------- FILL DATA ----------
     fill(0,0,"Incident",data.get("number"))
     fill(0,2,"Created By",data.get("created_by"))
     fill(1,0,"Azure Bug",data.get("azure_bug"))
@@ -111,11 +139,9 @@ def generate_word_doc(data, root, l2, res, images=None):
 
     doc.add_paragraph("")
 
-    # ---------- DESCRIPTION TABLE ----------
+    # DESCRIPTION
     t2 = doc.add_table(rows=2, cols=2)
     t2.style = "Table Grid"
-
-    t2.autofit = True
     t2.alignment = WD_TABLE_ALIGNMENT.CENTER
     set_table_full_width(t2)
 
@@ -124,7 +150,6 @@ def generate_word_doc(data, root, l2, res, images=None):
         cell = t2.rows[0].cells[i]
         p = cell.paragraphs[0]
         p.text = text
-        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         for run in p.runs:
             run.bold = True
         set_cell_bg(cell)
@@ -133,42 +158,21 @@ def generate_word_doc(data, root, l2, res, images=None):
         clean_text(data.get("short_description")),
         clean_text(data.get("description"))
     ]):
-        p = t2.rows[1].cells[i].paragraphs[0]
-        p.text = txt
-        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        t2.rows[1].cells[i].paragraphs[0].text = txt
 
-    # ---------- SECTIONS ----------
-    def add_images(doc, image_list):
-        if not image_list:
-            return
-    
-        from docx.shared import Inches
-    
-        for img in image_list:
-            try:
-                doc.add_picture(img, width=Inches(5.5))
-                doc.add_paragraph("")  # spacing
-            except:
-                pass
-    
-    
+    # SECTIONS
     section_map = {
-        "ROOT CAUSE": (root, images.get("root") if images else []),
-        "L2 ANALYSIS": (l2, images.get("l2") if images else []),  # ✅ FIXED
-        "RESOLUTION": (res, images.get("res") if images else [])
+        "ROOT CAUSE": (root, images.get("root")),
+        "L2 ANALYSIS": (l2, images.get("l2")),
+        "RESOLUTION": (res, images.get("res")),
     }
-    
+
     for title, (content, imgs) in section_map.items():
-        h = doc.add_heading(title, 1)
-        h.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    
-        p = doc.add_paragraph(content or "-")
-        p.paragraph_format.space_after = Inches(0.15)
-    
-        # ✅ Correct placement
-        add_images(doc, imgs)
-    
-    # ---------- FOOTER ----------
+        doc.add_heading(title, 1)
+        doc.add_paragraph(content or "-")
+        add_images_word(doc, imgs)
+
+    # FOOTER
     section = doc.sections[0]
     footer = section.footer.paragraphs[0]
     footer.clear()
@@ -199,19 +203,32 @@ def generate_word_doc(data, root, l2, res, images=None):
     buffer.seek(0)
     return buffer.getvalue()
 
+
 # ---------------- PDF ---------------- #
 
-def generate_pdf(data, root, l2, res, images=None):
+def add_images_pdf(elements, image_list):
+    if not image_list:
+        return
 
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet
-    from reportlab.lib.pagesizes import letter
-    from io import BytesIO
+    for img in image_list:
+        try:
+            if hasattr(img, "read"):
+                img_bytes = BytesIO(img.read())
+                img.seek(0)
+            else:
+                img_bytes = img
+
+            elements.append(Image(img_bytes, width=400, height=250))
+            elements.append(Spacer(1, 10))
+        except Exception as e:
+            print("PDF image error:", e)
+
+
+def generate_pdf(data, root, l2, res, images=None):
+    images = safe_images(images)
 
     buffer = BytesIO()
-    
     styles = getSampleStyleSheet()
-
     elements = []
 
     doc = SimpleDocTemplate(
@@ -220,54 +237,27 @@ def generate_pdf(data, root, l2, res, images=None):
         rightMargin=40,
         leftMargin=40,
         topMargin=40,
-        bottomMargin=50
+        bottomMargin=50,
     )
-    
-    from reportlab.lib.styles import ParagraphStyle
-    from reportlab.platypus import Table
-    from reportlab.lib import colors
-    from reportlab.lib.pagesizes import letter
-    
-    title_style = ParagraphStyle(
-        name="TitleCenter",
-        parent=styles["Title"],
-        alignment=1,
-        spaceAfter=0   # 🔥 key line
-    )
-    
-   # Title
+
+    # TITLE
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
-    
-    # 🔥 CONTROL GAP HERE (THIS is what you need)
-    elements.append(Spacer(1, -1))   # move line UP
-    
-    # Line (fixed width for now as you wanted)
+    elements.append(Spacer(1, -1))
+
     line = Table([[""]], colWidths=[520])
-    line.setStyle([
-        ("LINEBELOW", (0, 0), (-1, -1), 1, colors.black)
-    ])
-    
+    line.setStyle([("LINEBELOW", (0, 0), (-1, -1), 1, colors.black)])
     elements.append(line)
-    
-    # Gap before table
     elements.append(Spacer(1, 6))
-    
-    def link(url, text):
-        return Paragraph(f'<link href="{url}">{text}</link>', styles["Normal"])
 
     def wrap(x):
         return Paragraph(str(x or ""), styles["Normal"])
 
     # HEADER TABLE
     table = Table([
-        ["INCIDENT", link(f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}", data.get('number')),
-         "CREATED BY", wrap(data.get('created_by'))],
-        ["AZURE BUG", link(f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{data.get('azure_bug')}", data.get('azure_bug')),
-         "CREATED DATE", wrap(format_date(data.get('created_date')))],
-        ["PTC CASE", link(f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}", data.get('ptc_case')),
-         "ASSIGNED TO", wrap(data.get('assigned_to'))],
-        ["PRIORITY", wrap(data.get('priority')),
-         "RESOLVED DATE", wrap(format_date(data.get('resolved_date')))]
+        ["INCIDENT", wrap(data.get("number")), "CREATED BY", wrap(data.get("created_by"))],
+        ["AZURE BUG", wrap(data.get("azure_bug")), "CREATED DATE", wrap(format_date(data.get("created_date")))],
+        ["PTC CASE", wrap(data.get("ptc_case")), "ASSIGNED TO", wrap(data.get("assigned_to"))],
+        ["PRIORITY", wrap(data.get("priority")), "RESOLVED DATE", wrap(format_date(data.get("resolved_date")))],
     ], colWidths=[100,160,100,160])
 
     table.setStyle(TableStyle([
@@ -276,40 +266,32 @@ def generate_pdf(data, root, l2, res, images=None):
         ('BACKGROUND',(2,0),(2,-1),colors.lightgrey),
         ('FONTNAME',(0,0),(0,-1),'Helvetica-Bold'),
         ('FONTNAME',(2,0),(2,-1),'Helvetica-Bold'),
-        ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
     ]))
 
     elements.append(table)
     elements.append(Spacer(1,15))
 
     # DESCRIPTION
-    desc_table = Table([
-        ["SHORT DESCRIPTION","DESCRIPTION"],
-        [wrap(clean_text(data.get("short_description"))),
-         wrap(clean_text(data.get("description")))]
-    ], colWidths=[260,260])
+    elements.append(Paragraph("<b>SHORT DESCRIPTION</b>", styles["Heading3"]))
+    elements.append(wrap(clean_text(data.get("short_description"))))
+    elements.append(Spacer(1,10))
 
-    desc_table.setStyle(TableStyle([
-        ('GRID',(0,0),(-1,-1),1,colors.black),
-        ('BACKGROUND',(0,0),(-1,0),colors.lightgrey),
-        ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),
-        ('ALIGN',(0,0),(-1,0),'CENTER'),
-        ('VALIGN',(0,0),(-1,-1),'TOP'),
-    ]))
-
-    elements.append(desc_table)
+    elements.append(Paragraph("<b>DESCRIPTION</b>", styles["Heading3"]))
+    elements.append(wrap(clean_text(data.get("description"))))
     elements.append(Spacer(1,20))
 
-    # ✅ ADD MISSING SECTIONS
-    def section(title, content):
+    # SECTIONS WITH IMAGES
+    def section(title, content, imgs):
         elements.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
         elements.append(Spacer(1,6))
-        elements.append(Paragraph(content or "-", styles["Normal"]))
+        elements.append(wrap(content or "-"))
+        elements.append(Spacer(1,10))
+        add_images_pdf(elements, imgs)
         elements.append(Spacer(1,15))
 
-    section("ROOT CAUSE", root)
-    section("L2 ANALYSIS", l2)
-    section("RESOLUTION", res)
+    section("ROOT CAUSE", root, images.get("root"))
+    section("L2 ANALYSIS", l2, images.get("l2"))
+    section("RESOLUTION", res, images.get("res"))
 
     # FOOTER
     def footer(canvas, doc):
@@ -318,13 +300,9 @@ def generate_pdf(data, root, l2, res, images=None):
         canvas.drawString(40,20,str(data.get("number")))
         canvas.drawCentredString(width/2,20,f"Page {doc.page}")
         canvas.drawRightString(width-40,20,str(data.get("priority")))
-    
-    doc.build(elements, onFirstPage=footer, onLaterPages=footer)
-    pdf_bytes = buffer.getvalue()
-   
-    # extra safety
-    if not pdf_bytes or len(pdf_bytes) < 1000:
-        raise ValueError("PDF generation failed or empty")
 
+    doc.build(elements, onFirstPage=footer, onLaterPages=footer)
+
+    pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
