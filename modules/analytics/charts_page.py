@@ -10,14 +10,15 @@ def render():
 
     st.title("📊 Ops Insights - Trends & Metrics")
 
+    # ---------- LOAD ----------
     df, last_refresh = load_data()
 
     if df.empty:
         st.warning("No data available")
         return
 
-    # ---------- SIDEBAR CHART NAV ----------
-    st.sidebar.markdown("## 📊 Chart View")
+    # ---------- SIDEBAR CONTROLS ----------
+    st.sidebar.markdown("## 📊 Controls")
 
     chart_type = st.sidebar.radio(
         "Select Chart",
@@ -30,70 +31,6 @@ def render():
         ]
     )
 
-    # ---------- DATE FILTER (SIDEBAR) ----------
-    with st.sidebar.expander("📅 Date Filter", True):
-    
-        date_column = st.selectbox(
-            "Select Date Field",
-            ["Created Date", "Resolved Date"]
-        )
-    
-        mode = st.radio(
-            "Filter Type",
-            ["No Filter", "Date Range", "By Year", "Quick Select"]
-        )
-    
-        # Convert safely
-        filtered[date_column] = pd.to_datetime(
-            filtered[date_column], errors="coerce"
-        )
-    
-        temp_dates = filtered[date_column].dropna()
-    
-        if not temp_dates.empty:
-    
-            if mode == "Date Range":
-                date_range = st.date_input(
-                    "Select Date Range",
-                    value=(temp_dates.min(), temp_dates.max())
-                )
-    
-                if len(date_range) == 2:
-                    start, end = date_range
-                    filtered = filtered[
-                        (filtered[date_column] >= pd.to_datetime(start)) &
-                        (filtered[date_column] <= pd.to_datetime(end))
-                    ]
-    
-            elif mode == "By Year":
-                years = sorted(temp_dates.dt.year.unique())
-                selected_year = st.selectbox("Select Year", years)
-    
-                filtered = filtered[
-                    filtered[date_column].dt.year == selected_year
-                ]
-    
-            elif mode == "Quick Select":
-    
-                quick_option = st.selectbox(
-                    "Quick Options",
-                    ["Last 7 Days", "Last 30 Days", "This Month"]
-                )
-    
-                today = pd.Timestamp.today()
-    
-                if quick_option == "Last 7 Days":
-                    start = today - pd.Timedelta(days=7)
-    
-                elif quick_option == "Last 30 Days":
-                    start = today - pd.Timedelta(days=30)
-    
-                elif quick_option == "This Month":
-                    start = today.replace(day=1)
-    
-                filtered = filtered[
-                    filtered[date_column] >= start
-                ]
     # ---------- FILTERS (TOP) ----------
     st.subheader("Filters")
 
@@ -113,10 +50,75 @@ def render():
         st.warning("Select at least one source")
         return
 
+    # ✅ CREATE FILTERED FIRST (IMPORTANT FIX)
     filtered = df[df["Source"].isin(sources)].copy()
     filtered = apply_search(filtered, search_value)
 
-    
+    # ---------- DATE FILTER (SIDEBAR) ----------
+    with st.sidebar.expander("📅 Date Filter", True):
+
+        date_column = st.selectbox(
+            "Select Date Field",
+            ["Created Date", "Resolved Date"]
+        )
+
+        mode = st.radio(
+            "Filter Type",
+            ["No Filter", "Date Range", "By Year", "Quick Select"]
+        )
+
+        # Convert safely
+        filtered[date_column] = pd.to_datetime(
+            filtered[date_column], errors="coerce"
+        )
+
+        temp_dates = filtered[date_column].dropna()
+
+        if not temp_dates.empty:
+
+            if mode == "Date Range":
+                date_range = st.date_input(
+                    "Select Date Range",
+                    value=(temp_dates.min(), temp_dates.max())
+                )
+
+                if len(date_range) == 2:
+                    start, end = date_range
+                    filtered = filtered[
+                        (filtered[date_column] >= pd.to_datetime(start)) &
+                        (filtered[date_column] <= pd.to_datetime(end))
+                    ]
+
+            elif mode == "By Year":
+                years = sorted(temp_dates.dt.year.unique())
+                selected_year = st.selectbox("Select Year", years)
+
+                filtered = filtered[
+                    filtered[date_column].dt.year == selected_year
+                ]
+
+            elif mode == "Quick Select":
+
+                quick_option = st.selectbox(
+                    "Quick Options",
+                    ["Last 7 Days", "Last 30 Days", "This Month"]
+                )
+
+                today = pd.Timestamp.today()
+
+                if quick_option == "Last 7 Days":
+                    start = today - pd.Timedelta(days=7)
+
+                elif quick_option == "Last 30 Days":
+                    start = today - pd.Timedelta(days=30)
+
+                elif quick_option == "This Month":
+                    start = today.replace(day=1)
+
+                filtered = filtered[
+                    filtered[date_column] >= start
+                ]
+
     # ---------- KPI ----------
     kpi = calculate_kpi(filtered)
 
@@ -126,7 +128,7 @@ def render():
     c3.metric("Closed", kpi["closed"])
     c4.metric("Cancelled", kpi["cancelled"])
 
-    # ---------- DATE ----------
+    # ---------- DATE PREP ----------
     filtered["Created Date"] = pd.to_datetime(
         filtered["Created Date"], errors="coerce"
     )
@@ -174,4 +176,5 @@ def render():
 
         st.dataframe(heatmap, use_container_width=True)
 
+    # ---------- FOOTER ----------
     st.caption(f"Last refreshed: {last_refresh}")
