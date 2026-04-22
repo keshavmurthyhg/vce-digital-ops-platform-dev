@@ -2,13 +2,12 @@ import pandas as pd
 import os
 
 FILE_PATH = "data/user_group_mapping.csv"
-
-DEFAULT_GROUP = "Unassigned"
+DEFAULT_GROUP = "UNASSIGNED"
 
 
 def load_or_create_mapping(df):
 
-    # Extract unique users
+    # ---------- Extract unique users ----------
     users = pd.concat([
         df["Assigned To"],
         df["Created By"]
@@ -16,25 +15,28 @@ def load_or_create_mapping(df):
 
     users_df = pd.DataFrame({"Name": sorted(users)})
 
-    # If file exists → load
+    # ---------- Load existing mapping ----------
     if os.path.exists(FILE_PATH):
         mapping = pd.read_csv(FILE_PATH)
     else:
         mapping = pd.DataFrame(columns=["Name", "Group"])
 
-    # Merge (preserve old order!)
-    merged = mapping.merge(users_df, on="Name", how="outer", indicator=True)
+    # ---------- Ensure correct structure ----------
+    if "Group" not in mapping.columns:
+        mapping["Group"] = DEFAULT_GROUP
 
-    # Add new users at bottom
-    new_users = merged[merged["_merge"] == "right_only"][["Name"]]
-    new_users["Group"] = DEFAULT_GROUP
+    mapping = mapping[["Name", "Group"]]
 
-    final = pd.concat([
-        mapping,
-        new_users
-    ], ignore_index=True)
+    # ---------- Normalize ----------
+    mapping["Group"] = mapping["Group"].astype(str).str.strip().str.upper()
 
-    return final
+    # ---------- Merge (SAFE) ----------
+    merged = users_df.merge(mapping, on="Name", how="left")
+
+    # ---------- Fill missing ----------
+    merged["Group"] = merged["Group"].fillna(DEFAULT_GROUP)
+
+    return merged
 
 
 def save_mapping(df):
