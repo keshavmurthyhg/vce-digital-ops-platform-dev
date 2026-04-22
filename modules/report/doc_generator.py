@@ -219,7 +219,7 @@ def generate_pdf(data, root, l2, res, images=None):
          "ASSIGNED TO", wrap(data.get('assigned_to'))],
         ["PRIORITY", wrap(data.get('priority')),
          "RESOLVED DATE", wrap(format_date(data.get('resolved_date')))]
-    ], colWidths=[90,160,90,160])
+    ], colWidths=[100,160,100,160])
 
     table.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
@@ -238,7 +238,7 @@ def generate_pdf(data, root, l2, res, images=None):
         ["SHORT DESCRIPTION","DESCRIPTION"],
         [wrap(clean_text(data.get("short_description"))),
          wrap(clean_text(data.get("description")))]
-    ], colWidths=[250,250])
+    ], colWidths=[260,260])
 
     desc_table.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
