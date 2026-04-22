@@ -3,7 +3,7 @@ from io import BytesIO
 import zipfile
 import re
 
-from modules.search.snow_loader import load_snow_data
+from modules.report.snow_loader import load_snow_data
 from modules.report.doc_generator import generate_word, generate_pdf_report
 
 
