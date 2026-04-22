@@ -253,7 +253,8 @@ def generate_pdf(data, root, l2, res, images=None):
         canvas.drawString(40,20,str(data.get("number")))
         canvas.drawCentredString(width/2,20,f"Page {doc.page}")
         canvas.drawRightString(width-40,20,str(data.get("priority")))
-
+    
+    buffer = BytesIO()
     doc.build(elements, onFirstPage=footer, onLaterPages=footer)
     buffer.seek(0)
     return buffer.getvalue()
