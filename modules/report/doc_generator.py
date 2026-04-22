@@ -53,7 +53,7 @@ def generate_word_doc(data, root, l2, res, images=None):
     table.style = "Table Grid"
     table.autofit = False
 
-    widths = [1.5, 2.5, 1.5, 2.5]
+    widths = [1.2, 2.0, 1.2, 2.0]  # total = 6.4 inches (safe)
     for i, w in enumerate(widths):
         for row in table.rows:
             row.cells[i].width = Inches(w)
