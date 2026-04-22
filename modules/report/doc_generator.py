@@ -220,7 +220,7 @@ def generate_pdf(data, root, l2, res, images=None):
     line = Table([[""]], colWidths=[page_width])
     line.setStyle([
         ("LINEBELOW", (0, 0), (-1, -1), 1, colors.black),
-        ("TOPPADDING", (0, 0), (-1, -1), -2),
+        ("TOPPADDING", (0, 0), (-1, -1), 2),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 0)
     ])
     
