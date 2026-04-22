@@ -179,10 +179,20 @@ def generate_word_doc(data, root, l2, res, images=None):
 # ---------------- PDF ---------------- #
 
 def generate_pdf(data, root, l2, res, images=None):
+    from reportlab.platypus import SimpleDocTemplate
+    from reportlab.lib.pagesizes import letter
+    from io import BytesIO
+
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
-    styles = getSampleStyleSheet()
-    elements = []
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=20,
+        leftMargin=20,
+        topMargin=20,
+        bottomMargin=30
+    )
 
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
     elements.append(Spacer(1,10))
@@ -257,6 +267,10 @@ def generate_pdf(data, root, l2, res, images=None):
     buffer = BytesIO()
     doc.build(elements, onFirstPage=footer, onLaterPages=footer)
     pdf_bytes = buffer.getvalue()
-    buffer.close()
+   
+    # extra safety
+    if not pdf_bytes or len(pdf_bytes) < 1000:
+        raise ValueError("PDF generation failed or empty")
 
+    buffer.close()
     return pdf_bytes
