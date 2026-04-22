@@ -179,11 +179,17 @@ def generate_word_doc(data, root, l2, res, images=None):
 # ---------------- PDF ---------------- #
 
 def generate_pdf(data, root, l2, res, images=None):
-    from reportlab.platypus import SimpleDocTemplate
+
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
     from reportlab.lib.pagesizes import letter
     from io import BytesIO
 
     buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+
+    elements = []
 
     doc = SimpleDocTemplate(
         buffer,
