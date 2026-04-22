@@ -1,59 +1,74 @@
 import streamlit as st
-from .logic import load_data, process_data
+import pandas as pd
+import re
+import io
+
+from modules.search.data_loader import load_data
+from modules.search.search_logic import apply_all_filters
+from modules.search.kpi import calculate_kpi
+
 
 def render():
-    st.title("🔍 Search Dashboard")
+    st.title("Ops Insight Dashboard")
 
-    uploaded_file = st.file_uploader("Upload File")
+    df, last_refresh = load_data()
 
-    if uploaded_file:
-        data = load_data(uploaded_file)
-        result = process_data(data)
+    # ---------- PRIORITY CLEAN ----------
+    def clean_priority(row):
+        if row["Source"] == "PTC":
+            m = re.search(r"Severity\s*([1-3])", str(row["Priority"]))
+            return f"Severity {m.group(1)}" if m else ""
+        return row["Priority"]
 
-        st.write(result)
+    df["Priority"] = df.apply(clean_priority, axis=1)
 
-# ✅ GLOBAL CSS FIX
-st.markdown("""
-<style>
+    # ---------- SIDEBAR ----------
+    sources = st.sidebar.multiselect(
+        "Source",
+        ["AZURE", "SNOW", "PTC"],
+        default=["AZURE", "SNOW", "PTC"]
+    )
 
-section[data-testid="stSidebar"] label {
-    font-size: 14px !important;
-    font-weight: 600 !important;
-}
+    if not sources:
+        st.warning("Select at least one source")
+        return
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-}
+    filtered = df[df["Source"].isin(sources)].copy()
 
-/* FORCE NO WRAP FOR ALL CELLS */
-td, th {
-    white-space: nowrap !important;
-    text-align: center !important;
-}
+    status = st.sidebar.multiselect(
+        "Status",
+        sorted(filtered["Status"].dropna().unique())
+    )
 
-/* DESCRIPTION COLUMN */
-td:nth-child(3) {
-    text-align: left !important;
-    max-width: 350px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
+    priority = st.sidebar.multiselect(
+        "Priority",
+        sorted(filtered["Priority"].dropna().unique())
+    )
 
-/* HEADER CENTER */
-th:nth-child(3) {
-    text-align: center !important;
-}
+    search_value = st.text_input("🔎 Search")
 
-/* KPI FONT FIX */
-[data-testid="stMetricValue"] {
-    font-size: 14px !important;
-}
+    # ---------- APPLY LOGIC ----------
+    filtered = apply_all_filters(filtered, status, priority, search_value)
 
-/* INPUT HEIGHT */
-input, button {
-    height: 38px !important;
-}
+    # ---------- KPI ----------
+    kpi = calculate_kpi(filtered)
 
-</style>
-""", unsafe_allow_html=True)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Total", kpi["total"])
+    c2.metric("Open", kpi["open"])
+    c3.metric("Closed", kpi["closed"])
+    c4.metric("Cancelled", kpi["cancelled"])
+
+    # ---------- DOWNLOAD ----------
+    def to_excel(df):
+        buffer = io.BytesIO()
+        with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        return buffer.getvalue()
+
+    st.download_button("📥 Download", to_excel(filtered), "ops_data.xlsx")
+
+    # ---------- TABLE ----------
+    st.dataframe(filtered, use_container_width=True)
+
+    st.caption(f"Last refreshed: {last_refresh}")
