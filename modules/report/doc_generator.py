@@ -108,12 +108,20 @@ def generate_word_doc(data, root, l2, res, images=None):
             run.bold = True
         set_cell_bg(cell)
 
-    t2.rows[1].cells[0].text = clean_text(data.get("short_description"))
-    t2.rows[1].cells[1].text = clean_text(data.get("description"))
+    for i, txt in enumerate([
+        clean_text(data.get("short_description")),
+        clean_text(data.get("description"))
+    ]):
+        p = t2.rows[1].cells[i].paragraphs[0]
+        p.text = txt
+        p.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
     for title, content in [("ROOT CAUSE", root), ("L2 ANALYSIS", l2), ("RESOLUTION", res)]:
-        doc.add_heading(title, 1)
-        doc.add_paragraph(content or "")
+        h = doc.add_heading(title, 1)
+        h.alignment = WD_ALIGN_PARAGRAPH.LEFT
+    
+        p = doc.add_paragraph(content or "-")
+        p.paragraph_format.space_after = Inches(0.15)
 
     # FOOTER FIX
     section = doc.sections[0]
@@ -162,8 +170,9 @@ def generate_pdf(data, root, l2, res, images=None):
         return Paragraph(f'<link href="{url}">{text}</link>', styles["Normal"])
 
     def wrap(x):
-        return Paragraph(str(x), styles["Normal"])
+        return Paragraph(str(x or ""), styles["Normal"])
 
+    # HEADER TABLE
     table = Table([
         ["INCIDENT", link(f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}", data.get('number')),
          "CREATED BY", wrap(data.get('created_by'))],
@@ -181,16 +190,17 @@ def generate_pdf(data, root, l2, res, images=None):
         ('BACKGROUND',(2,0),(2,-1),colors.lightgrey),
         ('FONTNAME',(0,0),(0,-1),'Helvetica-Bold'),
         ('FONTNAME',(2,0),(2,-1),'Helvetica-Bold'),
-        ('ALIGN',(0,0),(0,-1),'LEFT'),
-        ('ALIGN',(2,0),(2,-1),'LEFT'),
+        ('VALIGN',(0,0),(-1,-1),'MIDDLE'),
     ]))
 
     elements.append(table)
     elements.append(Spacer(1,15))
 
+    # DESCRIPTION
     desc_table = Table([
         ["SHORT DESCRIPTION","DESCRIPTION"],
-        [wrap(clean_text(data.get("short_description"))), wrap(clean_text(data.get("description")))]
+        [wrap(clean_text(data.get("short_description"))),
+         wrap(clean_text(data.get("description")))]
     ], colWidths=[260,260])
 
     desc_table.setStyle(TableStyle([
@@ -198,10 +208,24 @@ def generate_pdf(data, root, l2, res, images=None):
         ('BACKGROUND',(0,0),(-1,0),colors.lightgrey),
         ('FONTNAME',(0,0),(-1,0),'Helvetica-Bold'),
         ('ALIGN',(0,0),(-1,0),'CENTER'),
+        ('VALIGN',(0,0),(-1,-1),'TOP'),
     ]))
 
     elements.append(desc_table)
+    elements.append(Spacer(1,20))
 
+    # ✅ ADD MISSING SECTIONS
+    def section(title, content):
+        elements.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
+        elements.append(Spacer(1,6))
+        elements.append(Paragraph(content or "-", styles["Normal"]))
+        elements.append(Spacer(1,15))
+
+    section("ROOT CAUSE", root)
+    section("L2 ANALYSIS", l2)
+    section("RESOLUTION", res)
+
+    # FOOTER
     def footer(canvas, doc):
         width, _ = letter
         canvas.setFont('Helvetica',9)
