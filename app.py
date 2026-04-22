@@ -2,12 +2,13 @@ import streamlit as st
 
 from modules.search.search_ui import render as search_ui
 from modules.analytics.charts_page import render as analytics_ui
+from modules.report.doc_generator_ui import render as report_ui
 
 st.set_page_config(layout="wide")
 
 st.sidebar.title("Navigation")
 
-page = st.sidebar.radio("Go to", ["Home", "Search", "Analytics"])
+page = st.sidebar.radio("Go to", ["Home", "Search", "Analytics", "Report"])
 
 if page == "Home":
     st.title("🏠 Home")
@@ -18,3 +19,6 @@ elif page == "Search":
 
 elif page == "Analytics":
     analytics_ui()
+
+elif page == "Report":
+    report_ui()
