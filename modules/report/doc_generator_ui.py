@@ -118,6 +118,10 @@ def render_doc_generator():
             data = get_incident(df, inc)
             if data:
                 st.session_state["data"] = data
+                
+                auto_root = build_root_cause(data["work_notes"])
+                auto_l2 = build_l2_analysis(data["comments"])
+                
                 st.session_state["root"] = data["work_notes"]
                 st.session_state["l2"] = data["comments"]
                 st.session_state["res"] = data["resolution"]
@@ -218,29 +222,32 @@ def render_doc_generator():
     reset_id = st.session_state.get("uploader_reset", 0)
     
     st.text_area("Root Cause", key="root")
-    root_img = st.file_uploader(
-        "Root Image",
+    root_imgs = st.file_uploader(
+        "Root Images",
         type=["png", "jpg"],
+        accept_multiple_files=True,
         key=f"root_img_{reset_id}"
     )
-    
+       
     st.text_area("L2 Analysis", key="l2")
-    l2_img = st.file_uploader(
-        "L2 Image",
+    l2_imgs = st.file_uploader(
+        "L2 Images",
         type=["png", "jpg"],
+        accept_multiple_files=True,
         key=f"l2_img_{reset_id}"
     )
     
     st.text_area("Resolution", key="res")
-    res_img = st.file_uploader(
-        "Resolution Image",
+    res_imgs = st.file_uploader(
+        "Resolution Images",
         type=["png", "jpg"],
+        accept_multiple_files=True,
         key=f"res_img_{reset_id}"
     )
     
     # store images
     st.session_state["images"] = {
-        "root": root_img,
-        "l2": l2_img,
-        "res": res_img
+        "root": root_imgs or [],
+        "l2": l2_imgs or [],
+        "res": res_imgs or []
     }
