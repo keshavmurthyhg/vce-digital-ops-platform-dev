@@ -195,7 +195,7 @@ def render():
         )
 
     with col4:
-        page_size = st.selectbox("Rows", [10, 20, 50, 100], key="rows")
+        page_size = st.selectbox("Rows", [10, 15, 20, 50, 100], key="rows")
 
     total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
 
