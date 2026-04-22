@@ -118,6 +118,7 @@ def render():
                     st.session_state.get("l2", ""),
                     st.session_state.get("res", ""),
                     st.session_state.get("images")
+                    full_df=df
                 )
 
         if "word_file" in st.session_state:
@@ -138,6 +139,7 @@ def render():
                     st.session_state.get("l2", ""),
                     st.session_state.get("res", ""),
                     st.session_state.get("images")
+                    full_df=df
                 )
 
         if "pdf_file" in st.session_state:
