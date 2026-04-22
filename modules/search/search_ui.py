@@ -52,11 +52,17 @@ def render():
     with st.sidebar.expander("🎯 Filters", True):
         status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
         priority = st.multiselect("Priority", sorted(filtered["Priority"].dropna().unique()))
+        priority = st.multiselect("Created by", sorted(filtered["Created by"].dropna().unique()))
+        priority = st.multiselect("Assigned to", sorted(filtered["Assigned to"].dropna().unique()))
 
     if status:
         filtered = filtered[filtered["Status"].isin(status)]
     if priority:
         filtered = filtered[filtered["Priority"].isin(priority)]
+    if created_by:
+        filtered = filtered[filtered["Created by"].isin(priority)]
+    if assigned_to:
+        filtered = filtered[filtered["Assigned by"].isin(priority)]
 
     # ---------- DATE FILTER (ADVANCED) ----------
     with st.sidebar.expander("📅 Date Filter", True):
