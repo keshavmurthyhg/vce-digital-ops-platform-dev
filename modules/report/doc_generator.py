@@ -11,7 +11,6 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import letter
 
-
 def clean_text(text):
     if not text:
         return ""
@@ -53,10 +52,23 @@ def generate_word_doc(data, root, l2, res, images=None):
     table.style = "Table Grid"
     table.autofit = False
 
-    widths = [1.5, 2.0, 1.5, 2.0]  # total = 6.4 inches (safe)
-    for i, w in enumerate(widths):
-        for row in table.rows:
-            row.cells[i].width = Inches(w)
+    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_TABLE_AUTOFIT
+
+    table.autofit = True
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+    
+
+    def set_table_full_width(table):
+        tbl = table._element
+        tblPr = tbl.xpath("./w:tblPr")[0]
+    
+        tblW = OxmlElement('w:tblW')
+        tblW.set(qn('w:type'), 'pct')
+        tblW.set(qn('w:w'), "5000")  # 100% width
+    
+        tblPr.append(tblW)
+        set_table_full_width(table)
 
     def fill(r, c, key, val):
         h = table.rows[r].cells[c]
