@@ -1,62 +1,34 @@
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-from reportlab.lib import colors
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import letter
 from io import BytesIO
-import re
 
 
-def clean_text(text):
-    return re.sub(r"How does the user want.*?\d+", "", str(text), flags=re.I).strip()
-
-
-def generate_pdf(data, root, l2, res):
+def generate_pdf(data, root, l2, res, images=None):
 
     buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, leftMargin=40, rightMargin=40)
-
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
     styles = getSampleStyleSheet()
+
     elements = []
 
-    def p(x): return Paragraph(str(x), styles["Normal"])
-
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
-    elements.append(Spacer(1,10))
+    elements.append(Spacer(1, 10))
 
-    table = Table([
-        ["INCIDENT", p(data.get("number")), "CREATED BY", p(data.get("created_by"))],
-        ["AZURE BUG", p(data.get("azure_bug")), "CREATED DATE", p(data.get("created_date"))],
-        ["PTC CASE", p(data.get("ptc_case")), "ASSIGNED TO", p(data.get("assigned_to"))],
-        ["PRIORITY", p(data.get("priority")), "RESOLVED DATE", p(data.get("resolved_date"))],
-    ], colWidths=[110,170,110,170])
+    elements.append(Paragraph(f"Incident: {data.get('number')}", styles["Normal"]))
+    elements.append(Paragraph(f"Priority: {data.get('priority')}", styles["Normal"]))
 
-    table.setStyle(TableStyle([
-        ('GRID',(0,0),(-1,-1),1,colors.black),
-        ('BACKGROUND',(0,0),(0,-1),colors.lightgrey),
-        ('BACKGROUND',(2,0),(2,-1),colors.lightgrey),
-    ]))
+    elements.append(Spacer(1, 10))
+    elements.append(Paragraph("ROOT CAUSE", styles["Heading2"]))
+    elements.append(Paragraph(root or "", styles["Normal"]))
 
-    elements.append(table)
-    elements.append(Spacer(1,10))
+    elements.append(Paragraph("L2 ANALYSIS", styles["Heading2"]))
+    elements.append(Paragraph(l2 or "", styles["Normal"]))
 
-    desc = Table([
-        ["SHORT DESCRIPTION", "DESCRIPTION"],
-        [p(clean_text(data.get("short_description"))),
-         p(clean_text(data.get("description")))]
-    ], colWidths=[220,340])
+    elements.append(Paragraph("RESOLUTION", styles["Heading2"]))
+    elements.append(Paragraph(res or "", styles["Normal"]))
 
-    desc.setStyle(TableStyle([
-        ('GRID',(0,0),(-1,-1),1,colors.black),
-        ('BACKGROUND',(0,0),(-1,0),colors.lightgrey),
-    ]))
-
-    elements.append(desc)
-
-    def footer(canvas, doc):
-        canvas.drawString(40,20,data.get("number"))
-        canvas.drawCentredString(300,20,f"Page {doc.page}")
-        canvas.drawRightString(550,20,data.get("priority"))
-
-    doc.build(elements, onFirstPage=footer, onLaterPages=footer)
+    doc.build(elements)
 
     buffer.seek(0)
     return buffer
