@@ -256,5 +256,7 @@ def generate_pdf(data, root, l2, res, images=None):
     
     buffer = BytesIO()
     doc.build(elements, onFirstPage=footer, onLaterPages=footer)
-    buffer.seek(0)
-    return buffer.getvalue()
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+
+    return pdf_bytes
