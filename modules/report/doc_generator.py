@@ -177,8 +177,8 @@ def generate_word_doc(data, root, l2, res, images=None):
             if line.startswith("-"):
                 line = line[1:].strip()
         
-            p = doc.add_paragraph(line)
-            p.style = "List Bullet"
+            p = doc.add_paragraph(line, style="List Bullet")
+            p.paragraph_format.space_after = Inches(0.05)
         add_images_word(doc, imgs)
 
     # FOOTER
