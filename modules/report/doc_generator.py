@@ -200,8 +200,16 @@ def generate_pdf(data, root, l2, res, images=None):
         bottomMargin=50
     )
 
-    elements.append(Paragraph("<b><u>INCIDENT REPORT</u></b>", styles["Title"]))
-    elements.append(Spacer(1,10))
+    elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
+    elements.append(Spacer(1, 6))
+    
+    from reportlab.platypus import Table
+    from reportlab.lib import colors
+    
+    line = Table([[""]], colWidths=[500])
+    line.setStyle([("LINEBELOW", (0,0), (-1,-1), 1, colors.black)])
+    
+    elements.append(line)
 
     def link(url, text):
         return Paragraph(f'<link href="{url}">{text}</link>', styles["Normal"])
