@@ -4,6 +4,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_TAB_ALIGNMENT
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from io import BytesIO
+from datetime import datetime
 import re
 
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
@@ -16,6 +17,13 @@ def clean_text(text):
         return ""
     return re.sub(r"How does the user want.*?\d+", "", str(text), flags=re.I).strip()
 
+def format_date(date_str):
+    if not date_str:
+        return ""
+    try:
+        return datetime.strptime(str(date_str), "%Y-%m-%d").strftime("%d-%b-%Y")
+    except:
+        return str(date_str)
 
 # ---------------- WORD ---------------- #
 
@@ -95,11 +103,11 @@ def generate_word_doc(data, root, l2, res, images=None):
     fill(0,0,"Incident",data.get("number"))
     fill(0,2,"Created By",data.get("created_by"))
     fill(1,0,"Azure Bug",data.get("azure_bug"))
-    fill(1,2,"Created Date",data.get("created_date"))
+    fill(1,2,"Created Date", format_date(data.get("created_date")))
     fill(2,0,"PTC Case",data.get("ptc_case"))
     fill(2,2,"Assigned To",data.get("assigned_to"))
     fill(3,0,"Priority",data.get("priority"))
-    fill(3,2,"Resolved Date",data.get("resolved_date"))
+    fill(3,2,"Resolved Date", format_date(data.get("resolved_date")))
 
     doc.add_paragraph("")
 
@@ -190,12 +198,12 @@ def generate_pdf(data, root, l2, res, images=None):
         ["INCIDENT", link(f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}", data.get('number')),
          "CREATED BY", wrap(data.get('created_by'))],
         ["AZURE BUG", link(f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{data.get('azure_bug')}", data.get('azure_bug')),
-         "CREATED DATE", wrap(data.get('created_date'))],
+         "CREATED DATE", wrap(format_date(data.get('created_date')))],
         ["PTC CASE", link(f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}", data.get('ptc_case')),
          "ASSIGNED TO", wrap(data.get('assigned_to'))],
         ["PRIORITY", wrap(data.get('priority')),
-         "RESOLVED DATE", wrap(data.get('resolved_date'))]
-    ], colWidths=[100,170,100,170])
+         "RESOLVED DATE", wrap(format_date(data.get('resolved_date')))]
+    ], colWidths=[100,165,100,165])
 
     table.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
