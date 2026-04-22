@@ -88,11 +88,12 @@ def render():
         status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
         priority = st.multiselect("Priority", sorted(filtered["Priority"].dropna().unique()))
     
-        group_options = sorted(mapping_df["Group"].dropna().unique())
-        group = st.multiselect("Group", group_options)
-        
         GROUP_ORDER = ["L1", "L2", "L3", "AOM", "UNASSIGNED"]
+
         group_options = [g for g in GROUP_ORDER if g in mapping_df["Group"].unique()]
+        
+        group = st.multiselect("Group", group_options)
+        group = group if 'group' in locals() else []
         
     if status:
         filtered = filtered[filtered["Status"].isin(status)]
