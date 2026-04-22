@@ -209,16 +209,18 @@ def generate_pdf(data, root, l2, res, images=None):
         name="TitleCenter",
         parent=styles["Title"],
         alignment=1,
-        spaceAfter=-4
+        spaceAfter=-6   # 🔥 key line
     )
     
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", title_style))
     
-    # Calculate page width
-    page_width = letter[0] - (doc.leftMargin + doc.rightMargin)
-         
+    line = Table([[""]], colWidths=[page_width])
+    line.setStyle([
+        ("LINEBELOW", (0, 0), (-1, -1), 1, colors.black)
+    ])
+    
     elements.append(line)
-    elements.append(Spacer(1, 4))
+    elements.append(Spacer(1, 6))
     
     def link(url, text):
         return Paragraph(f'<link href="{url}">{text}</link>', styles["Normal"])
