@@ -200,7 +200,7 @@ def generate_pdf(data, root, l2, res, images=None):
         bottomMargin=50
     )
 
-    elements.append(Paragraph("<b>INCIDENT REPORT</u></b>", styles["Title"]))
+    elements.append(Paragraph("<b><u>INCIDENT REPORT</u></b>", styles["Title"]))
     elements.append(Spacer(1,10))
 
     def link(url, text):
