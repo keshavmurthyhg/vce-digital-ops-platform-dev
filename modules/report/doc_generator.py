@@ -194,10 +194,10 @@ def generate_pdf(data, root, l2, res, images=None):
     doc = SimpleDocTemplate(
         buffer,
         pagesize=letter,
-        rightMargin=20,
-        leftMargin=20,
-        topMargin=20,
-        bottomMargin=30
+        rightMargin=50,
+        leftMargin=50,
+        topMargin=50,
+        bottomMargin=50
     )
 
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
