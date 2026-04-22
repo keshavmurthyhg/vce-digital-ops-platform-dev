@@ -48,28 +48,28 @@ def generate_word_doc(data, root, l2, res, images=None):
 
     doc.add_heading("INCIDENT REPORT", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
 
+    # ---------- HEADER TABLE ----------
     table = doc.add_table(rows=4, cols=4)
     table.style = "Table Grid"
-    table.autofit = False
 
-    from docx.enum.table import WD_TABLE_ALIGNMENT, WD_TABLE_AUTOFIT
-
+    from docx.enum.table import WD_TABLE_ALIGNMENT
     table.autofit = True
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
 
-    
-
+    # ✅ FULL WIDTH FUNCTION
     def set_table_full_width(table):
         tbl = table._element
         tblPr = tbl.xpath("./w:tblPr")[0]
-    
+
         tblW = OxmlElement('w:tblW')
         tblW.set(qn('w:type'), 'pct')
-        tblW.set(qn('w:w'), "5000")  # 100% width
-    
-        tblPr.append(tblW)
-        set_table_full_width(table)
+        tblW.set(qn('w:w'), "5000")
 
+        tblPr.append(tblW)
+
+    set_table_full_width(table)
+
+    # ---------- FILL FUNCTION ----------
     def fill(r, c, key, val):
         h = table.rows[r].cells[c]
         v = table.rows[r].cells[c + 1]
@@ -89,8 +89,9 @@ def generate_word_doc(data, root, l2, res, images=None):
         elif key == "PTC Case":
             add_hyperlink(p, f"https://support.ptc.com/app/caseviewer/?case={val}", str(val))
         else:
-            p.text = str(val)
+            p.text = str(val or "")
 
+    # ---------- FILL DATA ----------
     fill(0,0,"Incident",data.get("number"))
     fill(0,2,"Created By",data.get("created_by"))
     fill(1,0,"Azure Bug",data.get("azure_bug"))
@@ -102,13 +103,13 @@ def generate_word_doc(data, root, l2, res, images=None):
 
     doc.add_paragraph("")
 
+    # ---------- DESCRIPTION TABLE ----------
     t2 = doc.add_table(rows=2, cols=2)
     t2.style = "Table Grid"
-    t2.autofit = False
 
-    for row in t2.rows:
-        row.cells[0].width = Inches(3)
-        row.cells[1].width = Inches(3)
+    t2.autofit = True
+    t2.alignment = WD_TABLE_ALIGNMENT.CENTER
+    set_table_full_width(t2)
 
     headers = ["SHORT DESCRIPTION", "DESCRIPTION"]
     for i, text in enumerate(headers):
@@ -128,14 +129,15 @@ def generate_word_doc(data, root, l2, res, images=None):
         p.text = txt
         p.alignment = WD_ALIGN_PARAGRAPH.LEFT
 
+    # ---------- SECTIONS ----------
     for title, content in [("ROOT CAUSE", root), ("L2 ANALYSIS", l2), ("RESOLUTION", res)]:
         h = doc.add_heading(title, 1)
         h.alignment = WD_ALIGN_PARAGRAPH.LEFT
-    
+
         p = doc.add_paragraph(content or "-")
         p.paragraph_format.space_after = Inches(0.15)
 
-    # FOOTER FIX
+    # ---------- FOOTER ----------
     section = doc.sections[0]
     footer = section.footer.paragraphs[0]
     footer.clear()
@@ -165,7 +167,6 @@ def generate_word_doc(data, root, l2, res, images=None):
     doc.save(buffer)
     buffer.seek(0)
     return buffer
-
 
 # ---------------- PDF ---------------- #
 
