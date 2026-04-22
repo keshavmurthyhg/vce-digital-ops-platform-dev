@@ -83,6 +83,11 @@ def get_incident(df, inc):
 
 
 def render_doc_generator():
+    
+    for key in ["root", "l2", "res", "images"]:
+        if key not in st.session_state:
+            st.session_state[key] = "" if key != "images" else {"root": [], "l2": [], "res": []}
+        
     st.title("📄 SNOW Incident Report Generator")
     df = load_snow_data()
 
