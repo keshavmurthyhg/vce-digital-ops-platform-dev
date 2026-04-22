@@ -209,7 +209,7 @@ def generate_pdf(data, root, l2, res, images=None):
         name="TitleCenter",
         parent=styles["Title"],
         alignment=1,
-        spaceAfter=0
+        spaceAfter=2
     )
     
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", title_style))
