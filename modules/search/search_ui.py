@@ -6,6 +6,7 @@ import io
 from modules.search.data_loader import load_data
 from modules.search.search import apply_search
 from modules.search.kpi import calculate_kpi
+from modules.search.user_group import load_or_create_mapping, save_mapping
 
 
 def render():
@@ -15,7 +16,15 @@ def render():
     st.title("Ops Insight Dashboard")
 
     df, last_refresh = load_data()
-
+    
+    # ✅ Load mapping
+    mapping_df = load_or_create_mapping(df)
+    
+    group_map = dict(zip(mapping_df["Name"], mapping_df["Group"]))
+    
+    df["Assigned Group"] = df["Assigned To"].map(group_map).fillna("Unassigned")
+    df["Created Group"] = df["Created By"].map(group_map).fillna("Unassigned")
+    
     # ---------- PRIORITY CLEAN ----------
     def clean_priority(row):
         if row["Source"] == "PTC":
@@ -48,6 +57,18 @@ def render():
 
     filtered = df[df["Source"].isin(sources)].copy()
 
+    with st.sidebar.expander("👥 User Group Mapping", False):
+
+        edited_mapping = st.data_editor(
+            mapping_df,
+            num_rows="dynamic",
+            use_container_width=True
+        )
+    
+        if st.button("💾 Save Groups"):
+            save_mapping(edited_mapping)
+            st.success("Mapping saved!")
+
     # ---------- FILTER ----------
     with st.sidebar.expander("🎯 Filters", True):
         status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
@@ -57,6 +78,8 @@ def render():
         filtered = filtered[filtered["Status"].isin(status)]
     if priority:
         filtered = filtered[filtered["Priority"].isin(priority)]
+    if group:
+        filtered = filtered[filtered["Assigned Group"].isin(group)]
 
     # ---------- DATE FILTER (ADVANCED) ----------
     with st.sidebar.expander("📅 Date Filter", True):
