@@ -4,62 +4,203 @@ import re
 import io
 
 from modules.search.data_loader import load_data
-from modules.search.search_logic import apply_all_filters
+from modules.search.search import apply_search
 from modules.search.kpi import calculate_kpi
 
+st.set_page_config(layout="wide")
 
-def render():
-    st.title("Ops Insight Dashboard")
+# ================= CSS =================
+st.markdown("""
+<style>
 
-    df, last_refresh = load_data()
+/* GLOBAL */
+.block-container { padding-top: 1rem !important; }
 
-    # ---------- PRIORITY CLEAN ----------
-    def clean_priority(row):
-        if row["Source"] == "PTC":
-            m = re.search(r"Severity\s*([1-3])", str(row["Priority"]))
-            return f"Severity {m.group(1)}" if m else ""
-        return row["Priority"]
+/* TABLE */
+table { width:100%; border-collapse: collapse; }
+th { text-align:center !important; padding:6px !important; background:#f5f5f5; font-size:13px;}
+td { padding:6px !important; font-size:13px; white-space:nowrap !important; }
 
-    df["Priority"] = df.apply(clean_priority, axis=1)
+/* DESCRIPTION */
+td:nth-child(3), th:nth-child(3) {
+    max-width: 420px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
 
-    # ---------- SIDEBAR ----------
-    sources = st.sidebar.multiselect(
-        "Source",
-        ["AZURE", "SNOW", "PTC"],
-        default=["AZURE", "SNOW", "PTC"]
-    )
+/* PRIORITY */
+td:nth-child(4), th:nth-child(4) { width:130px; }
+
+/* DATE */
+td:nth-child(7), th:nth-child(7),
+td:nth-child(9), th:nth-child(9) { min-width:110px; }
+
+/* KPI */
+[data-testid="stMetricValue"] { font-size:13px !important; }
+
+/* STATUS */
+.status-open {color:red;font-weight:600;}
+.status-closed {color:green;font-weight:600;}
+.status-cancel {color:gray;font-weight:600;}
+
+/* TOOLBAR ALIGN */
+div[data-testid="stHorizontalBlock"] {
+    align-items: flex-end;
+}
+
+/* INPUT + BUTTON HEIGHT */
+input { height:38px !important; }
+button { height:38px !important; }
+
+/* ONLY PAGINATION DROPDOWN COMPACT */
+div[data-testid="column"]:nth-child(4) div[data-baseweb="select"],
+div[data-testid="column"]:nth-child(5) div[data-baseweb="select"] {
+    min-width:70px !important;
+    max-width:85px !important;
+}
+
+/* SIDEBAR FONT */
+section[data-testid="stSidebar"] label {
+    font-size:12px !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+# ================= TITLE =================
+st.title("Ops Insight Dashboard")
+
+# ================= LOAD =================
+df, last_refresh = load_data()
+
+# ================= PRIORITY FIX =================
+def clean_priority(row):
+    if row["Source"] == "PTC":
+        m = re.search(r"Severity\s*([1-3])", str(row["Priority"]))
+        return f"Severity {m.group(1)}" if m else ""
+    return row["Priority"]
+
+df["Priority"] = df.apply(clean_priority, axis=1)
+
+# ================= SIDEBAR =================
+st.sidebar.markdown("## 📊 Menu")
+st.sidebar.selectbox("", ["Search Tool"])
+
+with st.sidebar.expander("📂 Source", True):
+    cols = st.columns(2)
+
+    all_src = cols[0].checkbox("ALL", True)
+    azure = cols[1].checkbox("AZURE", all_src)
+    snow = cols[0].checkbox("SNOW", all_src)
+    ptc = cols[1].checkbox("PTC", all_src)
+
+    if all_src:
+        sources = ["AZURE","SNOW","PTC"]
+    else:
+        sources = []
+        if azure: sources.append("AZURE")
+        if snow: sources.append("SNOW")
+        if ptc: sources.append("PTC")
 
     if not sources:
-        st.warning("Select at least one source")
-        return
+        st.stop()
 
-    filtered = df[df["Source"].isin(sources)].copy()
+# ================= FILTER =================
+filtered = df[df["Source"].isin(sources)].copy()
 
-    status = st.sidebar.multiselect(
+# SESSION STATE FOR FILTER RESET
+if "status_filter" not in st.session_state:
+    st.session_state.status_filter = []
+if "priority_filter" not in st.session_state:
+    st.session_state.priority_filter = []
+
+with st.sidebar.expander("🎯 Filters", True):
+    status = st.multiselect(
         "Status",
-        sorted(filtered["Status"].dropna().unique())
+        sorted(filtered["Status"].dropna().unique()),
+        key="sidebar_status"
     )
 
-    priority = st.sidebar.multiselect(
+    priority = st.multiselect(
         "Priority",
-        sorted(filtered["Priority"].dropna().unique())
+        sorted(filtered["Priority"].dropna().unique()),
+        key="sidebar_priority"
     )
 
-    search_value = st.text_input("🔎 Search")
+if status:
+    filtered = filtered[filtered["Status"].isin(status)]
+if priority:
+    filtered = filtered[filtered["Priority"].isin(priority)]
 
-    # ---------- APPLY LOGIC ----------
-    filtered = apply_all_filters(filtered, status, priority, search_value)
+# ================= TOOLBAR =================
+def clear_all():
+    st.session_state.toolbar_search = ""
+    st.session_state.toolbar_page_number = 1
+    st.session_state.toolbar_page_size = 10
+    st.session_state.sidebar_status = []
+    st.session_state.sidebar_priority = []
 
-    # ---------- KPI ----------
-    kpi = calculate_kpi(filtered)
+if "toolbar_search" not in st.session_state:
+    st.session_state.toolbar_search = ""
 
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Total", kpi["total"])
-    c2.metric("Open", kpi["open"])
-    c3.metric("Closed", kpi["closed"])
-    c4.metric("Cancelled", kpi["cancelled"])
+col1, col2, col3, col4, col5, col6 = st.columns([5,1,2,1.5,1.5,2])
 
-    # ---------- DOWNLOAD ----------
+# SEARCH
+with col1:
+    search_value = st.text_input(
+        "🔎 Search",
+        value=st.session_state.toolbar_search,
+        key="toolbar_search"
+    )
+
+# CLEAR
+with col2:
+    st.markdown("<div style='margin-top:30px'></div>", unsafe_allow_html=True)
+    st.button("❌", on_click=clear_all)
+
+# APPLY SEARCH
+filtered = apply_search(filtered, search_value)
+
+# ================= DATA =================
+df_display = filtered.copy().reset_index(drop=True)
+df_display.insert(0, "SL No", range(1, len(df_display)+1))
+
+total_rows = len(df_display)
+
+# RESULTS + SOURCE COUNTS
+with col3:
+    vc = filtered["Source"].value_counts()
+    st.markdown(f"""
+    <div style="margin-top:8px">
+        <b>{total_rows}</b> Results<br>
+        <span style="font-size:11px">
+        AZURE: {vc.get('AZURE',0)} | SNOW: {vc.get('SNOW',0)} | PTC: {vc.get('PTC',0)}
+        </span>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ROWS
+with col4:
+    page_size = st.selectbox(
+        "Rows",
+        [10,20,50,100],
+        key="toolbar_page_size"
+    )
+
+# PAGE
+total_pages = max(1, (total_rows // page_size) + (1 if total_rows % page_size else 0))
+
+with col5:
+    page = st.selectbox(
+        "Page",
+        list(range(1, total_pages + 1)),
+        key="toolbar_page_number"
+    )
+
+# DOWNLOAD
+with col6:
+    st.markdown("<div style='margin-top:30px;text-align:right'>", unsafe_allow_html=True)
+
     def to_excel(df):
         buffer = io.BytesIO()
         with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
@@ -68,7 +209,76 @@ def render():
 
     st.download_button("📥 Download", to_excel(filtered), "ops_data.xlsx")
 
-    # ---------- TABLE ----------
-    st.dataframe(filtered, use_container_width=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.caption(f"Last refreshed: {last_refresh}")
+# PAGINATION
+start = (page - 1) * page_size
+end = start + page_size
+page_df = df_display.iloc[start:end]
+
+# ================= CLEAN DATA =================
+def clean(x):
+    return re.sub(r"\s*<.*?>|\(.*?\)", "", str(x)).strip()
+
+for col in ["Created By","Assigned To"]:
+    if col in page_df:
+        page_df[col] = page_df[col].apply(clean)
+
+for col in ["Created Date","Resolved Date"]:
+    if col in page_df:
+        page_df[col] = pd.to_datetime(page_df[col], errors="coerce").dt.strftime("%d-%b-%Y")
+
+page_df["Description"] = page_df["Description"].apply(
+    lambda x: x[:90] + "..." if len(str(x)) > 90 else x
+)
+
+page_df = page_df.fillna("")
+
+# STATUS COLOR
+def format_status(v):
+    v = str(v).lower()
+    if "open" in v or "active" in v:
+        return f'<span class="status-open">{v}</span>'
+    if "closed" in v:
+        return f'<span class="status-closed">{v}</span>'
+    if "cancel" in v:
+        return f'<span class="status-cancel">{v}</span>'
+    return v
+
+page_df["Status"] = page_df["Status"].apply(format_status)
+
+# LINK
+def make_link(row):
+    num = str(row["Number"])
+    src = row["Source"]
+
+    if src == "SNOW":
+        url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={num}"
+    elif src == "PTC":
+        url = f"https://support.ptc.com/appserver/cs/view/case.jsp?n={num}"
+    elif src == "AZURE":
+        url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{num}"
+    else:
+        url = ""
+
+    return f'<a href="{url}" target="_blank">Open</a>' if url else ""
+
+page_df["Open"] = page_df.apply(make_link, axis=1)
+
+# ================= TABLE =================
+st.write(page_df.to_html(escape=False, index=False), unsafe_allow_html=True)
+
+# ================= KPI =================
+with st.sidebar.expander("📈 KPI", True):
+    kpi = calculate_kpi(filtered)
+
+    c1,c2 = st.columns(2)
+    c1.metric("Total", kpi["total"])
+    c2.metric("Open", kpi["open"])
+
+    c3,c4 = st.columns(2)
+    c3.metric("Closed", kpi["closed"])
+    c4.metric("Cancelled", kpi["cancelled"])
+
+# ================= FOOTER =================
+st.caption(f"Last refreshed: {last_refresh}")
