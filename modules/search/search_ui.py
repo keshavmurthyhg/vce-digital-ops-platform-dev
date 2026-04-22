@@ -87,19 +87,24 @@ def render():
     with st.sidebar.expander("🎯 Filters", True):
         status = st.multiselect("Status", sorted(filtered["Status"].dropna().unique()))
         priority = st.multiselect("Priority", sorted(filtered["Priority"].dropna().unique()))
+    
+        group_options = sorted(mapping_df["Group"].dropna().unique())
+        group = st.multiselect("Group", group_options)
         
         GROUP_ORDER = ["L1", "L2", "L3", "AOM", "UNASSIGNED"]
         group_options = [g for g in GROUP_ORDER if g in mapping_df["Group"].unique()]
         
     if status:
-        filtered = filtered[filtered["Status"].isin(status)]
+    filtered = filtered[filtered["Status"].isin(status)]
+
     if priority:
         filtered = filtered[filtered["Priority"].isin(priority)]
+    
     if group:
-            filtered[
-                (filtered["Assigned Group"].isin(group)) |
-                (filtered["Created Group"].isin(group))
-            ]
+        filtered = filtered[
+            (filtered["Assigned Group"].isin(group)) |
+            (filtered["Created Group"].isin(group))
+        ]
 
     # ---------- DATE FILTER (ADVANCED) ----------
     with st.sidebar.expander("📅 Date Filter", True):
