@@ -122,8 +122,14 @@ def render_doc_generator():
                 auto_root = build_root_cause(data["work_notes"])
                 auto_l2 = build_l2_analysis(data["comments"])
                 
-                st.session_state["root"] = data["work_notes"]
-                st.session_state["l2"] = data["comments"]
+                st.session_state["root"] = merge_with_user_input(
+                    auto_root, st.session_state.get("root")
+                )
+                
+                st.session_state["l2"] = merge_with_user_input(
+                    auto_l2, st.session_state.get("l2")
+                )
+                
                 st.session_state["res"] = data["resolution"]
                 
                 # reset flag AFTER successful fetch
