@@ -205,9 +205,14 @@ def generate_pdf(data, root, l2, res, images=None):
     
     from reportlab.platypus import Table
     from reportlab.lib import colors
+    from reportlab.lib.pagesizes import letter
     
-    line = Table([[""]], colWidths=[500])
-    line.setStyle([("LINEBELOW", (0,0), (-1,-1), 1, colors.black)])
+    page_width = letter[0] - (doc.leftMargin + doc.rightMargin)
+    
+    line = Table([[""]], colWidths=[page_width])
+    line.setStyle([
+        ("LINEBELOW", (0, 0), (-1, -1), 1.5, colors.black)
+    ])
     
     elements.append(line)
 
