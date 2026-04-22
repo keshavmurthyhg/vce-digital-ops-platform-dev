@@ -216,14 +216,7 @@ def generate_pdf(data, root, l2, res, images=None):
     
     # Calculate page width
     page_width = letter[0] - (doc.leftMargin + doc.rightMargin)
-    
-    line = Table([[""]], colWidths=[page_width])
-    line.setStyle([
-        ("LINEBELOW", (0, 0), (-1, -1), 1, colors.black),
-        ("TOPPADDING", (0, 0), (-1, -1), 1),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 0)
-    ])
-    
+         
     elements.append(line)
     elements.append(Spacer(1, 4))
     
