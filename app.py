@@ -9,7 +9,7 @@ page = st.sidebar.radio("Go to", ["Home", "Search"])
 
 if page == "Home":
     st.title("🏠 Home")
-    st.write("Select module")
+    st.write("Welcome! Select a module.")
 
 elif page == "Search":
     search_ui()
