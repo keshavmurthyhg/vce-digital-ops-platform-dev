@@ -50,6 +50,59 @@ def render_sidebar(df):
             (filtered["created"].dt.date <= end)
         ]
 
+    # 🔹 Apply to bulk
+    st.sidebar.markdown("### Actions")
+
+    if st.sidebar.button("Apply to Bulk"):
+        st.session_state["apply_bulk"] = True
+
+    if st.session_state.get("apply_bulk"):
+
+        df = st.session_state.get("filtered_df")
+        bulk_input = st.session_state.get("bulk_incidents", "")
+    
+        if df is None:
+            st.sidebar.error("No data available")
+        
+        elif not bulk_input.strip():
+            st.sidebar.warning("Enter bulk incident numbers first")
+    
+        else:
+            bulk_ids = [i.strip() for i in bulk_input.split(",") if i.strip()]
+    
+            bulk_data = []
+    
+            for inc in bulk_ids:
+                incident_col = next(
+                    (c for c in df.columns if "number" in c.lower()),
+                    None
+                )
+    
+                if not incident_col:
+                    continue
+    
+                row = df[df[incident_col].astype(str).str.upper() == inc.upper()]
+    
+                if row.empty:
+                    continue
+    
+                data = row.iloc[0].to_dict()
+    
+                # ✅ APPLY CURRENT EDITED CONTENT
+                data["problem"] = st.session_state.get("problem", "")
+                data["analysis"] = st.session_state.get("analysis", "")
+                data["resolution"] = st.session_state.get("resolution", "")
+    
+                # ✅ APPLY IMAGES
+                data["images"] = st.session_state.get("images", {})
+    
+                bulk_data.append(data)
+    
+            st.session_state["bulk_data"] = bulk_data
+    
+            st.sidebar.success(f"Applied to {len(bulk_data)} incidents")
+
+    
     #================= DOWNLOAD BUTTONS ================================
     st.sidebar.markdown("### Download")
     
