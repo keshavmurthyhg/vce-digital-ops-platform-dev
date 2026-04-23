@@ -212,21 +212,24 @@ def render_main(df):
         else:
             data = st.session_state["data"]
 
-        try pdf_bytes = generate_pdf(
+        try:
+            pdf_bytes = generate_pdf(
                 data,
                 st.session_state.get("root"),
                 st.session_state.get("l2"),
                 st.session_state.get("res"),
                 st.session_state.get("images")
             )
-
+        
+            st.success("PDF generated successfully")
+        
             st.download_button(
                 "⬇ Download PDF",
                 data=pdf_bytes,
                 file_name=f"{data['number']}.pdf",
                 mime="application/pdf"
             )
-
+        
         except Exception as e:
             st.error(f"PDF Error: {e}")
     
