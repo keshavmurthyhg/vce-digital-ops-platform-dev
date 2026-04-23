@@ -54,22 +54,22 @@ def extract_azure_id(text):
     if not text:
         return None
 
-    # ✅ MUST BE FIRST
+    # ✅ DEFINE FIRST (CRITICAL FIX)
     patterns = [
         r'AB[#\s]*(\d+)',
         r'Azure\s*(?:Bug|ID)?[:\s]*(\d+)',
         r'Work\s*Item[:\s]*(\d+)',
-        r'\b(\d{6,8})\b'
+        r'\b(\d{6,8})\b'   # ✅ SUPPORTS 6 DIGIT
     ]
 
-    # DEBUG (safe now)
+    # DEBUG (optional)
     print("TEXT:", text)
 
     for p in patterns:
         print("Trying:", p)
         match = re.search(p, text, re.IGNORECASE)
         if match:
-            print("FOUND:", match.group(1))
+            print("FOUND AZURE:", match.group(1))
             return match.group(1)
 
     return None
