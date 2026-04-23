@@ -2,6 +2,7 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from modules.report.layout.footer import apply_word_footer
 from modules.report.utils.links import apply_word_link
+from modules.report.utils.utils import format_date, set_cell_bg
 
 def generate_word_doc(data, root, l2, res, images):
 
