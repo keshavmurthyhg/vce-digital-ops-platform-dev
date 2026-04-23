@@ -1,7 +1,7 @@
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-
 from modules.report.layout.footer import apply_word_footer
+from modules.report.utils.links import apply_word_link
 
 def generate_word_doc(data, root, l2, res, images):
 
@@ -22,7 +22,8 @@ def generate_word_doc(data, root, l2, res, images):
             run.bold = True
         set_cell_bg(h)
 
-        v.paragraphs[0].text = str(val or "")
+        p = v.paragraphs[0]
+        apply_word_link(p, key, val)
 
     fill(0,0,"Incident",data.get("number"))
     fill(0,2,"Created By",data.get("created_by"))
