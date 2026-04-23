@@ -50,35 +50,23 @@ def make_link(url, text):
     return f'<link href="{url}">{text}</link>'
 
 #============ AZURE NUMBER EXTRACTOR ============== #
-import re
-
 def extract_azure_id(text):
     if not text:
         return None
 
-    # ✅ 1. FIRST: Extract from Azure URL
-    url_match = re.search(
-        r'_workitems/edit/(\d+)',
-        text,
-        re.IGNORECASE
-    )
-    if url_match:
-        return url_match.group(1)
+    text = str(text)
 
-    # ✅ 2. FALLBACK: other patterns
-    patterns = [
-        r'AB[#\s]*(\d+)',
-        r'Azure\s*(?:Bug|ID|Feature)?[:\s]*(\d+)',
-        r'Work\s*Item[:\s]*(\d+)',
-        r'(?:Azure|AB|DevOps).*?(\d{6,8})',
-        r'\b(\d{6,8})\b'
-    ]
+    # ✅ 1. Extract from URL (MOST RELIABLE)
+    match = re.search(r"/(\d{5,})", text)
+    if match:
+        return match.group(1)
 
-    for p in patterns:
-        match = re.search(p, text, re.IGNORECASE)
-        if match:
-            return match.group(1)
+    # ✅ 2. Azure keyword patterns
+    match = re.search(r"azure[^\d]*(\d{5,})", text, re.I)
+    if match:
+        return match.group(1)
 
+    # ❌ DO NOT fallback to random numbers (avoid phone numbers)
     return None
     
 # ---------------- PDF ---------------- #
