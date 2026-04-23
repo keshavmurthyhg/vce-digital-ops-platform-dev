@@ -11,7 +11,8 @@ from modules.report.builders.analysis_builder import (
     build_resolution,
     merge_with_user_input
 )
-from modules.report.utils import clean_nan, format_date, format_description
+
+from modules.report.utils.utils import clean_nan, format_date, format_description
 
 
 # ---------------- HELPER ---------------- #
