@@ -2,7 +2,7 @@ import streamlit as st
 
 from modules.search.search_ui import render as search_ui
 from modules.analytics.charts_page import render as analytics_ui
-from modules.report.doc_generator_ui import render_doc_generator as report_ui
+from modules.report.doc_generator_ui import main as report
 from modules.excel_compare.ui import render as excel_compare_ui
 
 st.set_page_config(layout="wide")
