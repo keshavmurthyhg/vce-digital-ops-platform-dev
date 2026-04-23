@@ -22,7 +22,9 @@ def prepare_data(data):
     Central place for all sanitization & formatting
     """
     safe_data = data.copy()
-
+    
+    data = enrich_data(data)
+    
     safe_data["description"] = format_description(data.get("description"))
 
     return safe_data
