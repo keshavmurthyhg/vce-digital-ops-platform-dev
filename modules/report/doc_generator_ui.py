@@ -72,12 +72,14 @@ def extract_azure_link(text):
 def get_incident(df, inc):
     df["number"] = df["number"].astype(str).str.upper()
     row = df[df["number"] == inc.upper()]
+
     if row.empty:
         return None
 
     r = row.iloc[0]
 
-       resolution_text = (
+    # ✅ properly indented
+    resolution_text = (
         r.get("RESOLUTION & RECOMMENDATION notes")
         or r.get("resolution notes")
         or r.get("Resolution Notes")
@@ -95,11 +97,11 @@ def get_incident(df, inc):
         "resolved_date": str(r.get("resolved")).split()[0],
         "work_notes": r.get("work notes", ""),
         "comments": r.get("additional comments", ""),
-    
+
         # ✅ FIXED
         "resolution": resolution_text,
         "azure_bug": extract_azure_link(resolution_text),
-    
+
         "ptc_case": r.get("vendor ticket"),
     }
 
