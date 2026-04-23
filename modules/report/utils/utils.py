@@ -50,26 +50,33 @@ def make_link(url, text):
     return f'<link href="{url}">{text}</link>'
 
 #============ AZURE NUMBER EXTRACTOR ============== #
+import re
+
 def extract_azure_id(text):
     if not text:
         return None
 
-    # ✅ DEFINE FIRST (CRITICAL FIX)
+    # ✅ 1. FIRST: Extract from Azure URL
+    url_match = re.search(
+        r'_workitems/edit/(\d+)',
+        text,
+        re.IGNORECASE
+    )
+    if url_match:
+        return url_match.group(1)
+
+    # ✅ 2. FALLBACK: other patterns
     patterns = [
         r'AB[#\s]*(\d+)',
-        r'Azure\s*(?:Bug|ID)?[:\s]*(\d+)',
+        r'Azure\s*(?:Bug|ID|Feature)?[:\s]*(\d+)',
         r'Work\s*Item[:\s]*(\d+)',
-        r'\b(\d{6,8})\b'   # ✅ SUPPORTS 6 DIGIT
+        r'(?:Azure|AB|DevOps).*?(\d{6,8})',
+        r'\b(\d{6,8})\b'
     ]
 
-    # DEBUG (optional)
-    print("TEXT:", text)
-
     for p in patterns:
-        print("Trying:", p)
         match = re.search(p, text, re.IGNORECASE)
         if match:
-            print("FOUND AZURE:", match.group(1))
             return match.group(1)
 
     return None
