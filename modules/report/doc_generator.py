@@ -164,6 +164,33 @@ def generate_word_doc(data, root, l2, res, images=None):
 
         add_images_word(doc, imgs)
 
+    # FOOTER FIX
+    section = doc.sections[0]
+    footer = section.footer.paragraphs[0]
+    footer.clear()
+
+    tab_stops = footer.paragraph_format.tab_stops
+    tab_stops.add_tab_stop(Inches(3.25), WD_TAB_ALIGNMENT.CENTER)
+    tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
+
+    run = footer.add_run(f"{data.get('number')}\tPage ")
+
+    fld1 = OxmlElement('w:fldChar')
+    fld1.set(qn('w:fldCharType'), 'begin')
+
+    instr = OxmlElement('w:instrText')
+    instr.text = "PAGE"
+
+    fld2 = OxmlElement('w:fldChar')
+    fld2.set(qn('w:fldCharType'), 'end')
+
+    run._r.append(fld1)
+    run._r.append(instr)
+    run._r.append(fld2)
+
+    footer.add_run(f"\t{data.get('priority')}")
+
+   
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
@@ -274,8 +301,15 @@ def generate_pdf(data, root, l2, res, images=None):
     section("TECHNICAL ANALYSIS", l2, images.get("l2"))
     section("RESOLUTION & RECOMMENDATION", res, images.get("res"))
 
-    doc.build(elements)
+    def footer(canvas, doc):
+        width, _ = letter
+        canvas.setFont('Helvetica',9)
+        canvas.drawString(40,20,str(data.get("number")))
+        canvas.drawCentredString(width/2,20,f"Page {doc.page}")
+        canvas.drawRightString(width-40,20,str(data.get("priority")))
 
+    doc.build(elements, onFirstPage=footer, onLaterPages=footer)
+    
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
