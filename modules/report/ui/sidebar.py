@@ -10,8 +10,24 @@ def render_sidebar(df):
         options=sorted(df["priority"].dropna().unique())
     )
 
-    date_range = st.sidebar.date_input("Created Date Range")
+    date_range = st.sidebar.date_input(
+        "Created Date Range",
+        value=(),
+    )
 
+    preset = st.sidebar.selectbox(
+        "Quick Filter",
+        ["None", "Last 7 Days", "Last 30 Days"]
+    )
+
+    from datetime import date, timedelta
+    
+    if preset == "Last 7 Days":
+        date_range = (date.today() - timedelta(days=7), date.today())
+    
+    elif preset == "Last 30 Days":
+        date_range = (date.today() - timedelta(days=30), date.today())
+    
     # Apply filters
     filtered = df.copy()
 
@@ -23,18 +39,14 @@ def render_sidebar(df):
     filtered["created"] = pd.to_datetime(filtered["created"], errors="coerce")
 
     # 🔹 Date filter (safe handling)
-    if isinstance(date_range, (list, tuple)):
-        if len(date_range) == 2:
-            start, end = date_range
-        elif len(date_range) == 1:
-            start = end = date_range[0]
-        else:
-            start = end = None
-
-        if start and end:
-            filtered = filtered[
-                (filtered["created"] >= pd.to_datetime(start)) &
-                (filtered["created"] <= pd.to_datetime(end))
-            ]
+    if isinstance(date_range, tuple) and len(date_range) == 2:
+        start, end = date_range
+    
+        filtered["created"] = pd.to_datetime(filtered["created"], errors="coerce")
+    
+        filtered = filtered[
+            (filtered["created"].dt.date >= start) &
+            (filtered["created"].dt.date <= end)
+        ]
 
     return filtered
