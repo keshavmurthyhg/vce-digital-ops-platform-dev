@@ -41,13 +41,7 @@ def get_incident(df, inc):
 
 def render_main(df):
     st.title("Incident Report Generator")
-
-    # INIT STATE
-    for k in ["root", "l2", "res", "images"]:
-        if k not in st.session_state:
-            st.session_state[k] = "" if k != "images" else {"root": [], "l2": [], "res": []}
-
-
+    
     # ---------------- INIT STATE ---------------- #
     for key in ["root", "l2", "res", "images"]:
         if key not in st.session_state:
@@ -92,7 +86,7 @@ def render_main(df):
     bulk_input = st.text_area("Enter comma-separated incident numbers", key="bulk_ids")
 
     # ---------------- ACTION BUTTONS ---------------- #
-    colA, colB, colC, colD, colE = st.columns(4)
+    colA, colB, colC, colD, colE = st.columns(5)
 
     with colA:
         generate_pdf_btn = st.button("Generate PDF", use_container_width=True)
