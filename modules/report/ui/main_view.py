@@ -260,7 +260,7 @@ def render_main(df):
             data = st.session_state["data"]
     
             try:
-                word_bytes = generate_word_doc(
+                word_bytes = generate_word_doc_wrapper(
                     data,
                     st.session_state.get("root"),
                     st.session_state.get("l2"),
