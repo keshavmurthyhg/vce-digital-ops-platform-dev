@@ -8,7 +8,7 @@ from modules.report.layout.body import build_sections
 from modules.report.layout.styles import get_pdf_styles
 from modules.report.layout.footer import pdf_footer
 
-from modules.report.utils.utils import format_date, add_images_pdf, clean_text
+from modules.report.utils.utils import format_date, add_images_pdf
 from modules.report.utils.links import get_url, make_pdf_link
 
 
