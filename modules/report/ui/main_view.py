@@ -60,21 +60,26 @@ def render_main(df):
             st.session_state[key] = "" if key != "images" else {"root": [], "l2": [], "res": []}
 
     # ---------------- INCIDENT SELECT ---------------- #
-    col1, col2 = st.columns([6,1])
+    col1, col2, col3 = st.columns([3, 1, 4])
 
     with col1:
-        incident = st.selectbox("Select Incident", df["number"].dropna().unique())
+        incident = st.selectbox(
+            "Select Incident",
+            df["number"].dropna().unique()
+        )
 
     with col2:
-        st.write(""); st.write("")
+        st.write("")
+        st.write("")
         fetch = st.button("Fetch", use_container_width=True)
+
+    msg = st.empty()
 
     
     # ---------------- FETCH LOGIC ---------------- #
     if fetch:
         data = get_incident(df, incident)
-        
-        st.write("AZURE:", st.session_state.get("data", {}).get("azure_bug"))
+
         if data:
             st.session_state["data"] = data
 
@@ -91,9 +96,9 @@ def render_main(df):
                 st.session_state.get("res")
             )
 
-            st.success("Loaded")
+            msg.success("Loaded")
         else:
-            st.error("Not found")
+            msg.error("Not found")
 
     # ---------------- BULK INPUT ---------------- #
     st.markdown("### Bulk Incident Numbers")
@@ -119,7 +124,9 @@ def render_main(df):
 
     # ---------------- CLEAR ---------------- #
     if clear_btn:
-        st.session_state.clear()
+        for key in ["root", "l2", "res", "images", "data"]:
+            if key in st.session_state:
+                del st.session_state[key]
         st.rerun()
 
      # ---------------- PREVIEW ---------------- #
@@ -234,14 +241,7 @@ def render_main(df):
             )
         
             st.success("PDF generated successfully")
-        
-            st.download_button(
-                "⬇ Download PDF",
-                data=pdf_bytes,
-                file_name=f"{data['number']}.pdf",
-                mime="application/pdf"
-            )
-        
+                           
         except Exception as e:
             st.error(f"PDF Error: {e}")
     
@@ -259,14 +259,12 @@ def render_main(df):
                 st.session_state.get("res"),
                 st.session_state.get("images")
             )
-
-            st.download_button(
-                "⬇ Download Word",
-                data=word_bytes,
-                file_name=f"{data['number']}.docx",
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
-
+            
+            st.success("Word generated successfully")
+        
+        except Exception as e:
+            st.error(f"Word Error: {e}")
+            
     # ---------------- BULK GENERATE ---------------- #
     if bulk_btn:
         ids = [x.strip() for x in bulk_input.split(",") if x.strip()]
@@ -284,3 +282,8 @@ def render_main(df):
                 file_name=f"Bulk_Report_{format_date('2026-01-01')}.zip",
                 mime="application/zip"
             )
+            
+            st.success("Zip generated successfully")
+        
+        except Exception as e:
+            st.error(f"Zip Error: {e}")
