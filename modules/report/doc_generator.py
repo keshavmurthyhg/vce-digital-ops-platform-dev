@@ -22,6 +22,8 @@ def safe_images(images):
 def generate_pdf(data, root, l2, res, images=None):
     images = safe_images(images)
 
+    data = prepare_data(data)
+    
     return generate_pdf_doc(
         data=data,
         root=root,
@@ -34,6 +36,8 @@ def generate_pdf(data, root, l2, res, images=None):
 def generate_word_doc_wrapper(data, root, l2, res, images=None):
     images = safe_images(images)
 
+    data = prepare_data(data)
+    
     return generate_word_doc(
         data=data,
         root=root,
