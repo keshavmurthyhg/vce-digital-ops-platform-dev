@@ -1,10 +1,10 @@
-from reportlab.platypus import Table, TableStyle
+from reportlab.platypus import Table, TableStyle, Paragraph
 from reportlab.lib import colors
 from modules.report.utils.links import get_url, make_pdf_link
 
-def wrap_link(field, value, styles):
+def wrap_link(field, value):
     url = get_url(field, value)
-    return make_pdf_link(value, url, styles)
+    return make_pdf_link(value, url)
 
 def build_pdf_header(data, wrap_link, format_date):
 
