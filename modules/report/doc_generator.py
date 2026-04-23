@@ -286,13 +286,13 @@ def generate_pdf(data, root, l2, res, images=None):
     ], colWidths=[260,260])
 
         desc.setStyle(TableStyle([
-        ('GRID',(0,0),(-1,-1),1,colors.black),
-        ('BACKGROUND',(0,0),(-1,0),colors.lightgrey),
-        ('VALIGN',(0,0),(-1,-1),'TOP'),
-    
-        # ✅ center header row
-        ('ALIGN',(0,0),(-1,0),'CENTER'),
-    ]))
+            ('GRID',(0,0),(-1,-1),1,colors.black),
+            ('BACKGROUND',(0,0),(-1,0),colors.lightgrey),
+            ('VALIGN',(0,0),(-1,-1),'TOP'),
+        
+            # ✅ center header row
+            ('ALIGN',(0,0),(-1,0),'CENTER'),
+        ]))
 
     elements.append(desc)
     elements.append(Spacer(1,20))
