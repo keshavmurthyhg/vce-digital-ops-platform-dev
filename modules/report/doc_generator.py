@@ -142,12 +142,12 @@ def generate_word_doc(data, root, l2, res, images=None):
 
     t2.rows[1].cells[0].text = clean_text(data.get("short_description"))
     t2.rows[1].cells[1].text = clean_text(data.get("description"))
-    # ✅ Fix wrapping inside Word table
+
     for row in t2.rows:
         for cell in row.cells:
             for p in cell.paragraphs:
                 p.paragraph_format.space_after = Inches(0.05)
-                
+
     section_map = {
         "PROBLEM STATEMENT & ROOT CAUSE": (root, images.get("root")),
         "TECHNICAL ANALYSIS": (l2, images.get("l2")),
@@ -169,7 +169,7 @@ def generate_word_doc(data, root, l2, res, images=None):
 
         add_images_word(doc, imgs)
 
-    # FOOTER FIX
+    # FOOTER
     section = doc.sections[0]
     footer = section.footer.paragraphs[0]
     footer.clear()
@@ -195,7 +195,6 @@ def generate_word_doc(data, root, l2, res, images=None):
 
     footer.add_run(f"\t{data.get('priority')}")
 
-   
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
@@ -242,69 +241,54 @@ def generate_pdf(data, root, l2, res, images=None):
         return Paragraph(str(text), styles["Normal"])
 
     # HEADER TABLE
-    # HEADER TABLE
     table = Table([
-        [
-            "INCIDENT",
-            wrap_link(
-                data.get("number"),
-                f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}"
-            ),
-            "CREATED BY",
-            wrap_link(data.get("created_by"))
-        ],
-        [
-            "AZURE BUG",
-            wrap_link(
-                data.get("azure_bug"),
-                f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{data.get('azure_bug')}"
-            ) if data.get("azure_bug") else "",
-            "CREATED DATE",
-            wrap_link(format_date(data.get("created_date")))
-        ],
-        [
-            "PTC CASE",
-            wrap_link(
-                data.get("ptc_case"),
-                f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}"
-            ) if data.get("ptc_case") else "",
-            "ASSIGNED TO",
-            wrap_link(data.get("assigned_to"))
-        ],
-        [
-            "PRIORITY",
-            wrap_link(data.get("priority")),
-            "RESOLVED DATE",
-            wrap_link(format_date(data.get("resolved_date")))
-        ],
+        ["INCIDENT", wrap_link(data.get("number"),
+         f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}"),
+         "CREATED BY", wrap_link(data.get("created_by"))],
+
+        ["AZURE BUG", wrap_link(data.get("azure_bug"),
+         f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{data.get('azure_bug')}") if data.get("azure_bug") else "",
+         "CREATED DATE", wrap_link(format_date(data.get("created_date")))],
+
+        ["PTC CASE", wrap_link(data.get("ptc_case"),
+         f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}") if data.get("ptc_case") else "",
+         "ASSIGNED TO", wrap_link(data.get("assigned_to"))],
+
+        ["PRIORITY", wrap_link(data.get("priority")),
+         "RESOLVED DATE", wrap_link(format_date(data.get("resolved_date")))],
     ], colWidths=[100,160,100,160])
 
-   # ====================== DESCRIPTION TABLE ===================
+    table.setStyle(TableStyle([
+        ('GRID',(0,0),(-1,-1),1,colors.black),
+        ('BACKGROUND',(0,0),(0,-1),colors.lightgrey),
+        ('BACKGROUND',(2,0),(2,-1),colors.lightgrey),
+        ('FONTNAME',(0,0),(0,-1),'Helvetica-Bold'),
+        ('FONTNAME',(2,0),(2,-1),'Helvetica-Bold'),
+        ('VALIGN',(0,0),(-1,-1),'TOP'),
+    ]))
+
+    elements.append(table)
+    elements.append(Spacer(1,15))
+
+    # DESCRIPTION TABLE
     def wrap(x):
         return Paragraph(str(x or ""), styles["Normal"])
-    
+
     desc = Table([
-        [
-            Paragraph("<b>SHORT DESCRIPTION</b>", styles["Normal"]),
-            Paragraph("<b>DESCRIPTION</b>", styles["Normal"])
-        ],
-        [
-            wrap(clean_text(data.get("short_description"))),
-            wrap(clean_text(data.get("description")))
-        ]
-    ], colWidths=[260, 260])
-    
+        ["SHORT DESCRIPTION", "DESCRIPTION"],
+        [wrap(clean_text(data.get("short_description"))),
+         wrap(clean_text(data.get("description")))]
+    ], colWidths=[260,260])
+
     desc.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
         ('BACKGROUND',(0,0),(-1,0),colors.lightgrey),
         ('VALIGN',(0,0),(-1,-1),'TOP'),
     ]))
-    
+
     elements.append(desc)
-    elements.append(Spacer(1, 20))
-    
-    
-    # BULLETS
+    elements.append(Spacer(1,20))
+
     def add_bullets(text):
         for line in (text or "-").split("\n"):
             line = line.strip()
@@ -312,25 +296,22 @@ def generate_pdf(data, root, l2, res, images=None):
                 continue
             if line.startswith("-"):
                 line = line[1:].strip()
-    
+
             elements.append(Paragraph(f"• {line}", styles["Normal"]))
             elements.append(Spacer(1,4))
-    
-    
+
     def section(title, content, imgs):
         elements.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
         elements.append(Spacer(1,6))
         add_bullets(content)
         elements.append(Spacer(1,10))
         add_images_pdf(elements, imgs)
-    
-    
+
     section("PROBLEM STATEMENT & ROOT CAUSE", root, images.get("root"))
     section("TECHNICAL ANALYSIS", l2, images.get("l2"))
     section("RESOLUTION & RECOMMENDATION", res, images.get("res"))
 
-#============= FOOTER =====================
-    
+    # FOOTER
     def footer(canvas, doc):
         width, _ = letter
         canvas.setFont('Helvetica',9)
@@ -339,7 +320,7 @@ def generate_pdf(data, root, l2, res, images=None):
         canvas.drawRightString(width-40,20,str(data.get("priority")))
 
     doc.build(elements, onFirstPage=footer, onLaterPages=footer)
-    
+
     pdf_bytes = buffer.getvalue()
     buffer.close()
     return pdf_bytes
