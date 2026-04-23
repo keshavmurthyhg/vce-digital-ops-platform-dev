@@ -282,13 +282,7 @@ def render_main(df):
                 reports = build_bulk_reports(df, ids)
                 zip_bytes = generate_bulk_zip(reports)
     
-                st.download_button(
-                    "⬇ Download Bulk ZIP",
-                    data=zip_bytes,
-                    file_name=f"Bulk_Report_{format_date('2026-01-01')}.zip",
-                    mime="application/zip"
-                )
-    
+                st.session_state["zip_bytes"] = word_bytes
                 st.success("Zip generated successfully")
     
             except Exception as e:
