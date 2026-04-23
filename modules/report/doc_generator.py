@@ -233,7 +233,14 @@ def generate_pdf(data, root, l2, res, images=None):
     styles = getSampleStyleSheet()
     elements = []
 
-    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        leftMargin=40,
+        rightMargin=40,
+        topMargin=40,
+        bottomMargin=50
+    )
 
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
     elements.append(Spacer(1,10))
@@ -305,6 +312,15 @@ def generate_pdf(data, root, l2, res, images=None):
     elements.append(desc)
     elements.append(Spacer(1,20))
 
+    from reportlab.lib.styles import ParagraphStyle
+
+    bullet_style = ParagraphStyle(
+        name="bullet",
+        parent=styles["Normal"],
+        leftIndent=10,     # aligns with table
+        spaceAfter=4,
+    )
+    
     def add_bullets(text):
         for line in (text or "-").split("\n"):
             line = line.strip()
@@ -313,11 +329,12 @@ def generate_pdf(data, root, l2, res, images=None):
             if line.startswith("-"):
                 line = line[1:].strip()
 
-            elements.append(Paragraph(f"• {line}", styles["Normal"]))
+            elements.append(Paragraph(f"• {line}", bullet_style))
             elements.append(Spacer(1,4))
 
     def section(title, content, imgs):
         elements.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
+    
         elements.append(Spacer(1,6))
         add_bullets(content)
         elements.append(Spacer(1,10))
