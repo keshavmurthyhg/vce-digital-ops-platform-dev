@@ -11,6 +11,12 @@ def clean_text(text):
         return ""
     return re.sub(r"How does the user want.*?\d+", "", str(text), flags=re.I).strip()
 
+def clean_nan(val):
+    if val is None:
+        return ""
+    if str(val).lower() == "nan":
+        return ""
+    return str(val)
 
 def format_date(date_str):
     if not date_str:
