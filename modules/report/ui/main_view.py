@@ -3,7 +3,7 @@ from io import BytesIO
 import zipfile
 
 from modules.report.utils.links import make_ui_link
-from modules.report.doc_generator import generate_pdf, generate_word_doc
+from modules.report.doc_generator import generate_pdf, generate_word_doc_wrapper
 from modules.report.bulk_generator import build_bulk_reports, generate_bulk_zip
 from modules.report.builders.analysis_builder import (
     build_root_cause,
