@@ -32,10 +32,16 @@ def format_date(date_str):
 def format_description(text):
     if not text:
         return ""
+
     text = str(text)
-    text = text.replace("How does the user want", "\n\nHow does the user want")
-    text = text.replace("MS Teams", "\nMS Teams")
-    text = text.replace("Business phone number", "\nBusiness phone number")
+
+    # 🔴 Remove EVERYTHING after the privacy trigger line
+    text = re.split(
+        r"How does the user want to be contacted.*?\?",
+        text,
+        flags=re.I
+    )[0]
+
     return text.strip()
 
 def make_link(url, text):
