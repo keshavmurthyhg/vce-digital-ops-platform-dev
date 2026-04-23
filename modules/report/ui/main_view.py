@@ -225,65 +225,73 @@ def render_main(df):
     }
     
     # ---------------- PDF DOWNLOAD ---------------- #
+    
     if generate_pdf_btn:
         if "data" not in st.session_state:
             st.warning("Fetch incident first")
         else:
             data = st.session_state["data"]
-
-        try:
-            pdf_bytes = generate_pdf(
-                data,
-                st.session_state.get("root"),
-                st.session_state.get("l2"),
-                st.session_state.get("res"),
-                st.session_state.get("images")
-            )
-        
-            st.success("PDF generated successfully")
-                           
-        except Exception as e:
-            st.error(f"PDF Error: {e}")
+    
+            try:
+                pdf_bytes = generate_pdf(
+                    data,
+                    st.session_state.get("root"),
+                    st.session_state.get("l2"),
+                    st.session_state.get("res"),
+                    st.session_state.get("images")
+                )
+    
+                st.session_state["pdf_bytes"] = pdf_bytes   # ✅ IMPORTANT
+                st.success("PDF generated successfully")
+    
+            except Exception as e:
+                st.error(f"PDF Error: {e}")
     
     # ---------------- WORD DOWNLOAD ---------------- #
+    
     if generate_word_btn:
         if "data" not in st.session_state:
             st.warning("Fetch incident first")
         else:
             data = st.session_state["data"]
-
-            word_bytes = generate_word_doc(
-                data,
-                st.session_state.get("root"),
-                st.session_state.get("l2"),
-                st.session_state.get("res"),
-                st.session_state.get("images")
-            )
-            
-            st.success("Word generated successfully")
-        
-        except Exception as e:
-            st.error(f"Word Error: {e}")
+    
+            try:
+                word_bytes = generate_word_doc(
+                    data,
+                    st.session_state.get("root"),
+                    st.session_state.get("l2"),
+                    st.session_state.get("res"),
+                    st.session_state.get("images")
+                )
+    
+                st.session_state["word_bytes"] = word_bytes   # ✅ STORE
+                st.success("Word generated successfully")
+    
+            except Exception as e:
+                st.error(f"Word Error: {e}")
             
     # ---------------- BULK GENERATE ---------------- #
     if bulk_btn:
         ids = [x.strip() for x in bulk_input.split(",") if x.strip()]
-
+    
         if not ids:
             st.warning("Enter incident numbers")
         else:
-            reports = build_bulk_reports(df, ids)
-
-            zip_bytes = generate_bulk_zip(reports)
-
-            st.download_button(
-                "⬇ Download Bulk ZIP",
-                data=zip_bytes,
-                file_name=f"Bulk_Report_{format_date('2026-01-01')}.zip",
-                mime="application/zip"
-            )
-            
-            st.success("Zip generated successfully")
+            try:
+                reports = build_bulk_reports(df, ids)
+                zip_bytes = generate_bulk_zip(reports)
+    
+                st.download_button(
+                    "⬇ Download Bulk ZIP",
+                    data=zip_bytes,
+                    file_name="Bulk_Report.zip",
+                    mime="application/zip"
+                )
+    
+                st.success("Zip generated successfully")
+    
+            except Exception as e:
+                st.error(f"Zip Error: {e}")
         
         except Exception as e:
             st.error(f"Zip Error: {e}")
