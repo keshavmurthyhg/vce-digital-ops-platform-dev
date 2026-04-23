@@ -33,13 +33,14 @@ def get_url(field, value):
 # ---------------- PDF ---------------- #
 
 def make_pdf_link(text, url, styles):
-    from reportlab.platypus import Paragraph
-
     if not text:
         return Paragraph("", styles["Normal"])
 
     if url:
-        return Paragraph(f'<link href="{url}">{text}</link>', styles["Normal"])
+        return Paragraph(
+            f'<link href="{url}"><font color="black">{text}</font></link>',
+            styles["Normal"]
+        )
 
     return Paragraph(str(text), styles["Normal"])
 
