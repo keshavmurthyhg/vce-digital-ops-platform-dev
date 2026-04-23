@@ -208,24 +208,6 @@ def generate_word_doc(data, root, l2, res, images=None):
 
 # ---------------- PDF ---------------- #
 
-def add_images_pdf(elements, image_list):
-    if not image_list:
-        return
-
-    for img in image_list:
-        try:
-            if hasattr(img, "read"):
-                img_bytes = BytesIO(img.read())
-                img.seek(0)
-            else:
-                img_bytes = img
-
-            elements.append(Image(img_bytes, width=400, height=250))
-            elements.append(Spacer(1, 10))
-        except:
-            pass
-
-
 def generate_pdf(data, root, l2, res, images=None):
     images = safe_images(images)
 
@@ -252,7 +234,7 @@ def generate_pdf(data, root, l2, res, images=None):
             return Paragraph(f'<link href="{url}">{text}</link>', styles["Normal"])
         return Paragraph(str(text), styles["Normal"])
 
-    # HEADER TABLE
+    # ---------------- HEADER TABLE ---------------- #
     table = Table([
         ["INCIDENT", wrap_link(data.get("number"),
          f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}"),
@@ -268,7 +250,7 @@ def generate_pdf(data, root, l2, res, images=None):
 
         ["PRIORITY", wrap_link(data.get("priority")),
          "RESOLVED DATE", wrap_link(format_date(data.get("resolved_date")))],
-    ], colWidths=[100,160,100,160])
+    ], colWidths=[100,166,100,166])
 
     table.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
@@ -282,7 +264,7 @@ def generate_pdf(data, root, l2, res, images=None):
     elements.append(table)
     elements.append(Spacer(1,15))
 
-    # CENTER STYLE FOR HEADER
+    # ---------------- CENTER STYLE ---------------- #
     center_style = ParagraphStyle(
         name="center",
         parent=styles["Normal"],
@@ -292,6 +274,7 @@ def generate_pdf(data, root, l2, res, images=None):
     def wrap(x):
         return Paragraph(str(x or ""), styles["Normal"])
 
+    # ---------------- DESCRIPTION TABLE ---------------- #
     desc = Table([
         [
             Paragraph("<b>SHORT DESCRIPTION</b>", center_style),
@@ -301,7 +284,7 @@ def generate_pdf(data, root, l2, res, images=None):
             wrap(clean_text(data.get("short_description"))),
             wrap(clean_text(data.get("description")))
         ]
-    ], colWidths=[260,260])
+    ], colWidths=[266,266])
 
     desc.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
@@ -312,15 +295,14 @@ def generate_pdf(data, root, l2, res, images=None):
     elements.append(desc)
     elements.append(Spacer(1,20))
 
-    from reportlab.lib.styles import ParagraphStyle
-
+    # ---------------- BULLET STYLE ---------------- #
     bullet_style = ParagraphStyle(
         name="bullet",
         parent=styles["Normal"],
-        leftIndent=10,     # aligns with table
+        leftIndent=10,
         spaceAfter=4,
     )
-    
+
     def add_bullets(text):
         for line in (text or "-").split("\n"):
             line = line.strip()
@@ -330,11 +312,9 @@ def generate_pdf(data, root, l2, res, images=None):
                 line = line[1:].strip()
 
             elements.append(Paragraph(f"• {line}", bullet_style))
-            elements.append(Spacer(1,4))
 
     def section(title, content, imgs):
         elements.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
-    
         elements.append(Spacer(1,6))
         add_bullets(content)
         elements.append(Spacer(1,10))
@@ -344,6 +324,7 @@ def generate_pdf(data, root, l2, res, images=None):
     section("TECHNICAL ANALYSIS", l2, images.get("l2"))
     section("RESOLUTION & RECOMMENDATION", res, images.get("res"))
 
+    # ---------------- FOOTER ---------------- #
     def footer(canvas, doc):
         width, _ = letter
         canvas.setFont('Helvetica',9)
