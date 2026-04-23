@@ -47,7 +47,7 @@ def make_pdf_link(text, url, styles):
 # ---------------- WORD ---------------- #
 
 def apply_word_link(paragraph, field, value):
-    from modules.report.utils import add_hyperlink
+    from modules.report.utils.utils import add_hyperlink
 
     url = get_url(field, value)
 
