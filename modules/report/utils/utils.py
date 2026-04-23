@@ -50,25 +50,26 @@ def make_link(url, text):
     return f'<link href="{url}">{text}</link>'
 
 #============ AZURE NUMBER EXTRACTOR ============== #
-import re
-
 def extract_azure_id(text):
     if not text:
         return None
-    for p in patterns:
-        print(...)
-    # ✅ DEFINE FIRST
+
+    # ✅ MUST BE FIRST
     patterns = [
         r'AB[#\s]*(\d+)',
         r'Azure\s*(?:Bug|ID)?[:\s]*(\d+)',
         r'Work\s*Item[:\s]*(\d+)',
-        r'\b(\d{6,8})\b'   # supports 6-digit Azure IDs
+        r'\b(\d{6,8})\b'
     ]
 
-    # ✅ THEN USE
+    # DEBUG (safe now)
+    print("TEXT:", text)
+
     for p in patterns:
+        print("Trying:", p)
         match = re.search(p, text, re.IGNORECASE)
         if match:
+            print("FOUND:", match.group(1))
             return match.group(1)
 
     return None
