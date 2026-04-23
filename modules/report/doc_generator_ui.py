@@ -246,3 +246,12 @@ def render_doc_generator():
         "l2": l2_imgs or [],
         "res": res_imgs or []
     }
+    
+    # PREVIEW
+    with col_prev:
+        show_prev = st.button("Preview", use_container_width=True)
+
+    if show_prev and "data" in st.session_state:
+        with st.expander("Report Preview", expanded=True):
+            st.write(f"**Short Description:** {st.session_state['data']['short_description']}")
+            st.write(f"**Root Cause:** {st.session_state.get('root')}")
