@@ -21,7 +21,12 @@ def get_incident(df, inc):
     row = df[df["number"].astype(str).str.upper() == inc.upper()]
     if row.empty:
         return None
+
     r = row.iloc[0]
+
+    # ✅ extract once BEFORE dict
+    resolution_text = r.get("resolution notes", "")
+    azure_id = extract_azure_id(resolution_text)
 
     return {
         "number": clean_nan(r.get("number")),
@@ -32,14 +37,18 @@ def get_incident(df, inc):
         "created_date": format_date(r.get("created")),
         "assigned_to": clean_nan(r.get("assigned to")),
         "resolved_date": format_date(r.get("resolved")),
+
         "work_notes": r.get("work notes", ""),
         "comments": r.get("additional comments", ""),
-        resolution_text = r.get("resolution notes", "")
+
+        # ✅ use extracted text
         "resolution": resolution_text,
-        "azure_bug": extract_azure_id(resolution_text) or clean_nan(r.get("azure bug")),
+
+        # ✅ FIXED AZURE EXTRACTION
+        "azure_bug": azure_id if azure_id else clean_nan(r.get("azure bug")),
+
         "ptc_case": clean_nan(r.get("vendor ticket")),
     }
-
 # ---------------- MAIN UI ---------------- #
 
 def render_main(df):
@@ -64,7 +73,7 @@ def render_main(df):
     # ---------------- FETCH LOGIC ---------------- #
     if fetch:
         data = get_incident(df, incident)
-        st.write("DEBUG AFTER FETCH:", st.session_state.get("data"))
+        st.write("DEBUG AFTER FETCH:", data)
         st.write("AZURE:", st.session_state.get("data", {}).get("azure_bug"))
         if data:
             st.session_state["data"] = data
