@@ -1,17 +1,21 @@
 from reportlab.platypus import Table, TableStyle
 from reportlab.lib import colors
+from modules.report.utils.links import get_url, make_pdf_link
 
+def wrap_link(field, value, styles):
+    url = get_url(field, value)
+    return make_pdf_link(value, url, styles)
 
 def build_pdf_header(data, wrap_link, format_date):
 
     table = Table([
-        ["INCIDENT", wrap_link(data.get("number")),
+        ["INCIDENT", wrap_link("incident", data.get("number"), styles),
          "CREATED BY", wrap_link(data.get("created_by"))],
 
-        ["AZURE BUG", wrap_link(data.get("azure_bug")),
+        ["AZURE BUG", wrap_link("azure", data.get("azure_bug"), styles),
          "CREATED DATE", wrap_link(format_date(data.get("created_date")))],
 
-        ["PTC CASE", wrap_link(data.get("ptc_case")),
+        ["PTC CASE", wrap_link("ptc", data.get("ptc_case"), styles),
          "ASSIGNED TO", wrap_link(data.get("assigned_to"))],
 
         ["PRIORITY", wrap_link(data.get("priority")),
