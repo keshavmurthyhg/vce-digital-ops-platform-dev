@@ -1,9 +1,9 @@
 import streamlit as st
 from modules.report.data.snow_loader import load_snow_data
 
-from ui.state import init_state
-from ui.sidebar import render_sidebar
-from ui.main_view import render_main
+from modules.report.ui.state import init_state
+from modules.report.ui.sidebar import render_sidebar
+from modules.report.ui.main_view import render_main
 
 def main():
     init_state()
