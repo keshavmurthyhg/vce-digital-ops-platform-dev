@@ -275,15 +275,23 @@ def generate_pdf(data, root, l2, res, images=None):
         return Paragraph(str(x or ""), styles["Normal"])
 
     desc = Table([
-        ["SHORT DESCRIPTION", "DESCRIPTION"],
-        [wrap(clean_text(data.get("short_description"))),
-         wrap(clean_text(data.get("description")))]
+        [
+            Paragraph("<b>SHORT DESCRIPTION</b>", styles["Normal"]),
+            Paragraph("<b>DESCRIPTION</b>", styles["Normal"])
+        ],
+        [
+            wrap(clean_text(data.get("short_description"))),
+            wrap(clean_text(data.get("description")))
+        ]
     ], colWidths=[260,260])
 
-    desc.setStyle(TableStyle([
+        desc.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
         ('BACKGROUND',(0,0),(-1,0),colors.lightgrey),
         ('VALIGN',(0,0),(-1,-1),'TOP'),
+    
+        # ✅ center header row
+        ('ALIGN',(0,0),(-1,0),'CENTER'),
     ]))
 
     elements.append(desc)
