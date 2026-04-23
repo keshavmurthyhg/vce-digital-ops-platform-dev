@@ -17,7 +17,7 @@ def build_pdf_header(data, wrap_link, format_date):
         ["PRIORITY", wrap_link(data.get("priority")),
          "RESOLVED DATE", wrap_link(format_date(data.get("resolved_date")))],
     ],
-    colWidths=[120, 180, 120, 180]   # ✅ correct place
+    colWidths=[100, 160, 100, 160]   # ✅ correct place
     )
 
     table.setStyle(TableStyle([
