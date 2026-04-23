@@ -27,7 +27,7 @@ def generate_pdf_doc(data, root, l2, res, images):
         topMargin=40,
         bottomMargin=50
     )
-
+    print("PDF DATA AZURE:", data.get("azure_bug"))
     # ================= HEADER ================= #
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
     elements.append(Spacer(1, 10))
