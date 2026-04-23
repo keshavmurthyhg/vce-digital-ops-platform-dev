@@ -21,9 +21,22 @@ def build_pdf_header(data, wrap_link, format_date):
     )
 
     table.setStyle(TableStyle([
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
-        ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+        # 🔹 GRID
         ('GRID', (0,0), (-1,-1), 1, colors.black),
+    
+        # 🔹 GREY BACKGROUND (LABEL COLUMNS)
+        ('BACKGROUND', (0,0), (0,-1), colors.lightgrey),
+        ('BACKGROUND', (2,0), (2,-1), colors.lightgrey),
+    
+        # 🔹 BOLD LABELS
+        ('FONTNAME', (0,0), (0,-1), 'Helvetica-Bold'),
+        ('FONTNAME', (2,0), (2,-1), 'Helvetica-Bold'),
+    
+        # 🔹 NORMAL TEXT
+        ('FONTNAME', (1,0), (1,-1), 'Helvetica'),
+        ('FONTNAME', (3,0), (3,-1), 'Helvetica'),
+    
+        # 🔹 ALIGNMENT
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
 
