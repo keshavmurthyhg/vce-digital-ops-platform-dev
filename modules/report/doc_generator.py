@@ -1,7 +1,21 @@
 from modules.report.renderers.pdf_renderer import generate_pdf_doc
 from modules.report.renderers.word_renderer import generate_word_doc
 from modules.report.utils.utils import format_description
+from modules.report.utils.utils import extract_azure_id
 
+
+def enrich_data(data):
+    notes = " ".join([
+        str(data.get("resolution_notes", "")),
+        str(data.get("work_notes", "")),
+        str(data.get("comments", "")),
+        str(data.get("additional_comments", ""))
+    ])
+
+    if not data.get("azure_bug"):
+        data["azure_bug"] = extract_azure_id(notes)
+
+    return data
 
 def prepare_data(data):
     """
@@ -31,7 +45,6 @@ def generate_pdf(data, root, l2, res, images=None):
         res=res,
         images=images
     )
-
 
 def generate_word_doc_wrapper(data, root, l2, res, images=None):
     images = safe_images(images)
