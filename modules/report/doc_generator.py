@@ -12,7 +12,7 @@ def enrich_data(data):
         str(data.get("additional_comments", ""))
     ])
 
-    if not data.get("azure_bug"):
+    if not data.get("azure_bug") or str(data.get("azure_bug")).strip() == "":
         data["azure_bug"] = extract_azure_id(notes)
 
     return data
