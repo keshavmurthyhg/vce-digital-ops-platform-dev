@@ -286,6 +286,8 @@ def generate_pdf(data, root, l2, res, images=None):
         ('VALIGN',(0,0),(-1,-1),'TOP'),   # 🔥 important
     ]))
 
+    elements.append(desc_table)
+    
    # BULLETS
     def add_bullets(text):
         for line in (text or "-").split("\n"):
