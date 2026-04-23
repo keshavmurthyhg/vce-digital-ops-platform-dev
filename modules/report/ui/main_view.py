@@ -227,6 +227,9 @@ def render_main(df):
                 mime="application/pdf"
             )
 
+        except Exception as e:
+            st.error(f"PDF Error: {e}")
+    
     # ---------------- WORD DOWNLOAD ---------------- #
     if generate_word_btn:
         if "data" not in st.session_state:
