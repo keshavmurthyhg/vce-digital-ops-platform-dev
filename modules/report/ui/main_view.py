@@ -1,6 +1,6 @@
 import streamlit as st
 from modules.report.doc_generator import generate_pdf, generate_word_doc_wrapper
-from ui.actions import run_bulk
+from modules.report.ui.actions import run_bulk
 
 def render_main(filtered_df):
 
