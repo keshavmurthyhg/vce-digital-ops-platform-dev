@@ -69,10 +69,13 @@ def render_sidebar(df):
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
     
-    if "zip_bytes" in st.session_state and "data" in st.session_state:
+    if "zip_bytes" in st.session_state:
         st.sidebar.download_button(
-            "⬇ Download Word",
+            "⬇ Download ZIP",
             data=st.session_state["zip_bytes"],
-            file_name=f"Bulk_Report_{format_date('2026-01-01')}.zip",
+            file_name="Bulk_Report.zip",
             mime="application/zip"
         )
+    
+    # ✅ CRITICAL FIX
+    return filtered
