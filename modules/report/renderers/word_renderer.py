@@ -2,7 +2,8 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from modules.report.layout.footer import apply_word_footer
 from modules.report.utils.links import apply_word_link
-from modules.report.utils.utils import format_date, set_cell_bg
+from modules.report.utils.utils import format_date, set_cell_bg, format_description
+
 
 def generate_word_doc(data, root, l2, res, images):
 
@@ -17,41 +18,43 @@ def generate_word_doc(data, root, l2, res, images):
         h = table.rows[r].cells[c]
         v = table.rows[r].cells[c + 1]
 
+        # HEADER CELL
         p = h.paragraphs[0]
-        p.text = key.upper()
-        for run in p.runs:
-            run.bold = True
+        run = p.add_run(key.upper())
+        run.bold = True
         set_cell_bg(h)
 
+        # VALUE CELL (WITH LINK)
         p = v.paragraphs[0]
         apply_word_link(p, key, val)
 
-    fill(0,0,"Incident",data.get("number"))
-    fill(0,2,"Created By",data.get("created_by"))
-    fill(1,0,"Azure Bug",data.get("azure_bug"))
-    fill(1,2,"Created Date",format_date(data.get("created_date")))
-    fill(2,0,"PTC Case",data.get("ptc_case"))
-    fill(2,2,"Assigned To",data.get("assigned_to"))
-    fill(3,0,"Priority",data.get("priority"))
-    fill(3,2,"Resolved Date",format_date(data.get("resolved_date")))
+    fill(0, 0, "Incident", data.get("number"))
+    fill(0, 2, "Created By", data.get("created_by"))
+    fill(1, 0, "Azure Bug", data.get("azure_bug"))
+    fill(1, 2, "Created Date", format_date(data.get("created_date")))
+    fill(2, 0, "PTC Case", data.get("ptc_case"))
+    fill(2, 2, "Assigned To", data.get("assigned_to"))
+    fill(3, 0, "Priority", data.get("priority"))
+    fill(3, 2, "Resolved Date", format_date(data.get("resolved_date")))
 
     doc.add_paragraph("")
 
-    # DESCRIPTION
+    # DESCRIPTION TABLE
     t2 = doc.add_table(rows=2, cols=2)
     t2.style = "Table Grid"
 
     headers = ["SHORT DESCRIPTION", "DESCRIPTION"]
+
     for i, text in enumerate(headers):
         p = t2.rows[0].cells[i].paragraphs[0]
-        p.text = text
-        for run in p.runs:
-            run.bold = True
+        run = p.add_run(text)
+        run.bold = True
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         set_cell_bg(t2.rows[0].cells[i])
 
+    # ✅ CLEAN DESCRIPTION (REMOVES PERSONAL INFO)
     t2.rows[1].cells[0].text = str(data.get("short_description") or "")
-    t2.rows[1].cells[1].text = str(data.get("description") or "")
+    t2.rows[1].cells[1].text = format_description(data.get("description"))
 
     # BODY
     sections = {
