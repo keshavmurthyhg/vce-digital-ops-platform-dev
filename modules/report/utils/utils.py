@@ -49,7 +49,33 @@ def make_link(url, text):
         return ""
     return f'<link href="{url}">{text}</link>'
 
+#============ AZURE NUMBER EXTRACTOR ============== #
+import re
+def extract_azure_id(text):
+    """
+    Extract Azure Work Item ID from text
+    Example patterns:
+    - Azure Bug: 123456
+    - AB#123456
+    - DevOps 123456
+    """
+    if not text:
+        return None
 
+    patterns = [
+        r'AB[#\s]*(\d+)',
+        r'Azure\s*(?:Bug|ID)?[:\s]*(\d+)',
+        r'Work\s*Item[:\s]*(\d+)',
+        r'\b(\d{5,7})\b'  # fallback (optional)
+    ]
+
+    for p in patterns:
+        match = re.search(p, text, re.IGNORECASE)
+        if match:
+            return match.group(1)
+
+    return None
+    
 # ---------------- PDF ---------------- #
 
 def add_images_pdf(elements, image_list):
