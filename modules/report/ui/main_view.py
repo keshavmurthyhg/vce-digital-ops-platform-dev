@@ -10,49 +10,43 @@ from modules.report.builders.analysis_builder import (
     build_resolution,
     merge_with_user_input
 )
-from modules.report.utils import format_date
+from modules.report.utils import clean_nan, format_date, format_description
 
 
 # ---------------- HELPER ---------------- #
 
 def get_incident(df, inc):
-    df["number"] = df["number"].astype(str).str.upper()
-    row = df[df["number"] == inc.upper()]
-
+    row = df[df["number"].astype(str).str.upper() == inc.upper()]
     if row.empty:
         return None
-
     r = row.iloc[0]
 
-    resolution_text = (
-        r.get("RESOLUTION & RECOMMENDATION notes")
-        or r.get("resolution notes")
-        or r.get("Resolution Notes")
-        or ""
-    )
-
     return {
-        "number": r.get("number"),
-        "short_description": r.get("short description"),
-        "description": r.get("description"),
-        "priority": r.get("priority"),
-        "created_by": r.get("caller"),
-        "created_date": str(r.get("created")).split()[0],
-        "assigned_to": r.get("assigned to"),
-        "resolved_date": str(r.get("resolved")).split()[0],
+        "number": clean_nan(r.get("number")),
+        "short_description": clean_nan(r.get("short description")),
+        "description": clean_nan(r.get("description")),
+        "priority": clean_nan(r.get("priority")),
+        "created_by": clean_nan(r.get("caller")),
+        "created_date": format_date(r.get("created")),
+        "assigned_to": clean_nan(r.get("assigned to")),
+        "resolved_date": format_date(r.get("resolved")),
         "work_notes": r.get("work notes", ""),
         "comments": r.get("additional comments", ""),
-        "resolution": resolution_text,
-        "azure_bug": r.get("azure bug"),
-        "ptc_case": r.get("vendor ticket"),
+        "resolution": r.get("resolution notes", ""),
+        "azure_bug": clean_nan(r.get("azure bug")),
+        "ptc_case": clean_nan(r.get("vendor ticket")),
     }
-
 
 # ---------------- MAIN UI ---------------- #
 
 def render_main(df):
-
     st.title("Incident Report Generator")
+
+    # INIT STATE
+    for k in ["root", "l2", "res", "images"]:
+        if k not in st.session_state:
+            st.session_state[k] = "" if k != "images" else {"root": [], "l2": [], "res": []}
+
 
     # ---------------- INIT STATE ---------------- #
     for key in ["root", "l2", "res", "images"]:
@@ -63,52 +57,42 @@ def render_main(df):
     col1, col2 = st.columns([6,1])
 
     with col1:
-        incident = st.selectbox(
-            "Select Incident",
-            df["number"].dropna().unique()
-        )
-    
+        incident = st.selectbox("Select Incident", df["number"].dropna().unique())
+
     with col2:
-        st.write("")
-        st.write("")
+        st.write(""); st.write("")
         fetch = st.button("Fetch", use_container_width=True)
 
+    
     # ---------------- FETCH LOGIC ---------------- #
     if fetch:
         data = get_incident(df, incident)
-
         if data:
             st.session_state["data"] = data
 
-            auto_root = build_root_cause(data["work_notes"])
-            auto_l2 = build_l2_analysis(data["comments"])
-            auto_res = build_resolution(data["resolution"])
-
             st.session_state["root"] = merge_with_user_input(
-                auto_root, st.session_state.get("root")
+                build_root_cause(data["work_notes"]),
+                st.session_state.get("root")
             )
             st.session_state["l2"] = merge_with_user_input(
-                auto_l2, st.session_state.get("l2")
+                build_l2_analysis(data["comments"]),
+                st.session_state.get("l2")
             )
             st.session_state["res"] = merge_with_user_input(
-                auto_res, st.session_state.get("res")
+                build_resolution(data["resolution"]),
+                st.session_state.get("res")
             )
 
-            st.success(f"Loaded {incident}")
+            st.success("Loaded")
         else:
-            st.error("Incident not found")
+            st.error("Not found")
 
     # ---------------- BULK INPUT ---------------- #
     st.markdown("### Bulk Incident Numbers")
-
-    bulk_input = st.text_area(
-        "Enter comma-separated incident numbers",
-        value=st.session_state.get("bulk_ids", ""),
-        key="bulk_ids"
-    )
+    bulk_input = st.text_area("Enter comma-separated incident numbers", key="bulk_ids")
 
     # ---------------- ACTION BUTTONS ---------------- #
-    colA, colB, colC, colD = st.columns(4)
+    colA, colB, colC, colD, colE = st.columns(4)
 
     with colA:
         generate_pdf_btn = st.button("Generate PDF", use_container_width=True)
@@ -121,12 +105,12 @@ def render_main(df):
 
     with colD:
         clear_btn = st.button("Clear", use_container_width=True)
-
+    
+    with colE:
         preview_btn = st.button("Preview", use_container_width=True)
 
     # ---------------- CLEAR ---------------- #
     if clear_btn:
-        if clear_btn:
         st.session_state.clear()
         st.rerun()
 
