@@ -2,6 +2,7 @@ import streamlit as st
 from io import BytesIO
 import zipfile
 
+from modules.report.utils.links import make_ui_link
 from modules.report.doc_generator import generate_pdf, generate_word_doc
 from modules.report.bulk_generator import build_bulk_reports, generate_bulk_zip
 from modules.report.builders.analysis_builder import (
@@ -123,7 +124,22 @@ def render_main(df):
             ["PRIORITY", data["priority"], "RESOLVED DATE", data["resolved_date"]],
         ]
     
-        st.table(t1)
+        st.markdown("#### Incident Details")
+
+        for row in t1:
+            col1, col2, col3, col4 = st.columns(4)
+        
+            with col1:
+                st.markdown(f"**{row[0]}**")
+        
+            with col2:
+                st.markdown(make_ui_link(row[0], row[1]))
+        
+            with col3:
+                st.markdown(f"**{row[2]}**")
+        
+            with col4:
+                st.markdown(make_ui_link(row[2], row[3]))
     
         # -------- TABLE 2 -------- #
         t2 = [
@@ -131,7 +147,17 @@ def render_main(df):
             [data["short_description"], format_description(data["description"])]
         ]
     
-        st.table(t2)
+        st.markdown("#### Description")
+
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**SHORT DESCRIPTION**")
+            st.write(data["short_description"])
+        
+        with col2:
+            st.markdown("**DESCRIPTION**")
+            st.write(format_description(data["description"]))
     
     # ---------------- EDITABLE BLOCKS ---------------- #
     st.subheader("Edit Report Details")
