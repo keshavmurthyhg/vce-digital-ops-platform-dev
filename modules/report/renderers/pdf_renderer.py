@@ -8,8 +8,8 @@ from modules.report.layout.body import build_sections
 from modules.report.layout.styles import get_pdf_styles
 from modules.report.layout.footer import pdf_footer
 
-from modules.report.utils.utils import format_date, add_images_pdf
-from modules.report.utils.links import get_url
+from modules.report.utils.utils import format_date, add_images_pdf, clean_text
+from modules.report.utils.links import get_url, make_pdf_link
 
 
 def generate_pdf_doc(data, root, l2, res, images):
@@ -29,19 +29,8 @@ def generate_pdf_doc(data, root, l2, res, images):
     )
 
     # ✅ FIXED WRAP LINK (NEW STANDARD)
-    ddef wrap_link(field, value):
-    if not value:
-        return Paragraph("", styles["Normal"])
-
-    url = get_url(field, value)
-
-    if url:
-        return Paragraph(
-            f'<link href="{url}"><font color="black">{value}</font></link>',
-            styles["Normal"]
-        )
-
-    return Paragraph(str(value), styles["Normal"])
+    def wrap_link(field, value):
+        return make_pdf_link(value, get_url(field, value), styles)
 
     # HEADER
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
@@ -52,7 +41,7 @@ def generate_pdf_doc(data, root, l2, res, images):
     elements.append(Spacer(1, 15))
 
     # DESCRIPTION
-    desc = build_pdf_description(data, center_style, styles)
+    desc = build_pdf_description(data, center_style, clean_text, styles)
     elements.append(desc)
     elements.append(Spacer(1, 20))
 
