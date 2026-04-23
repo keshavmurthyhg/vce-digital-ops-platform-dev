@@ -1,7 +1,7 @@
 from reportlab.platypus import Table, TableStyle, Paragraph
 from reportlab.lib import colors
 
-def build_pdf_description(data, center_style, clean_text, styles):
+def build_pdf_description(data, center_style, styles):
 
     def wrap(x):
         return Paragraph(str(x or ""), styles["Normal"])
@@ -12,8 +12,8 @@ def build_pdf_description(data, center_style, clean_text, styles):
             Paragraph("<b>DESCRIPTION</b>", center_style)
         ],
         [
-            wrap(clean_text(data.get("short_description"))),
-            wrap(clean_text(data.get("description")))
+            wrap(data.get("short_description")),
+            wrap(data.get("description"))
         ]
     ], colWidths=[260,260])
 
