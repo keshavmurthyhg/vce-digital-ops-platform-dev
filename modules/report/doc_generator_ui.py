@@ -52,8 +52,21 @@ def clear_all():
 def extract_azure_link(text):
     if not text:
         return ""
-    match = re.search(r"/(\d+)", str(text))
-    return match.group(1) if match else ""
+
+    text = str(text)
+
+    # ✅ Case 1: Azure URL
+    match = re.search(r"/(\d{5,})", text)
+    if match:
+        return match.group(1)
+
+    # ✅ Case 2: "Azure bug 695698"
+    match = re.search(r"azure[^\d]*(\d{5,})", text, re.I)
+    if match:
+        return match.group(1)
+
+    # ❌ Do NOT fallback to random numbers
+    return ""
 
 
 def get_incident(df, inc):
@@ -63,6 +76,13 @@ def get_incident(df, inc):
         return None
 
     r = row.iloc[0]
+
+       resolution_text = (
+        r.get("RESOLUTION & RECOMMENDATION notes")
+        or r.get("resolution notes")
+        or r.get("Resolution Notes")
+        or ""
+    )
 
     return {
         "number": r.get("number"),
@@ -75,11 +95,13 @@ def get_incident(df, inc):
         "resolved_date": str(r.get("resolved")).split()[0],
         "work_notes": r.get("work notes", ""),
         "comments": r.get("additional comments", ""),
-        "resolution": r.get("RESOLUTION & RECOMMENDATION notes", ""),  # ✅ FIXED KEY
+    
+        # ✅ FIXED
+        "resolution": resolution_text,
+        "azure_bug": extract_azure_link(resolution_text),
+    
         "ptc_case": r.get("vendor ticket"),
-        "azure_bug": extract_azure_link(r.get("RESOLUTION & RECOMMENDATION notes"))
     }
-
 
 def render_doc_generator():
 
