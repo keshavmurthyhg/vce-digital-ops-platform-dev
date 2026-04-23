@@ -73,7 +73,7 @@ def render_main(df):
     # ---------------- FETCH LOGIC ---------------- #
     if fetch:
         data = get_incident(df, incident)
-        st.write("DEBUG AFTER FETCH:", data)
+        
         st.write("AZURE:", st.session_state.get("data", {}).get("azure_bug"))
         if data:
             st.session_state["data"] = data
@@ -216,7 +216,7 @@ def render_main(df):
         "l2": l2_imgs or [],
         "res": res_imgs or []
     }
-    st.write("DEBUG BEFORE PDF:", st.session_state.get("data"))
+    
     # ---------------- PDF DOWNLOAD ---------------- #
     if generate_pdf_btn:
         if "data" not in st.session_state:
