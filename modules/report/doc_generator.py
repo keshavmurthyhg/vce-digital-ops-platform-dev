@@ -9,7 +9,7 @@ import re
 
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
 from reportlab.lib import colors
-from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import letter
 
 
@@ -134,11 +134,16 @@ def generate_word_doc(data, root, l2, res, images=None):
 
     headers = ["SHORT DESCRIPTION", "DESCRIPTION"]
     for i, text in enumerate(headers):
-        p = t2.rows[0].cells[i].paragraphs[0]
+        cell = t2.rows[0].cells[i]
+        p = cell.paragraphs[0]
         p.text = text
+
         for run in p.runs:
             run.bold = True
-        set_cell_bg(t2.rows[0].cells[i])
+
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER   # ✅ CENTER FIX
+
+        set_cell_bg(cell)
 
     t2.rows[1].cells[0].text = clean_text(data.get("short_description"))
     t2.rows[1].cells[1].text = clean_text(data.get("description"))
@@ -270,32 +275,31 @@ def generate_pdf(data, root, l2, res, images=None):
     elements.append(table)
     elements.append(Spacer(1,15))
 
-    # DESCRIPTION TABLE
+    # CENTER STYLE FOR HEADER
+    center_style = ParagraphStyle(
+        name="center",
+        parent=styles["Normal"],
+        alignment=1
+    )
+
     def wrap(x):
-        from reportlab.lib.styles import ParagraphStyle
-        center_style = ParagraphStyle(
-            name="center",
-            parent=styles["Normal"],
-            alignment=1,   # 0=left, 1=center, 2=right
-        )
-        desc = Table([
-            [
-                Paragraph("<b>SHORT DESCRIPTION</b>", styles["Normal"]),
-                Paragraph("<b>DESCRIPTION</b>", styles["Normal"])
-            ],
-            [
-                wrap(clean_text(data.get("short_description"))),
-                wrap(clean_text(data.get("description")))
-            ]
-        ], colWidths=[260,260])
+        return Paragraph(str(x or ""), styles["Normal"])
+
+    desc = Table([
+        [
+            Paragraph("<b>SHORT DESCRIPTION</b>", center_style),
+            Paragraph("<b>DESCRIPTION</b>", center_style)
+        ],
+        [
+            wrap(clean_text(data.get("short_description"))),
+            wrap(clean_text(data.get("description")))
+        ]
+    ], colWidths=[260,260])
 
     desc.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
         ('BACKGROUND',(0,0),(-1,0),colors.lightgrey),
         ('VALIGN',(0,0),(-1,-1),'TOP'),
-        
-         # ✅ center header row
-         ('ALIGN',(0,0),(-1,0),'CENTER'),
     ]))
 
     elements.append(desc)
@@ -323,7 +327,6 @@ def generate_pdf(data, root, l2, res, images=None):
     section("TECHNICAL ANALYSIS", l2, images.get("l2"))
     section("RESOLUTION & RECOMMENDATION", res, images.get("res"))
 
-    # FOOTER
     def footer(canvas, doc):
         width, _ = letter
         canvas.setFont('Helvetica',9)
