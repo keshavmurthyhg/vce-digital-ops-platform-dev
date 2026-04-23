@@ -2,14 +2,6 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from modules.report.layout.footer import apply_word_footer
-from modules.report.utils import (
-    clean_text,
-    format_date,
-    add_images_word,
-    add_hyperlink,
-    set_cell_bg
-)
-
 
 def generate_word_doc(data, root, l2, res, images):
 
@@ -56,8 +48,8 @@ def generate_word_doc(data, root, l2, res, images):
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         set_cell_bg(t2.rows[0].cells[i])
 
-    t2.rows[1].cells[0].text = clean_text(data.get("short_description"))
-    t2.rows[1].cells[1].text = clean_text(data.get("description"))
+    t2.rows[1].cells[0].text = str(data.get("short_description") or "")
+    t2.rows[1].cells[1].text = str(data.get("description") or "")
 
     # BODY
     sections = {
