@@ -40,7 +40,7 @@ def make_pdf_link(text, url, styles):
 
     if url:
         return Paragraph(
-            f'<link href="{url}" color="black"><u></u>{text}</link>',
+            f'<link href="{url}"><font color="black">{text}</font></link>',
             styles["Normal"]
         )
 
