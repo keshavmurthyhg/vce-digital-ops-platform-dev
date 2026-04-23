@@ -205,6 +205,22 @@ def generate_word_doc(data, root, l2, res, images=None):
     buffer.seek(0)
     return buffer.getvalue()
 
+def add_images_pdf(elements, image_list):
+    if not image_list:
+        return
+
+    for img in image_list:
+        try:
+            if hasattr(img, "read"):
+                img_bytes = BytesIO(img.read())
+                img.seek(0)
+            else:
+                img_bytes = img
+
+            elements.append(Image(img_bytes, width=400, height=250))
+            elements.append(Spacer(1, 10))
+        except:
+            pass
 
 # ---------------- PDF ---------------- #
 
