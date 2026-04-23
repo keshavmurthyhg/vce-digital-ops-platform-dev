@@ -242,31 +242,42 @@ def generate_pdf(data, root, l2, res, images=None):
         return Paragraph(str(text), styles["Normal"])
 
     # HEADER TABLE
+    # HEADER TABLE
     table = Table([
-        ["INCIDENT", wrap_link(data.get("number"),
-         f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}"),
-         "CREATED BY", wrap_link(data.get("created_by"))
-
-        ["AZURE BUG", wrap_link(data.get("azure_bug"),
-         f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{data.get('azure_bug')}") if data.get("azure_bug") else "",
-         "CREATED DATE", format_date(data.get("created_date"))],
-
-        ["PTC CASE", wrap_link(data.get("ptc_case"),
-         f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}") if data.get("ptc_case") else "",
-         "ASSIGNED TO", wrap_link(data.get("assigned_to"))
-
-        "PRIORITY", wrap_link(data.get("priority"))
-         "RESOLVED DATE", format_date(data.get("resolved_date"))],
+        [
+            "INCIDENT",
+            wrap_link(
+                data.get("number"),
+                f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}"
+            ),
+            "CREATED BY",
+            wrap_link(data.get("created_by"))
+        ],
+        [
+            "AZURE BUG",
+            wrap_link(
+                data.get("azure_bug"),
+                f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{data.get('azure_bug')}"
+            ) if data.get("azure_bug") else "",
+            "CREATED DATE",
+            wrap_link(format_date(data.get("created_date")))
+        ],
+        [
+            "PTC CASE",
+            wrap_link(
+                data.get("ptc_case"),
+                f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}"
+            ) if data.get("ptc_case") else "",
+            "ASSIGNED TO",
+            wrap_link(data.get("assigned_to"))
+        ],
+        [
+            "PRIORITY",
+            wrap_link(data.get("priority")),
+            "RESOLVED DATE",
+            wrap_link(format_date(data.get("resolved_date")))
+        ],
     ], colWidths=[100,160,100,160])
-
-    table.setStyle(TableStyle([
-        ('GRID',(0,0),(-1,-1),1,colors.black),
-        ('BACKGROUND',(0,0),(0,-1),colors.lightgrey),
-        ('BACKGROUND',(2,0),(2,-1),colors.lightgrey),
-    ]))
-
-    elements.append(table)
-    elements.append(Spacer(1,15))
 
    # ====================== DESCRIPTION TABLE ===================
     def wrap(x):
