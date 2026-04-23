@@ -9,6 +9,7 @@ from modules.report.layout.styles import get_pdf_styles
 from modules.report.layout.footer import pdf_footer
 
 from modules.report.utils.utils import format_date, add_images_pdf
+from modules.report.utils.links import get_url
 
 
 def generate_pdf_doc(data, root, l2, res, images):
@@ -27,12 +28,20 @@ def generate_pdf_doc(data, root, l2, res, images):
         bottomMargin=50
     )
 
-    def wrap_link(text, url=None):
-        if not text:
+    # ✅ FIXED WRAP LINK (NEW STANDARD)
+    def wrap_link(field, value):
+        if not value:
             return Paragraph("", styles["Normal"])
+
+        url = get_url(field, value)
+
         if url:
-            return Paragraph(f'<link href="{url}">{text}</link>', styles["Normal"])
-        return Paragraph(str(text), styles["Normal"])
+            return Paragraph(
+                f'<link href="{url}"><u><font color="blue">{value}</font></u></link>',
+                styles["Normal"]
+            )
+
+        return Paragraph(str(value), styles["Normal"])
 
     # HEADER
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
