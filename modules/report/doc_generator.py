@@ -273,7 +273,14 @@ def generate_pdf(data, root, l2, res, images=None):
     # DESCRIPTION TABLE
     def wrap(x):
         return Paragraph(str(x or ""), styles["Normal"])
+        
+        from reportlab.lib.styles import ParagraphStyle
 
+        center_style = ParagraphStyle(
+            name="center",
+            parent=styles["Normal"],
+            alignment=1,   # 0=left, 1=center, 2=right
+        )
     desc = Table([
         [
             Paragraph("<b>SHORT DESCRIPTION</b>", styles["Normal"]),
