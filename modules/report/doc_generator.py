@@ -19,23 +19,7 @@ def enrich_data(data):
         str(data.get("additional_comments", ""))
     ])
     
-    print("COMBINED NOTES:", notes)
     
-    azure = extract_azure_id(notes)
-    print("EXTRACTED AZURE:", azure)
-    
-    if not data.get("azure_bug") or str(data.get("azure_bug")).strip() == "":
-        data["azure_bug"] = azure
-    
-    print("FINAL AZURE IN DATA:", data.get("azure_bug"))
-    print("==================================")
-    notes = " ".join([
-        str(data.get("resolution_notes", "")),
-        str(data.get("work_notes", "")),
-        str(data.get("comments", "")),
-        str(data.get("additional_comments", ""))
-    ])
-
     if not data.get("azure_bug") or str(data.get("azure_bug")).strip() == "":
         data["azure_bug"] = extract_azure_id(notes)
 
