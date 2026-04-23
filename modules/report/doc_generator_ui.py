@@ -5,7 +5,7 @@ from modules.report.ui.state import init_state
 from modules.report.ui.sidebar import render_sidebar
 from modules.report.ui.main_view import render_main
 
-def main():
+def render_doc_generator():
     init_state()
 
     df = load_snow_data()
