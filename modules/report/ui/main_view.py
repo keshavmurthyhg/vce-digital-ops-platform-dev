@@ -13,7 +13,7 @@ from modules.report.builders.analysis_builder import (
 )
 
 from modules.report.utils.utils import clean_nan, format_date, format_description
-
+from modules.report.utils.utils import extract_azure_id
 
 # ---------------- HELPER ---------------- #
 
@@ -34,8 +34,9 @@ def get_incident(df, inc):
         "resolved_date": format_date(r.get("resolved")),
         "work_notes": r.get("work notes", ""),
         "comments": r.get("additional comments", ""),
-        "resolution": r.get("resolution notes", ""),
-        "azure_bug": clean_nan(r.get("azure bug")),
+        resolution_text = r.get("resolution notes", "")
+        "resolution": resolution_text,
+        "azure_bug": extract_azure_id(resolution_text) or clean_nan(r.get("azure bug")),
         "ptc_case": clean_nan(r.get("vendor ticket")),
     }
 
