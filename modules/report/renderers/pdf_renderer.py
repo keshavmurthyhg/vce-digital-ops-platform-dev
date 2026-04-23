@@ -29,8 +29,12 @@ def generate_pdf_doc(data, root, l2, res, images):
     )
 
     # ✅ FIXED WRAP LINK (NEW STANDARD)
-    def wrap_link(field, value):
-        return make_pdf_link(value, get_url(field, value), styles)
+    header = build_pdf_header(
+        data,
+        lambda field, value: make_pdf_link(value, get_url(field, value), styles),
+        format_date
+    )
+        
 
     # HEADER
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
