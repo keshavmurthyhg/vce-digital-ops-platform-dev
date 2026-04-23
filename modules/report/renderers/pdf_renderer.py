@@ -28,35 +28,37 @@ def generate_pdf_doc(data, root, l2, res, images):
         bottomMargin=50
     )
 
-    # ✅ FIXED WRAP LINK (NEW STANDARD)
+    # ================= HEADER ================= #
+    elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
+    elements.append(Spacer(1, 10))
+
     header = build_pdf_header(
         data,
         lambda field, value: make_pdf_link(value, get_url(field, value), styles),
         format_date
     )
-        
 
-    # HEADER
-    elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
-    elements.append(Spacer(1, 10))
-
-    header = build_pdf_header(data, wrap_link, format_date)
     elements.append(header)
     elements.append(Spacer(1, 15))
 
-    # DESCRIPTION
-    desc = build_pdf_description(data, center_style, clean_text, styles)
+    # ================= DESCRIPTION ================= #
+    desc = build_pdf_description(data, center_style, styles)
     elements.append(desc)
     elements.append(Spacer(1, 20))
 
-    # BODY
+    # ================= BODY ================= #
     build_sections(
-        elements, root, l2, res,
-        styles, bullet_style,
-        add_images_pdf, images
+        elements,
+        root,
+        l2,
+        res,
+        styles,
+        bullet_style,
+        add_images_pdf,
+        images
     )
 
-    # FOOTER
+    # ================= FOOTER ================= #
     footer = pdf_footer(data)
 
     doc.build(elements, onFirstPage=footer, onLaterPages=footer)
