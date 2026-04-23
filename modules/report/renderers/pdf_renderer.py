@@ -43,7 +43,7 @@ def generate_pdf_doc(data, root, l2, res, images):
     elements.append(Spacer(1, 15))
 
     # DESCRIPTION
-    desc = build_pdf_description(data, center_style, clean_text, styles)
+    desc = build_pdf_description(data, center_style, styles)
     elements.append(desc)
     elements.append(Spacer(1, 20))
 
