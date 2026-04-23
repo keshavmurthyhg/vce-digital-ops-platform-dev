@@ -51,31 +51,20 @@ def make_link(url, text):
 
 #============ AZURE NUMBER EXTRACTOR ============== #
 import re
+
 def extract_azure_id(text):
-    """
-    Extract Azure Work Item ID from text
-    Example patterns:
-    - Azure Bug: 12345678
-    - AB#123456788
-    - DevOps 12345678
-    """
     if not text:
         return None
-    
-    for p in patterns:
-        print("Trying pattern:", p)
-        match = re.search(p, text, re.IGNORECASE)
-        if match:
-            print("MATCH FOUND:", match.group(1))
-            return match.group(1)
-        
+
+    # ✅ DEFINE FIRST
     patterns = [
         r'AB[#\s]*(\d+)',
         r'Azure\s*(?:Bug|ID)?[:\s]*(\d+)',
         r'Work\s*Item[:\s]*(\d+)',
-        r'\b(\d{7,8})\b'  # fallback (optional)
+        r'\b(\d{6,8})\b'   # supports 6-digit Azure IDs
     ]
 
+    # ✅ THEN USE
     for p in patterns:
         match = re.search(p, text, re.IGNORECASE)
         if match:
