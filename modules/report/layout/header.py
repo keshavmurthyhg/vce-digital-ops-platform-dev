@@ -1,5 +1,12 @@
 from reportlab.platypus import Table, TableStyle, Paragraph
 from reportlab.lib import colors
+from reportlab.platypus import Table
+
+table = Table(
+    data,
+    colWidths=[120, 180, 120, 180]   # 👈 ADD THIS
+)
+
 
 def build_pdf_header(data, wrap_link, format_date):
     table = Table([
@@ -17,9 +24,10 @@ def build_pdf_header(data, wrap_link, format_date):
     ], colWidths=[100,166,100,166])
 
     table.setStyle(TableStyle([
-        ('GRID',(0,0),(-1,-1),1,colors.black),
-        ('BACKGROUND',(0,0),(0,-1),colors.lightgrey),
-        ('BACKGROUND',(2,0),(2,-1),colors.lightgrey),
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),   # header bold
+        ('FONTNAME', (0,0), (-1,-1), 'Helvetica'),
+        ('GRID', (0,0), (-1,-1), 1, colors.black),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
     ]))
 
     return table
