@@ -17,4 +17,4 @@ def render_doc_generator():
     render_main(filtered)
 
 if __name__ == "__main__":
-    main()
+    render_doc_generator()
