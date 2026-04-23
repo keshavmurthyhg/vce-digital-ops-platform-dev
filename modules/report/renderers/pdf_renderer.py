@@ -29,19 +29,19 @@ def generate_pdf_doc(data, root, l2, res, images):
     )
 
     # ✅ FIXED WRAP LINK (NEW STANDARD)
-    def wrap_link(field, value):
-        if not value:
-            return Paragraph("", styles["Normal"])
+    ddef wrap_link(field, value):
+    if not value:
+        return Paragraph("", styles["Normal"])
 
-        url = get_url(field, value)
+    url = get_url(field, value)
 
-        if url:
-            return Paragraph(
-                f'<link href="{url}"><u><font color="blue">{value}</font></u></link>',
-                styles["Normal"]
-            )
+    if url:
+        return Paragraph(
+            f'<link href="{url}"><font color="black">{value}</font></link>',
+            styles["Normal"]
+        )
 
-        return Paragraph(str(value), styles["Normal"])
+    return Paragraph(str(value), styles["Normal"])
 
     # HEADER
     elements.append(Paragraph("<b>INCIDENT REPORT</b>", styles["Title"]))
