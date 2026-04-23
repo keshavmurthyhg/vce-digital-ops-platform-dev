@@ -286,10 +286,7 @@ def generate_pdf(data, root, l2, res, images=None):
         ('VALIGN',(0,0),(-1,-1),'TOP'),   # 🔥 important
     ]))
 
-    elements.append(desc)
-    elements.append(Spacer(1,20))
-
-    # BULLETS
+   # BULLETS
     def add_bullets(text):
         for line in (text or "-").split("\n"):
             line = line.strip()
