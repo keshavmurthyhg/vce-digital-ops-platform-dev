@@ -1,6 +1,17 @@
 from modules.report.renderers.pdf_renderer import generate_pdf_doc
 from modules.report.renderers.word_renderer import generate_word_doc
+from modules.report.utils import format_description
 
+
+def prepare_data(data):
+    """
+    Central place for all sanitization & formatting
+    """
+    safe_data = data.copy()
+
+    safe_data["description"] = format_description(data.get("description"))
+
+    return safe_data
 
 def safe_images(images):
     if not isinstance(images, dict):
