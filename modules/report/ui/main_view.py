@@ -212,7 +212,7 @@ def render_main(df):
         else:
             data = st.session_state["data"]
 
-            pdf_bytes = generate_pdf(
+        try pdf_bytes = generate_pdf(
                 data,
                 st.session_state.get("root"),
                 st.session_state.get("l2"),
