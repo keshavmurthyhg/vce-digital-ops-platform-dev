@@ -1,5 +1,5 @@
 import streamlit as st
-from modules.data_loader import load_snow_data
+from modules.report.data.data_loader import load_snow_data
 
 from ui.state import init_state
 from ui.sidebar import render_sidebar
