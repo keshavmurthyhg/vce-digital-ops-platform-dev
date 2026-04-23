@@ -1,3 +1,5 @@
+from reportlab.platypus import Paragraph
+
 # ---------------- URL BUILDERS ---------------- #
 
 def get_snow_url(id):
@@ -38,7 +40,7 @@ def make_pdf_link(text, url, styles):
 
     if url:
         return Paragraph(
-            f'<link href="{url}"><font color="black">{text}</font></link>',
+            f'<link href="{url}" color="black"><u></u>{text}</link>',
             styles["Normal"]
         )
 
