@@ -268,9 +268,7 @@ def generate_pdf(data, root, l2, res, images=None):
     elements.append(table)
     elements.append(Spacer(1,15))
 
-    # DESCRIPTION TABLE
-    from reportlab.platypus import Paragraph
-    
+   # ====================== DESCRIPTION TABLE ===================
     def wrap(x):
         return Paragraph(str(x or ""), styles["Normal"])
     
@@ -288,13 +286,14 @@ def generate_pdf(data, root, l2, res, images=None):
     desc.setStyle(TableStyle([
         ('GRID',(0,0),(-1,-1),1,colors.black),
         ('BACKGROUND',(0,0),(-1,0),colors.lightgrey),
-        ('VALIGN',(0,0),(-1,-1),'TOP'),   # 🔥 important
+        ('VALIGN',(0,0),(-1,-1),'TOP'),
     ]))
-
-    elements.append(desc)
-    elements.append(Spacer(1, 20))   # spacing fix
     
-   # BULLETS
+    elements.append(desc)
+    elements.append(Spacer(1, 20))
+    
+    
+    # BULLETS
     def add_bullets(text):
         for line in (text or "-").split("\n"):
             line = line.strip()
@@ -302,21 +301,25 @@ def generate_pdf(data, root, l2, res, images=None):
                 continue
             if line.startswith("-"):
                 line = line[1:].strip()
-
+    
             elements.append(Paragraph(f"• {line}", styles["Normal"]))
             elements.append(Spacer(1,4))
-
+    
+    
     def section(title, content, imgs):
         elements.append(Paragraph(f"<b>{title}</b>", styles["Heading2"]))
         elements.append(Spacer(1,6))
         add_bullets(content)
         elements.append(Spacer(1,10))
         add_images_pdf(elements, imgs)
-
+    
+    
     section("PROBLEM STATEMENT & ROOT CAUSE", root, images.get("root"))
     section("TECHNICAL ANALYSIS", l2, images.get("l2"))
     section("RESOLUTION & RECOMMENDATION", res, images.get("res"))
 
+#============= FOOTER =====================
+    
     def footer(canvas, doc):
         width, _ = letter
         canvas.setFont('Helvetica',9)
