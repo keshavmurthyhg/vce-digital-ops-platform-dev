@@ -55,9 +55,9 @@ def extract_azure_id(text):
     """
     Extract Azure Work Item ID from text
     Example patterns:
-    - Azure Bug: 123456
-    - AB#123456
-    - DevOps 123456
+    - Azure Bug: 12345678
+    - AB#123456788
+    - DevOps 12345678
     """
     if not text:
         return None
@@ -66,7 +66,7 @@ def extract_azure_id(text):
         r'AB[#\s]*(\d+)',
         r'Azure\s*(?:Bug|ID)?[:\s]*(\d+)',
         r'Work\s*Item[:\s]*(\d+)',
-        r'\b(\d{5,7})\b'  # fallback (optional)
+        r'\b(\d{7,8})\b'  # fallback (optional)
     ]
 
     for p in patterns:
