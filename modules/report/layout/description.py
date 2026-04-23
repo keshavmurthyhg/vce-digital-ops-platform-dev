@@ -15,11 +15,18 @@ def build_pdf_description(data, center_style, clean_text, styles):
             wrap(clean_text(data.get("short_description"))),
             wrap(clean_text(data.get("description")))
         ]
-    ], colWidths=[266,266])
+    ], colWidths=[260,260])
 
     table.setStyle(TableStyle([
-        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
         ('GRID', (0,0), (-1,-1), 1, colors.black),
+    
+        # 🔹 HEADER ROW GREY
+        ('BACKGROUND', (0,0), (-1,0), colors.lightgrey),
+    
+        # 🔹 HEADER BOLD
+        ('FONTNAME', (0,0), (-1,0), 'Helvetica-Bold'),
+    
+        # 🔹 TEXT ALIGNMENT
         ('VALIGN', (0,0), (-1,-1), 'TOP'),
     ]))
 
