@@ -283,7 +283,16 @@ def render_main(df):
             st.warning("Enter incident numbers")
         else:
             try:
-                reports = build_bulk_reports(df, ids)
+                bulk_data = st.session_state.get("bulk_data")
+
+                if bulk_data:
+                    data_list = bulk_data
+                else:
+                    data_list = []
+                    for inc in ids:
+                        row = get_incident(df, inc)
+                        if row is not None:
+                            data_list.append(row.to_dict())
                 zip_bytes = generate_bulk_zip(reports)
     
                 st.session_state["zip_bytes"] = zip_bytes
