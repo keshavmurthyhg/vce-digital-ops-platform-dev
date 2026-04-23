@@ -5,6 +5,30 @@ from modules.report.utils.utils import extract_azure_id
 
 
 def enrich_data(data):
+    print("===== DEBUG AZURE EXTRACTION =====")
+
+    print("resolution_notes:", data.get("resolution_notes"))
+    print("work_notes:", data.get("work_notes"))
+    print("comments:", data.get("comments"))
+    print("additional_comments:", data.get("additional_comments"))
+    
+    notes = " ".join([
+        str(data.get("resolution_notes", "")),
+        str(data.get("work_notes", "")),
+        str(data.get("comments", "")),
+        str(data.get("additional_comments", ""))
+    ])
+    
+    print("COMBINED NOTES:", notes)
+    
+    azure = extract_azure_id(notes)
+    print("EXTRACTED AZURE:", azure)
+    
+    if not data.get("azure_bug") or str(data.get("azure_bug")).strip() == "":
+        data["azure_bug"] = azure
+    
+    print("FINAL AZURE IN DATA:", data.get("azure_bug"))
+    print("==================================")
     notes = " ".join([
         str(data.get("resolution_notes", "")),
         str(data.get("work_notes", "")),
