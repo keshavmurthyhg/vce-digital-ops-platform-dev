@@ -11,6 +11,9 @@ def clean_text(text):
         return ""
     return re.sub(r"How does the user want.*?\d+", "", str(text), flags=re.I).strip()
 
+import re
+from datetime import datetime
+
 def clean_nan(val):
     if val is None:
         return ""
@@ -22,9 +25,23 @@ def format_date(date_str):
     if not date_str:
         return ""
     try:
-        return datetime.strptime(str(date_str), "%Y-%m-%d").strftime("%d-%b-%Y")
+        return datetime.strptime(str(date_str).split()[0], "%Y-%m-%d").strftime("%d-%b-%Y")
     except:
         return str(date_str)
+
+def format_description(text):
+    if not text:
+        return ""
+    text = str(text)
+    text = text.replace("How does the user want", "\n\nHow does the user want")
+    text = text.replace("MS Teams", "\nMS Teams")
+    text = text.replace("Business phone number", "\nBusiness phone number")
+    return text.strip()
+
+def make_link(url, text):
+    if not text:
+        return ""
+    return f'<link href="{url}">{text}</link>'
 
 
 # ---------------- PDF ---------------- #
