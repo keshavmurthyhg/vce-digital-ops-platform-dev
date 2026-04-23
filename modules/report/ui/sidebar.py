@@ -63,12 +63,15 @@ def render_sidebar(df):
     
         if df is None:
             st.sidebar.error("No data available")
-        
+    
         elif not bulk_input.strip():
             st.sidebar.warning("Enter bulk incident numbers first")
     
         else:
             bulk_ids = [i.strip() for i in bulk_input.split(",") if i.strip()]
+    
+            # ✅ UPDATE TEXTBOX VALUE
+            st.session_state["bulk_incidents"] = ", ".join(bulk_ids)
     
             bulk_data = []
     
@@ -88,12 +91,9 @@ def render_sidebar(df):
     
                 data = row.iloc[0].to_dict()
     
-                # ✅ APPLY CURRENT EDITED CONTENT
                 data["problem"] = st.session_state.get("problem", "")
                 data["analysis"] = st.session_state.get("analysis", "")
                 data["resolution"] = st.session_state.get("resolution", "")
-    
-                # ✅ APPLY IMAGES
                 data["images"] = st.session_state.get("images", {})
     
                 bulk_data.append(data)
