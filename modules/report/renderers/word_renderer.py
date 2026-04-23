@@ -2,9 +2,12 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from modules.report.layout.footer import apply_word_footer
-from modules.report.doc_generator import (
-    clean_text, format_date,
-    add_images_word, add_hyperlink, set_cell_bg
+from modules.report.utils import (
+    clean_text,
+    format_date,
+    add_images_word,
+    add_hyperlink,
+    set_cell_bg
 )
 
 
