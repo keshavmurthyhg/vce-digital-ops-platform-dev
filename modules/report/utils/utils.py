@@ -55,7 +55,8 @@ import re
 def extract_azure_id(text):
     if not text:
         return None
-
+    for p in patterns:
+        print(...)
     # ✅ DEFINE FIRST
     patterns = [
         r'AB[#\s]*(\d+)',
