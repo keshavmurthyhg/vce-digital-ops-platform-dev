@@ -18,6 +18,7 @@ from modules.report.utils.utils import extract_azure_id
 # ---------------- HELPER ---------------- #
 
 def get_incident(df, inc):
+    incident_col = "number" if "number" in df.columns else df.columns[0]
     row = df[df["number"].astype(str).str.upper() == inc.upper()]
     if row.empty:
         return None
@@ -63,9 +64,12 @@ def render_main(df):
     col1, col2, col3 = st.columns([3, 1, 4])
 
     with col1:
+        incident_col = "number" if "number" in df.columns else df.columns[0]
+        
         incident = st.selectbox(
             "Select Incident",
-            df["number"].dropna().unique()
+            df[incident_col].dropna().astype(str).unique()
+        
         )
 
     with col2:
@@ -282,7 +286,7 @@ def render_main(df):
                 reports = build_bulk_reports(df, ids)
                 zip_bytes = generate_bulk_zip(reports)
     
-                st.session_state["zip_bytes"] = word_bytes
+                st.session_state["zip_bytes"] = zip_bytes
                 st.success("Zip generated successfully")
     
             except Exception as e:
