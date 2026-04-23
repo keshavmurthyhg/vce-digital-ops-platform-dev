@@ -60,15 +60,16 @@ def render_main(df):
             st.session_state[key] = "" if key != "images" else {"root": [], "l2": [], "res": []}
 
     # ---------------- INCIDENT SELECT ---------------- #
-    col1, col2 = st.columns([4, 1])
+    col1, col2 = st.columns([6,1])
 
     with col1:
         incident = st.selectbox(
             "Select Incident",
             df["number"].dropna().unique()
         )
-
+    
     with col2:
+        st.write("")
         st.write("")
         fetch = st.button("Fetch", use_container_width=True)
 
@@ -121,12 +122,39 @@ def render_main(df):
     with colD:
         clear_btn = st.button("Clear", use_container_width=True)
 
+        preview_btn = st.button("Preview", use_container_width=True)
+
     # ---------------- CLEAR ---------------- #
     if clear_btn:
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
+        if clear_btn:
+        st.session_state.clear()
         st.rerun()
 
+     # ---------------- PREVIEW ---------------- #
+    
+    if preview_btn and "data" in st.session_state:
+        data = st.session_state["data"]
+    
+        st.markdown("### Preview")
+    
+        # -------- TABLE 1 -------- #
+        t1 = [
+            ["INCIDENT", data["number"], "CREATED BY", data["created_by"]],
+            ["AZURE BUG", data["azure_bug"], "CREATED DATE", data["created_date"]],
+            ["PTC CASE", data["ptc_case"], "ASSIGNED TO", data["assigned_to"]],
+            ["PRIORITY", data["priority"], "RESOLVED DATE", data["resolved_date"]],
+        ]
+    
+        st.table(t1)
+    
+        # -------- TABLE 2 -------- #
+        t2 = [
+            ["SHORT DESCRIPTION", "DESCRIPTION"],
+            [data["short_description"], format_description(data["description"])]
+        ]
+    
+        st.table(t2)
+    
     # ---------------- EDITABLE BLOCKS ---------------- #
     st.subheader("Edit Report Details")
 
