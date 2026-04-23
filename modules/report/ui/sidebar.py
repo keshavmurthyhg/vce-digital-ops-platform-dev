@@ -52,22 +52,19 @@ def render_sidebar(df):
 
     #================= DOWNLOAD BUTTONS ================================
     st.sidebar.markdown("### Download")
-
-    if "pdf_bytes" in st.session_state:
+    
+    if "pdf_bytes" in st.session_state and "data" in st.session_state:
         st.sidebar.download_button(
             "⬇ Download PDF",
-            data=pdf_bytes,
-            file_name=f"{data['number']}.pdf",
+            data=st.session_state["pdf_bytes"],
+            file_name=f"{st.session_state['data']['number']}.pdf",
             mime="application/pdf"
         )
     
-    if "word_bytes" in st.session_state:
+    if "word_bytes" in st.session_state and "data" in st.session_state:
         st.sidebar.download_button(
             "⬇ Download Word",
-            data=word_bytes,
-            file_name=f"{data['number']}.docx",
+            data=st.session_state["word_bytes"],
+            file_name=f"{st.session_state['data']['number']}.docx",
             mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
         )
-
-    
-    return filtered
