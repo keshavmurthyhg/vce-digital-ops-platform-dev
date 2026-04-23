@@ -271,6 +271,7 @@ def render_main(df):
                 st.error(f"Word Error: {e}")
             
     # ---------------- BULK GENERATE ---------------- #
+    
     if bulk_btn:
         ids = [x.strip() for x in bulk_input.split(",") if x.strip()]
     
@@ -284,7 +285,7 @@ def render_main(df):
                 st.download_button(
                     "⬇ Download Bulk ZIP",
                     data=zip_bytes,
-                    file_name="Bulk_Report.zip",
+                    file_name=f"Bulk_Report_{format_date('2026-01-01')}.zip",
                     mime="application/zip"
                 )
     
@@ -292,6 +293,3 @@ def render_main(df):
     
             except Exception as e:
                 st.error(f"Zip Error: {e}")
-        
-        except Exception as e:
-            st.error(f"Zip Error: {e}")
