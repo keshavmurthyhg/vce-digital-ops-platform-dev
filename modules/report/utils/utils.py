@@ -61,7 +61,14 @@ def extract_azure_id(text):
     """
     if not text:
         return None
-
+    
+    for p in patterns:
+        print("Trying pattern:", p)
+        match = re.search(p, text, re.IGNORECASE)
+        if match:
+            print("MATCH FOUND:", match.group(1))
+            return match.group(1)
+        
     patterns = [
         r'AB[#\s]*(\d+)',
         r'Azure\s*(?:Bug|ID)?[:\s]*(\d+)',
