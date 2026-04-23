@@ -142,7 +142,12 @@ def generate_word_doc(data, root, l2, res, images=None):
 
     t2.rows[1].cells[0].text = clean_text(data.get("short_description"))
     t2.rows[1].cells[1].text = clean_text(data.get("description"))
-
+    # ✅ Fix wrapping inside Word table
+    for row in t2.rows:
+        for cell in row.cells:
+            for p in cell.paragraphs:
+                p.paragraph_format.space_after = Inches(0.05)
+                
     section_map = {
         "PROBLEM STATEMENT & ROOT CAUSE": (root, images.get("root")),
         "TECHNICAL ANALYSIS": (l2, images.get("l2")),
@@ -240,7 +245,7 @@ def generate_pdf(data, root, l2, res, images=None):
     table = Table([
         ["INCIDENT", wrap_link(data.get("number"),
          f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={data.get('number')}"),
-         "CREATED BY", data.get("created_by")],
+         "CREATED BY", wrap_link(data.get("created_by"))
 
         ["AZURE BUG", wrap_link(data.get("azure_bug"),
          f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{data.get('azure_bug')}") if data.get("azure_bug") else "",
@@ -248,9 +253,9 @@ def generate_pdf(data, root, l2, res, images=None):
 
         ["PTC CASE", wrap_link(data.get("ptc_case"),
          f"https://support.ptc.com/app/caseviewer/?case={data.get('ptc_case')}") if data.get("ptc_case") else "",
-         "ASSIGNED TO", data.get("assigned_to")],
+         "ASSIGNED TO", wrap_link(data.get("assigned_to"))
 
-        ["PRIORITY", data.get("priority"),
+        "PRIORITY", wrap_link(data.get("priority"))
          "RESOLVED DATE", format_date(data.get("resolved_date"))],
     ], colWidths=[100,160,100,160])
 
@@ -286,7 +291,8 @@ def generate_pdf(data, root, l2, res, images=None):
         ('VALIGN',(0,0),(-1,-1),'TOP'),   # 🔥 important
     ]))
 
-    elements.append(desc_table)
+    elements.append(desc)
+    elements.append(Spacer(1, 20))   # spacing fix
     
    # BULLETS
     def add_bullets(text):
