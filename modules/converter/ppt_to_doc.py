@@ -9,7 +9,7 @@ import uuid
 import re
 
 
-#================= Hyperlink helper =======================
+# ---------------- HYPERLINK ---------------- #
 def add_hyperlink(paragraph, url, text):
     part = paragraph.part
     r_id = part.relate_to(
@@ -29,27 +29,27 @@ def add_hyperlink(paragraph, url, text):
 
     paragraph._p.append(hyperlink)
 
-#================= Azure Detection =======================
 
+# ---------------- AZURE ---------------- #
 def extract_azure_bug(text):
     if not text:
         return ""
-
     match = re.search(r"\b(\d{5,})\b", text)
     return match.group(1) if match else ""
-    
-# ---------------- CLEAN TEXT ---------------- #
+
+
+# ---------------- CLEAN ---------------- #
 def clean_text(text):
     if not text:
         return ""
     try:
         text = text.encode("utf-8", "ignore").decode("utf-8")
-    except Exception:
+    except:
         text = str(text)
     return "".join(ch for ch in text if ch.isprintable())
 
 
-# ---------------- EXTRACT SLIDE 1 ---------------- #
+# ---------------- SLIDE 1 ---------------- #
 def extract_slide1_content(slide):
     texts = []
 
@@ -61,9 +61,7 @@ def extract_slide1_content(slide):
             if txt:
                 texts.append(txt)
 
-    incident = ""
-    description = []
-    date = ""
+    incident, description, date = "", [], ""
 
     for txt in texts:
 
@@ -76,16 +74,17 @@ def extract_slide1_content(slide):
             continue
 
         if re.search(r"\d{1,2}-[A-Za-z]{3}-\d{4}", txt):
-            date = txt.strip()
+            date = txt
             continue
 
-        description.append(txt.strip())
+        description.append(txt)
 
     azure = extract_azure_bug(" ".join(texts))
+
     return incident or "N/A", " ".join(description) or "N/A", date or "", azure
 
 
-# ---------------- TABLE STYLE ---------------- #
+# ---------------- STYLE ---------------- #
 def set_cell_bg(cell):
     tcPr = cell._element.get_or_add_tcPr()
     shd = OxmlElement("w:shd")
@@ -94,7 +93,7 @@ def set_cell_bg(cell):
 
 
 # ---------------- HEADER ---------------- #
-def add_header_table(doc, incident, description, date):
+def add_header_table(doc, incident, description, date, azure):
 
     doc.add_heading("INCIDENT REPORT", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
 
@@ -102,33 +101,42 @@ def add_header_table(doc, incident, description, date):
     table.style = "Table Grid"
 
     def fill(r, c, key, val):
-    h = table.rows[r].cells[c]
-    v = table.rows[r].cells[c + 1]
+        h = table.rows[r].cells[c]
+        v = table.rows[r].cells[c + 1]
 
-    p = h.paragraphs[0]
-    p.text = key.upper()
-    for run in p.runs:
-        run.bold = True
-    set_cell_bg(h)
+        p = h.paragraphs[0]
+        p.text = key.upper()
+        for run in p.runs:
+            run.bold = True
+        set_cell_bg(h)
 
-    p = v.paragraphs[0]
+        p = v.paragraphs[0]
 
-    # 🔗 Incident clickable
-    if key.lower() == "incident" and val:
-        url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={val}"
-        add_hyperlink(p, url, val)
+        if key.lower() == "incident" and val:
+            url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={val}"
+            add_hyperlink(p, url, val)
 
-    # 🔗 Azure clickable
-    elif key.lower() == "azure bug" and val:
-        url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{val}"
-        add_hyperlink(p, url, val)
+        elif key.lower() == "azure bug" and val:
+            url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{val}"
+            add_hyperlink(p, url, val)
 
-    else:
-        p.text = str(val or "")
-        
+        else:
+            p.text = str(val or "")
+
+    fill(0, 0, "Incident", incident)
+    fill(0, 2, "Created By", "PPT Import")
+
+    fill(1, 0, "Azure Bug", azure)
+    fill(1, 2, "Created Date", date)
+
+    fill(2, 0, "PTC Case", "")
+    fill(2, 2, "Assigned To", "")
+
+    fill(3, 0, "Priority", "")
+    fill(3, 2, "Resolved Date", "")
+
     doc.add_paragraph("")
 
-    # Description table
     t2 = doc.add_table(rows=2, cols=2)
     t2.style = "Table Grid"
 
@@ -144,7 +152,6 @@ def add_header_table(doc, incident, description, date):
         set_cell_bg(cell)
 
     short_desc = description.split("\n")[0] if description else ""
-
     t2.rows[1].cells[0].text = short_desc
     t2.rows[1].cells[1].text = description
 
@@ -152,7 +159,7 @@ def add_header_table(doc, incident, description, date):
 
 
 # ---------------- FOOTER ---------------- #
-def add_footer(doc, incident, priority="PPT"):
+def add_footer(doc, incident):
     section = doc.sections[0]
     footer = section.footer.paragraphs[0]
     footer.clear()
@@ -176,7 +183,7 @@ def add_footer(doc, incident, priority="PPT"):
     run._r.append(instr)
     run._r.append(fld2)
 
-    footer.add_run(f"\t{priority}")
+    footer.add_run("\tPPT")
 
 
 # ---------------- MAIN ---------------- #
@@ -184,18 +191,11 @@ def ppt_to_word(ppt_path, output_docx):
     prs = Presentation(ppt_path)
     doc = Document()
 
-    incident = "N/A"
+    if prs.slides:
+        incident, description, date, azure = extract_slide1_content(prs.slides[0])
+        add_header_table(doc, incident, description, date, azure)
+        add_footer(doc, incident)
 
-    if len(prs.slides) > 0:
-        slide1 = prs.slides[0]
-        incident, description, date, azure = extract_slide1_content(slide1)
-
-        add_header_table(doc, incident, description, date)
-
-    # ✅ APPLY FOOTER HERE
-    add_footer(doc, incident)
-
-    # Remaining slides
     for i, slide in enumerate(prs.slides):
         if i == 0:
             continue
@@ -205,21 +205,15 @@ def ppt_to_word(ppt_path, output_docx):
         shapes = sorted(slide.shapes, key=lambda s: getattr(s, "top", 0))
 
         for shape in shapes:
-
             if hasattr(shape, "text") and shape.text.strip():
                 doc.add_paragraph(clean_text(shape.text))
 
-            try:
-                if shape.shape_type == 13:
-                    image_path = f"temp_{uuid.uuid4().hex}.png"
-                    with open(image_path, "wb") as f:
-                        f.write(shape.image.blob)
-
-                    doc.add_picture(image_path, width=Inches(5))
-                    os.remove(image_path)
-
-            except Exception:
-                continue
+            if shape.shape_type == 13:
+                img_path = f"temp_{uuid.uuid4().hex}.png"
+                with open(img_path, "wb") as f:
+                    f.write(shape.image.blob)
+                doc.add_picture(img_path, width=Inches(5))
+                os.remove(img_path)
 
         doc.add_page_break()
 
