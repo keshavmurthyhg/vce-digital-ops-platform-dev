@@ -8,57 +8,46 @@ from modules.converter.combined_report import generate_combined_report
 def render():
     st.subheader("📊 PPT to Word & PDF Converter")
 
-    st.info("ℹ️ Note: PDF conversion may not work in cloud environment")
-
-    uploaded_ppt = st.file_uploader(
-        "Upload PowerPoint file",
-        type=["pptx"]
-    )
+    uploaded_ppt = st.file_uploader("Upload PowerPoint file", type=["pptx"])
 
     if uploaded_ppt:
-        st.success(f"Uploaded: {uploaded_ppt.name}")
 
-        if st.button("🚀 Convert PPT"):
-            with st.spinner("Converting..."):
-                try:
-                    with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir:
 
-                        ppt_path = os.path.join(tmpdir, uploaded_ppt.name)
+            ppt_path = os.path.join(tmpdir, uploaded_ppt.name)
 
-                        # Save uploaded file
-                        with open(ppt_path, "wb") as f:
-                            f.write(uploaded_ppt.read())
+            with open(ppt_path, "wb") as f:
+                f.write(uploaded_ppt.read())
 
-                        # Run conversion
-                        docx_path, pdf_path = convert_ppt(ppt_path, tmpdir)
+            if st.button("🚀 Convert PPT"):
 
-                        # Read DOCX
-                        with open(docx_path, "rb") as f:
-                            docx_bytes = f.read()
+                docx_path, pdf_path = convert_ppt(ppt_path, tmpdir)
 
-                        st.success("✅ Conversion completed!")
+                with open(docx_path, "rb") as f:
+                    docx_bytes = f.read()
 
-                        col1, col2 = st.columns(2)
+                col1, col2 = st.columns(2)
 
-                        # 📄 WORD DOWNLOAD
-                        with col1:
-                            st.download_button(
-                                "📄 Download Word",
-                                data=docx_bytes,
-                                file_name="converted.docx"
-                            )
+                with col1:
+                    st.download_button("📄 Word", docx_bytes, "converted.docx")
 
-                        st.divider()
-                        
-        st.subheader("📦 Combined Report")
-        
-        if st.button("Generate Combined Report"):
-        
-            if "data" not in st.session_state:
-                st.error("⚠️ Load SNOW data first from Report module")
-            else:
-                with st.spinner("Generating combined report..."):
-        
+                with col2:
+                    if pdf_path and os.path.exists(pdf_path):
+                        with open(pdf_path, "rb") as f:
+                            pdf_bytes = f.read()
+                        st.download_button("📕 PDF", pdf_bytes, "converted.pdf")
+                    else:
+                        st.warning("PDF not available")
+
+            # ✅ Combined report (INSIDE same block)
+            st.divider()
+            st.subheader("📦 Combined Report")
+
+            if st.button("Generate Combined Report"):
+
+                if "data" not in st.session_state:
+                    st.error("Load SNOW data first")
+                else:
                     combined_bytes = generate_combined_report(
                         ppt_path,
                         st.session_state["data"],
@@ -67,9 +56,9 @@ def render():
                         st.session_state.get("res", ""),
                         st.session_state.get("images", {})
                     )
-        
+
                     st.download_button(
-                        "📄 Download Combined Report",
+                        "📄 Combined Report",
                         combined_bytes,
                         "combined_report.docx"
                     )
