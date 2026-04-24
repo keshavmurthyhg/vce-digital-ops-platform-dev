@@ -1,6 +1,10 @@
 import streamlit as st
 import os
 
+import sys
+import os
+sys.path.append(os.path.abspath("."))
+
 from modules.search.search_ui import render as search_ui
 from modules.analytics.charts_page import render as analytics_ui
 from modules.report.doc_generator_ui import render_doc_generator as report_ui
