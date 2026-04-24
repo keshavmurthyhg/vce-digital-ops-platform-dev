@@ -10,15 +10,20 @@ def ppt_to_word(ppt_path, output_docx):
     for i, slide in enumerate(prs.slides):
         doc.add_heading(f"Slide {i+1}", level=1)
 
-        for shape in slide.shapes:
-            if hasattr(shape, "text"):
+        # Sort shapes by vertical position (TOP)
+        shapes = sorted(slide.shapes, key=lambda s: getattr(s, "top", 0))
+
+        for shape in shapes:
+
+            # TEXT
+            if hasattr(shape, "text") and shape.text.strip():
                 doc.add_paragraph(shape.text)
 
-            # Extract images
-            if shape.shape_type == 13:  # Picture
+            # IMAGE
+            if shape.shape_type == 13:
                 image = shape.image
                 image_bytes = image.blob
-                image_path = f"temp_image_{i}.png"
+                image_path = f"temp_{i}.png"
 
                 with open(image_path, "wb") as f:
                     f.write(image_bytes)
