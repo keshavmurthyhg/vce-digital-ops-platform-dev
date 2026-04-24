@@ -59,22 +59,68 @@ def extract_slide1_content(slide):
 
     return incident or "N/A", description_text, date or ""
 
-def add_header_table(doc, incident, description, date):
-    # Title
-    doc.add_heading("Incident Report", level=0)
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Pt
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 
-    # Table (2 columns)
+
+def set_cell_bg(cell, color="D9E1F2"):
+    """Set background color for table cell"""
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    shd = OxmlElement('w:shd')
+    shd.set(qn('w:fill'), color)
+    tcPr.append(shd)
+
+
+def add_header_table(doc, incident, description, date):
+
+    # 🔹 TITLE (centered + styled)
+    title = doc.add_paragraph()
+    run = title.add_run("Incident Report")
+    run.bold = True
+    run.font.size = Pt(24)
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # 🔹 underline effect (like your UI)
+    doc.add_paragraph("────────────────────────────────────────")
+
+    doc.add_paragraph("")  # spacing
+
+    # 🔹 TABLE
     table = doc.add_table(rows=3, cols=2)
     table.style = "Table Grid"
 
-    table.cell(0, 0).text = "Incident Number"
+    # Column widths (approx)
+    table.columns[0].width = Pt(150)
+    table.columns[1].width = Pt(350)
+
+    # 🔹 Row 1
+    cell = table.cell(0, 0)
+    cell.text = "Incident Number"
+    cell.paragraphs[0].runs[0].bold = True
+    set_cell_bg(cell)
+
     table.cell(0, 1).text = incident
 
-    table.cell(1, 0).text = "Description"
+    # 🔹 Row 2
+    cell = table.cell(1, 0)
+    cell.text = "Description"
+    cell.paragraphs[0].runs[0].bold = True
+    set_cell_bg(cell)
+
     table.cell(1, 1).text = description
 
-    table.cell(2, 0).text = "Date"
+    # 🔹 Row 3
+    cell = table.cell(2, 0)
+    cell.text = "Date"
+    cell.paragraphs[0].runs[0].bold = True
+    set_cell_bg(cell)
+
     table.cell(2, 1).text = date
+
+    doc.add_paragraph("")  # spacing after table
 
 
 def ppt_to_word(ppt_path, output_docx):
