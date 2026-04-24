@@ -1,4 +1,4 @@
-from modules.ppt_converter.converter import convert_ppt
+from modules.converter.converter import convert_ppt
 import tempfile
 import os
 import streamlit as st
