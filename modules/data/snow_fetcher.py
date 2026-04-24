@@ -31,14 +31,23 @@ def fetch_snow_data_from_incident(incident):
 
     # 🔄 Normalize structure
     return {
-        "number": data.get("number"),
-        "short_description": data.get("short_description"),
-        "description": data.get("description"),
-        "created_by": data.get("created_by"),
-        "created_date": data.get("created_date"),
-        "assigned_to": data.get("assigned_to"),
-        "priority": data.get("priority"),
-        "resolved_date": data.get("resolved_date"),
-        "azure_bug": data.get("azure_bug"),
-        "ptc_case": data.get("ptc_case")
+        "number": data.get("number") or data.get("Number"),
+    
+        "short_description": data.get("short_description") or data.get("Short description"),
+    
+        "description": data.get("description") or data.get("Description"),
+    
+        "created_by": data.get("created_by") or data.get("Created By"),
+    
+        "created_date": data.get("created_date") or data.get("Created"),
+    
+        "assigned_to": data.get("assigned_to") or data.get("Assigned To"),
+    
+        "priority": data.get("priority") or data.get("Priority"),
+    
+        "resolved_date": data.get("resolved_date") or data.get("Resolved"),
+    
+        "azure_bug": data.get("azure_bug") or data.get("Azure Bug"),
+    
+        "ptc_case": data.get("ptc_case") or data.get("PTC Case"),
     }
