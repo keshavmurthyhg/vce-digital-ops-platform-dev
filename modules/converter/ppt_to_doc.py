@@ -15,10 +15,9 @@ def clean_text(text):
     return "".join(ch for ch in text if ch.isprintable())
 
 
+import re
+
 def extract_slide1_content(slide):
-    """
-    Extract top 3 text blocks from slide 1
-    """
     texts = []
 
     shapes = sorted(slide.shapes, key=lambda s: getattr(s, "top", 0))
@@ -29,12 +28,28 @@ def extract_slide1_content(slide):
             if txt:
                 texts.append(txt)
 
-    # Fallback safe extraction
-    incident = texts[0] if len(texts) > 0 else "N/A"
-    description = texts[1] if len(texts) > 1 else "N/A"
-    date = texts[2] if len(texts) > 2 else ""
+    incident = ""
+    description = []
+    date = ""
 
-    return incident, description, date
+    for txt in texts:
+
+        # 🔹 Incident detection
+        if txt.upper().startswith("INC"):
+            incident = txt.strip()
+            continue
+
+        # 🔹 Date detection (simple pattern)
+        if re.search(r"\d{1,2}-[A-Za-z]{3}-\d{4}", txt):
+            date = txt.strip()
+            continue
+
+        # 🔹 Everything else = description
+        description.append(txt.strip())
+
+    description_text = " ".join(description) if description else "N/A"
+
+    return incident or "N/A", description_text, date or ""
 
 
 def add_header_table(doc, incident, description, date):
