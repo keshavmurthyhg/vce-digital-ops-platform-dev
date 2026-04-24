@@ -2,10 +2,14 @@ def fetch_snow_data_from_incident(incident):
 
     from modules.data.snow_loader import load_snow_data
 
-    all_data = load_snow_data()  # load full dataset
+    df = load_snow_data()  # returns DataFrame
 
-    if not all_data:
+    # ✅ Fix 1: Proper empty check
+    if df is None or df.empty:
         return None
+
+    # ✅ Convert DataFrame → list of dicts
+    all_data = df.to_dict(orient="records")
 
     # 🔍 Find matching incident
     data = None
