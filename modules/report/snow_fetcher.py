@@ -15,14 +15,19 @@ def fetch_snow_data_from_incident(incident):
     all_data = df.to_dict(orient="records")
 
     # 🔍 Find matching incident
+    incident_clean = incident.replace("INC", "").strip()
+
     data = None
+    
     for row in all_data:
-        if str(row.get("number", "")).strip().upper() == incident.upper():
+        number = str(row.get("number", "")).upper().strip()
+    
+        # Normalize both sides
+        number_clean = number.replace("INC", "").strip()
+    
+        if number_clean == incident_clean:
             data = row
             break
-
-    if data is None:
-        return None
 
     # 🔄 Normalize structure
     return {
