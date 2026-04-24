@@ -17,6 +17,8 @@ def clean_text(text):
 
 import re
 
+import re
+
 def extract_slide1_content(slide):
     texts = []
 
@@ -34,23 +36,28 @@ def extract_slide1_content(slide):
 
     for txt in texts:
 
-        # 🔹 Incident detection
-        if txt.upper().startswith("INC"):
-            incident = txt.strip()
+        # 🔹 Extract incident even if merged with text
+        inc_match = re.search(r"(INC\d+)", txt, re.IGNORECASE)
+        if inc_match:
+            incident = inc_match.group(1)
+
+            # Remove incident from text → remaining is description
+            remaining = txt.replace(incident, "").strip()
+            if remaining:
+                description.append(remaining)
             continue
 
-        # 🔹 Date detection (simple pattern)
+        # 🔹 Detect date
         if re.search(r"\d{1,2}-[A-Za-z]{3}-\d{4}", txt):
             date = txt.strip()
             continue
 
-        # 🔹 Everything else = description
+        # 🔹 Everything else
         description.append(txt.strip())
 
     description_text = " ".join(description) if description else "N/A"
 
     return incident or "N/A", description_text, date or ""
-
 
 def add_header_table(doc, incident, description, date):
     # Title
