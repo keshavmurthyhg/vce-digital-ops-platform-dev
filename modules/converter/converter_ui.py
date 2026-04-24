@@ -1,3 +1,8 @@
+from modules.ppt_converter.converter import convert_ppt
+import tempfile
+import os
+import streamlit as st
+
 st.subheader("📊 PPT to Word & PDF Converter")
 
 uploaded_ppt = st.file_uploader(
