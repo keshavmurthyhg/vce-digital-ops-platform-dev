@@ -54,9 +54,8 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
         set_cell_bg(t2.rows[0].cells[i])
     
     # ✅ CLEAN DESCRIPTION (REMOVES PERSONAL INFO)
-    t2.rows[1].cells[0].text = str(data.get("short_description") or "")
-    t2.rows[1].cells[1].text = format_description(data.get("description"))
-
+    t2.rows[1].cells[0].text = clean_text(data.get("short_description"))
+    t2.rows[1].cells[1].text = clean_text(format_description(data.get("description")))
     # BODY
     sections = {
         "PROBLEM STATEMENT & ROOT CAUSE": root,
@@ -69,7 +68,7 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
 
         for line in (content or "-").split("\n"):
             if line.strip():
-                doc.add_paragraph(line.strip("- ").strip(), style="List Bullet")
+                doc.add_paragraph(clean_text(line.strip("- ").strip()), style="List Bullet")
 
     # FOOTER
     apply_word_footer(doc, data)
@@ -84,7 +83,7 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
             doc.add_heading(slide["title"], level=1)
 
             for txt in slide["texts"]:
-                doc.add_paragraph(txt)
+                doc.add_paragraph(clean_text(txt))
 
             for img in slide["images"]:
                 if os.path.exists(img):
