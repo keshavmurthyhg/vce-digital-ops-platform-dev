@@ -32,7 +32,35 @@ def render():
             if st.button("Generate Combined Report"):
 
                 if "data" not in st.session_state:
-                    st.error("Load SNOW data first")
+                    st.warning("⚠️ SNOW data not found. Generating PPT-only report...")
+                
+                    from modules.converter.ppt_to_doc import ppt_to_word
+                    from io import BytesIO
+                
+                    temp_doc = os.path.join(tmpdir, "ppt_only.docx")
+                    ppt_to_word(ppt_path, temp_doc)
+                
+                    with open(temp_doc, "rb") as f:
+                        st.download_button(
+                            "📄 Download PPT Report",
+                            f.read(),
+                            "ppt_report.docx"
+                        )
+                else:
+                    combined = generate_combined_report(
+                        ppt_path,
+                        st.session_state["data"],
+                        st.session_state.get("root", ""),
+                        st.session_state.get("l2", ""),
+                        st.session_state.get("res", ""),
+                        st.session_state.get("images", {})
+                    )
+                
+                    st.download_button(
+                        "📄 Download Combined Report",
+                        combined,
+                        "combined.docx"
+                    )
                 else:
                     combined = generate_combined_report(
                         ppt_path,
