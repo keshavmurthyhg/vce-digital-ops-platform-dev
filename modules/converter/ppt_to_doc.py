@@ -105,6 +105,37 @@ def add_horizontal_line(doc):
     p_pr.append(border)
 
 
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Pt, Inches
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+
+
+# 🔹 Background color helper
+def set_cell_bg(cell, color="D9E1F2"):
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+    shd = OxmlElement('w:shd')
+    shd.set(qn('w:fill'), color)
+    tcPr.append(shd)
+
+
+# 🔹 Horizontal line (proper, not text)
+def add_horizontal_line(doc):
+    p = doc.add_paragraph()
+    p_format = p.paragraph_format
+
+    p_pr = p._element.get_or_add_pPr()
+    border = OxmlElement('w:pBdr')
+    bottom = OxmlElement('w:bottom')
+    bottom.set(qn('w:val'), 'single')
+    bottom.set(qn('w:sz'), '6')
+    bottom.set(qn('w:space'), '1')
+    bottom.set(qn('w:color'), 'auto')
+    border.append(bottom)
+    p_pr.append(border)
+
+
 def add_header_table(doc, incident, description, date):
 
     # 🔹 TITLE (exact report style)
@@ -150,7 +181,6 @@ def add_header_table(doc, incident, description, date):
         right_run.font.size = Pt(11)
 
     doc.add_paragraph("")  # spacing after table
-
 
 def ppt_to_word(ppt_path, output_docx):
     prs = Presentation(ppt_path)
