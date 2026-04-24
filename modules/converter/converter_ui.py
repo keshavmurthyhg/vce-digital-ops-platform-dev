@@ -3,7 +3,6 @@ import tempfile
 import os
 
 from modules.converter.converter import convert_ppt
-from modules.converter.combined_report import generate_combined_report
 
 
 def render():
@@ -50,7 +49,7 @@ def render():
                 from modules.converter.ppt_to_doc import extract_slide1_content
                 from modules.data.snow_fetcher import fetch_snow_data_from_incident
                 from modules.converter.ppt_extractor import extract_ppt_content
-                from modules.report.doc_generator import generate_word_doc
+                from modules.report.doc_generator import generate_word_doc_wrapper
                 from io import BytesIO
             
                 prs = Presentation(ppt_path)
@@ -82,7 +81,7 @@ def render():
                 ppt_data = extract_ppt_content(ppt_path, tmpdir)
             
                 # 🔹 Generate SINGLE document
-                doc_bytes = generate_word_doc(
+                doc_bytes = generate_word_doc_wrapper(
                     snow_data,
                     st.session_state.get("root", ""),
                     st.session_state.get("l2", ""),
