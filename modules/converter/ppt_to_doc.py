@@ -211,6 +211,43 @@ def add_header_table(doc, incident, description, date):
 
     doc.add_paragraph("")
 
+from docx.enum.text import WD_TAB_ALIGNMENT
+from docx.shared import Inches
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+
+
+def add_footer(doc, incident, priority="PPT"):
+    section = doc.sections[0]
+    footer = section.footer.paragraphs[0]
+
+    footer.clear()
+
+    # 🔹 Tab stops (same as report module)
+    tab_stops = footer.paragraph_format.tab_stops
+    tab_stops.add_tab_stop(Inches(3.25), WD_TAB_ALIGNMENT.CENTER)
+    tab_stops.add_tab_stop(Inches(6.5), WD_TAB_ALIGNMENT.RIGHT)
+
+    # 🔹 Left: Incident
+    run = footer.add_run(f"{incident}\tPage ")
+
+    # 🔹 Page number field (dynamic)
+    fld1 = OxmlElement('w:fldChar')
+    fld1.set(qn('w:fldCharType'), 'begin')
+
+    instr = OxmlElement('w:instrText')
+    instr.text = "PAGE"
+
+    fld2 = OxmlElement('w:fldChar')
+    fld2.set(qn('w:fldCharType'), 'end')
+
+    run._r.append(fld1)
+    run._r.append(instr)
+    run._r.append(fld2)
+
+    # 🔹 Right: Priority / tag
+    footer.add_run(f"\t{priority}")
+
 def ppt_to_word(ppt_path, output_docx):
     prs = Presentation(ppt_path)
     doc = Document()
