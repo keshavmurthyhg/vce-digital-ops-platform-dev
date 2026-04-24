@@ -44,41 +44,54 @@ def render():
                     st.warning("⚠️ PDF not available")
 
             # ---------------- COMBINED ---------------- #
-            st.divider()
-            st.subheader("📦 Combined Report")
-
             if st.button("Generate Combined Report"):
 
-                # ❗ If SNOW data NOT available
-                if "data" not in st.session_state:
-
-                    st.warning("⚠️ SNOW data not found. Generating PPT-only report...")
-
-                    from modules.converter.ppt_to_doc import ppt_to_word
-
-                    temp_doc = os.path.join(tmpdir, "ppt_only.docx")
-                    ppt_to_word(ppt_path, temp_doc)
-
-                    with open(temp_doc, "rb") as f:
-                        st.download_button(
-                            "📄 Download PPT Report",
-                            f.read(),
-                            "ppt_report.docx"
-                        )
-
-                # ✅ If SNOW data available
-                else:
-                    combined = generate_combined_report(
-                        ppt_path,
-                        st.session_state["data"],
-                        st.session_state.get("root", ""),
-                        st.session_state.get("l2", ""),
-                        st.session_state.get("res", ""),
-                        st.session_state.get("images", {})
-                    )
-
-                    st.download_button(
-                        "📄 Download Combined Report",
-                        combined,
-                        "combined.docx"
-                    )
+            from pptx import Presentation
+            from modules.converter.ppt_to_doc import extract_slide1_content
+            from modules.report.snow_fetcher import fetch_snow_data_from_incident
+        
+            prs = Presentation(ppt_path)
+        
+            # 🔹 Extract incident from PPT
+            incident, desc, date, azure = extract_slide1_content(prs.slides[0])
+        
+            st.info(f"🔍 Detected Incident: {incident}")
+        
+            # 🔹 Fetch SNOW data automatically
+            snow_data = fetch_snow_data_from_incident(incident)
+        
+            if not snow_data:
+                st.warning("⚠️ SNOW data not found, using PPT data fallback")
+        
+                # fallback (PPT-based)
+                snow_data = {
+                    "number": incident,
+                    "short_description": desc[:100],
+                    "description": desc,
+                    "created_by": "PPT",
+                    "created_date": date,
+                    "assigned_to": "",
+                    "priority": "",
+                    "resolved_date": "",
+                    "azure_bug": azure,
+                    "ptc_case": ""
+                }
+        
+            # Save into session (for compatibility)
+            st.session_state["data"] = snow_data
+        
+            # 🔹 Generate combined report
+            combined = generate_combined_report(
+                ppt_path,
+                snow_data,
+                st.session_state.get("root", ""),
+                st.session_state.get("l2", ""),
+                st.session_state.get("res", ""),
+                st.session_state.get("images", {})
+            )
+        
+            st.download_button(
+                "📄 Download Combined Report",
+                combined,
+                "combined_report.docx"
+            )
