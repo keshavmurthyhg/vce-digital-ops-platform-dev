@@ -141,3 +141,20 @@ def merge_with_user_input(auto_text, user_text):
     if user_text and user_text.strip():
         return user_text
     return auto_text
+
+# ---------------- FINAL WRAPPER ---------------- #
+
+def build_report_sections(data):
+    """
+    Build all report sections from SNOW data
+    """
+
+    work_notes = data.get("work_notes", "") or data.get("description", "")
+    comments = data.get("comments", "") or data.get("description", "")
+    resolution_text = data.get("close_notes", "") or data.get("description", "")
+
+    root = build_root_cause(work_notes)
+    l2 = build_l2_analysis(comments)
+    res = build_resolution(resolution_text)
+
+    return root, l2, res
