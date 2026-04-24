@@ -136,51 +136,80 @@ def add_horizontal_line(doc):
     p_pr.append(border)
 
 
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
+
+
+def set_cell_bg(cell):
+    tcPr = cell._element.get_or_add_tcPr()
+    shd = OxmlElement("w:shd")
+    shd.set(qn("w:fill"), "D9D9D9")
+    tcPr.append(shd)
+
+
 def add_header_table(doc, incident, description, date):
 
-    # 🔹 TITLE (exact report style)
-    title = doc.add_paragraph()
-    run = title.add_run("Incident Report")
-    run.bold = True
-    run.font.size = Pt(26)
-    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    # 🔹 TITLE (same as report module)
+    doc.add_heading("INCIDENT REPORT", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    doc.add_paragraph("")  # spacing
-
-    # 🔹 Clean divider line
-    add_horizontal_line(doc)
-
-    doc.add_paragraph("")  # spacing
-
-    # 🔹 TABLE
-    table = doc.add_table(rows=3, cols=2)
+    # 🔹 HEADER TABLE (same 4x4 structure)
+    table = doc.add_table(rows=4, cols=4)
     table.style = "Table Grid"
-    table.autofit = False
 
-    # 🔹 Fixed widths (important for alignment)
-    table.columns[0].width = Inches(2.5)
-    table.columns[1].width = Inches(4.5)
+    def fill(r, c, key, val):
+        h = table.rows[r].cells[c]
+        v = table.rows[r].cells[c + 1]
 
-    labels = ["Incident Number", "Description", "Date"]
-    values = [incident, description, date]
+        # Header cell
+        p = h.paragraphs[0]
+        p.text = key.upper()
+        for run in p.runs:
+            run.bold = True
+        set_cell_bg(h)
 
-    for i in range(3):
-        # Left cell (label)
-        left_cell = table.cell(i, 0)
-        left_para = left_cell.paragraphs[0]
-        left_run = left_para.add_run(labels[i])
-        left_run.bold = True
-        left_run.font.size = Pt(11)
+        # Value cell
+        v.paragraphs[0].text = str(val or "")
 
-        set_cell_bg(left_cell, "D9E1F2")
+    fill(0, 0, "Incident", incident)
+    fill(0, 2, "Created By", "PPT Import")
 
-        # Right cell (value)
-        right_cell = table.cell(i, 1)
-        right_para = right_cell.paragraphs[0]
-        right_run = right_para.add_run(values[i])
-        right_run.font.size = Pt(11)
+    fill(1, 0, "Azure Bug", "")
+    fill(1, 2, "Created Date", date)
 
-    doc.add_paragraph("")  # spacing after table
+    fill(2, 0, "PTC Case", "")
+    fill(2, 2, "Assigned To", "")
+
+    fill(3, 0, "Priority", "")
+    fill(3, 2, "Resolved Date", "")
+
+    doc.add_paragraph("")
+
+    # 🔹 DESCRIPTION TABLE (exact same structure)
+    t2 = doc.add_table(rows=2, cols=2)
+    t2.style = "Table Grid"
+
+    headers = ["SHORT DESCRIPTION", "DESCRIPTION"]
+
+    for i, text in enumerate(headers):
+        cell = t2.rows[0].cells[i]
+        p = cell.paragraphs[0]
+        p.text = text
+
+        for run in p.runs:
+            run.bold = True
+
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        set_cell_bg(cell)
+
+    # Split description
+    short_desc = description.split("\n")[0] if description else ""
+
+    t2.rows[1].cells[0].text = short_desc
+    t2.rows[1].cells[1].text = description
+
+    doc.add_paragraph("")
 
 def ppt_to_word(ppt_path, output_docx):
     prs = Presentation(ppt_path)
