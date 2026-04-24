@@ -1,6 +1,6 @@
 import os
-from modules.ppt_converter.ppt_to_doc import ppt_to_word
-from modules.ppt_converter.doc_to_pdf import doc_to_pdf
+from modules.converter.ppt_to_doc import ppt_to_word
+from modules.converter.doc_to_pdf import doc_to_pdf
 
 def convert_ppt(ppt_path, output_folder):
     base = os.path.splitext(os.path.basename(ppt_path))[0]
