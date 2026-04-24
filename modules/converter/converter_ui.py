@@ -3,7 +3,14 @@ import tempfile
 import os
 
 from modules.converter.converter import convert_ppt
+import re
 
+def clean_incident(incident):
+    if not incident:
+        return None
+
+    match = re.search(r'INC\d{7,}', str(incident))
+    return match.group(0) if match else None
 
 def render():
     st.subheader("📊 PPT Converter")
@@ -56,17 +63,22 @@ def render():
             
                 # 🔹 Extract incident
                 incident, desc, date, azure = extract_slide1_content(prs.slides[0])
+                incident = clean_incident(incident)
                 st.info(f"🔍 Detected Incident: {incident}")
             
                 # 🔹 Fetch SNOW
                 snow_data = fetch_snow_data_from_incident(incident)
+                if snow_data:
+                    st.success("✅ SNOW data loaded")
+                else:
+                    st.warning("⚠️ SNOW not found — using PPT fallback")
             
                 if not snow_data:
                     st.warning("⚠️ SNOW not found, using PPT fallback")
             
                     snow_data = {
                         "number": incident,
-                        "short_description": desc[:150],
+                        "short_description": desc.split("\n")[0] if desc else "",
                         "description": desc,
                         "created_by": "PPT",
                         "created_date": date,
