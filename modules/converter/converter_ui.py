@@ -48,25 +48,26 @@ def render():
 
                 from pptx import Presentation
                 from modules.converter.ppt_to_doc import extract_slide1_content
-                from modules.report.snow_fetcher import fetch_snow_data_from_incident
+                from modules.data.snow_fetcher import fetch_snow_data_from_incident
+                from modules.converter.ppt_extractor import extract_ppt_content
+                from modules.report.doc_generator import generate_word_doc
+                from io import BytesIO
             
                 prs = Presentation(ppt_path)
             
-                # 🔹 Extract incident from PPT
+                # 🔹 Extract incident
                 incident, desc, date, azure = extract_slide1_content(prs.slides[0])
-            
                 st.info(f"🔍 Detected Incident: {incident}")
             
-                # 🔹 Fetch SNOW data automatically
+                # 🔹 Fetch SNOW
                 snow_data = fetch_snow_data_from_incident(incident)
             
                 if not snow_data:
-                    st.warning("⚠️ SNOW data not found, using PPT data fallback")
+                    st.warning("⚠️ SNOW not found, using PPT fallback")
             
-                    # fallback (PPT-based)
                     snow_data = {
                         "number": incident,
-                        "short_description": desc[:100],
+                        "short_description": desc[:150],
                         "description": desc,
                         "created_by": "PPT",
                         "created_date": date,
@@ -77,21 +78,21 @@ def render():
                         "ptc_case": ""
                     }
             
-                # Save into session (for compatibility)
-                st.session_state["data"] = snow_data
+                # 🔹 Extract PPT content
+                ppt_data = extract_ppt_content(ppt_path, tmpdir)
             
-                # 🔹 Generate combined report
-                combined = generate_combined_report(
-                    ppt_path,
+                # 🔹 Generate SINGLE document
+                doc_bytes = generate_word_doc(
                     snow_data,
                     st.session_state.get("root", ""),
                     st.session_state.get("l2", ""),
                     st.session_state.get("res", ""),
-                    st.session_state.get("images", {})
+                    st.session_state.get("images", {}),
+                    ppt_data=ppt_data   # 🔥 KEY LINE
                 )
             
                 st.download_button(
                     "📄 Download Combined Report",
-                    combined,
+                    doc_bytes,
                     "combined_report.docx"
                 )
