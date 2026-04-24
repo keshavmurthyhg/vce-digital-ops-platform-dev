@@ -68,3 +68,24 @@ def generate_word_doc_wrapper(data, root, l2, res, images=None):
         res=res,
         images=images
     )
+
+from docx.shared import Inches
+
+# ---------------- PPT CONTENT ---------------- #
+if ppt_data:
+
+    doc.add_page_break()
+
+    for slide in ppt_data:
+
+        doc.add_heading(slide["title"], level=1)
+
+        for txt in slide["texts"]:
+            doc.add_paragraph(txt)
+
+        for img in slide["images"]:
+            if os.path.exists(img):
+                try:
+                    doc.add_picture(img, width=Inches(5))
+                except Exception:
+                    continue
