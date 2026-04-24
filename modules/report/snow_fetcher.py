@@ -1,17 +1,23 @@
 def fetch_snow_data_from_incident(incident):
-    """
-    Reuse existing SNOW loader logic
-    """
 
-    # 👇 IMPORT your existing loader
-    from modules.data.snow_loader import load_snow_data  # adjust if different
+    from modules.data.snow_loader import load_snow_data
 
-    data = load_snow_data(incident)
+    all_data = load_snow_data()  # load full dataset
+
+    if not all_data:
+        return None
+
+    # 🔍 Find matching incident
+    data = None
+    for row in all_data:
+        if str(row.get("number")).strip().upper() == incident.upper():
+            data = row
+            break
 
     if not data:
         return None
 
-    # Ensure correct structure for doc_generator
+    # 🔄 Normalize structure
     return {
         "number": data.get("number"),
         "short_description": data.get("short_description"),
