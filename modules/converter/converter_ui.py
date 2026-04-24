@@ -2,6 +2,7 @@ import streamlit as st
 import tempfile
 import os
 
+from modules.report.builders.analysis_builder import build_report_sections
 from modules.converter.converter import convert_ppt
 import re
 
