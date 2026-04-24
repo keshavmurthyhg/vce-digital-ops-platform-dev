@@ -151,7 +151,7 @@ def add_header_table(doc, incident, description, date, azure):
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         set_cell_bg(cell)
 
-    short_desc = description.split("\n")[0] if description else ""
+    short_desc = description[:150]  # first 150 chars
     t2.rows[1].cells[0].text = short_desc
     t2.rows[1].cells[1].text = description
 
