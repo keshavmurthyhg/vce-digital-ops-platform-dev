@@ -4,8 +4,11 @@ def fetch_snow_data_from_incident(incident):
 
     df = load_snow_data()  # returns DataFrame
 
-    # ✅ Fix 1: Proper empty check
-    if df is None or df.empty:
+    # ✅ FIX: Proper empty check for DataFrame
+    if df is None:
+        return None
+
+    if hasattr(df, "empty") and df.empty:
         return None
 
     # ✅ Convert DataFrame → list of dicts
@@ -14,11 +17,11 @@ def fetch_snow_data_from_incident(incident):
     # 🔍 Find matching incident
     data = None
     for row in all_data:
-        if str(row.get("number")).strip().upper() == incident.upper():
+        if str(row.get("number", "")).strip().upper() == incident.upper():
             data = row
             break
 
-    if not data:
+    if data is None:
         return None
 
     # 🔄 Normalize structure
