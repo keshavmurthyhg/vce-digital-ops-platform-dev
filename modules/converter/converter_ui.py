@@ -6,7 +6,33 @@ import re
 from modules.report.builders.analysis_builder import build_report_sections
 from modules.converter.converter import convert_ppt
 
+def normalize_snow_data(data):
+    if not data:
+        return {}
 
+    return {
+        "number": data.get("number"),
+
+        "created_by": data.get("opened_by") or data.get("created_by"),
+        "created_date": data.get("opened_at") or data.get("created_date"),
+
+        "assigned_to": data.get("assigned_to"),
+        "priority": f"Priority {data.get('priority')}" if data.get("priority") else "",
+
+        "resolved_date": data.get("closed_at") or data.get("resolved_date"),
+
+        "short_description": data.get("short_description") or "",
+        "description": (
+            data.get("description")
+            or data.get("comments")
+            or data.get("work_notes")
+            or ""
+        ),
+
+        "azure_bug": data.get("azure_bug"),
+        "ptc_case": data.get("ptc_case"),
+    }
+    
 def clean_incident(incident):
     if not incident:
         return None
