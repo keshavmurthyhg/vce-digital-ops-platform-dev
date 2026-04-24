@@ -3,6 +3,7 @@ import tempfile
 import os
 
 from modules.converter.converter import convert_ppt
+from modules.converter.combined_report import generate_combined_report
 
 def render():
     st.subheader("📊 PPT to Word & PDF Converter")
@@ -47,6 +48,32 @@ def render():
                                 file_name="converted.docx"
                             )
 
+                        st.divider()
+                        
+        st.subheader("📦 Combined Report")
+        
+        if st.button("Generate Combined Report"):
+        
+            if "data" not in st.session_state:
+                st.error("⚠️ Load SNOW data first from Report module")
+            else:
+                with st.spinner("Generating combined report..."):
+        
+                    combined_bytes = generate_combined_report(
+                        ppt_path,
+                        st.session_state["data"],
+                        st.session_state.get("root", ""),
+                        st.session_state.get("l2", ""),
+                        st.session_state.get("res", ""),
+                        st.session_state.get("images", {})
+                    )
+        
+                    st.download_button(
+                        "📄 Download Combined Report",
+                        combined_bytes,
+                        "combined_report.docx"
+                    )
+                        
                         # 📕 PDF DOWNLOAD (SAFE)
                         with col2:
                             if pdf_path and os.path.exists(pdf_path):
