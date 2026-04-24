@@ -1,10 +1,11 @@
 import streamlit as st
 import tempfile
 import os
+import re
 
 from modules.report.builders.analysis_builder import build_report_sections
 from modules.converter.converter import convert_ppt
-import re
+
 
 def clean_incident(incident):
     if not incident:
@@ -12,6 +13,7 @@ def clean_incident(incident):
 
     match = re.search(r'INC\d{7,}', str(incident))
     return match.group(0) if match else None
+
 
 def render():
     st.subheader("📊 PPT Converter")
@@ -34,19 +36,11 @@ def render():
                 docx_path, pdf_path = convert_ppt(ppt_path, tmpdir)
 
                 with open(docx_path, "rb") as f:
-                    st.download_button(
-                        "📄 Download Word",
-                        f.read(),
-                        "converted.docx"
-                    )
+                    st.download_button("📄 Download Word", f.read(), "converted.docx")
 
                 if pdf_path and os.path.exists(pdf_path):
                     with open(pdf_path, "rb") as f:
-                        st.download_button(
-                            "📕 Download PDF",
-                            f.read(),
-                            "converted.pdf"
-                        )
+                        st.download_button("📕 Download PDF", f.read(), "converted.pdf")
                 else:
                     st.warning("⚠️ PDF not available")
 
@@ -58,25 +52,23 @@ def render():
                 from modules.data.snow_fetcher import fetch_snow_data_from_incident
                 from modules.converter.ppt_extractor import extract_ppt_content
                 from modules.report.doc_generator import generate_word_doc_wrapper
-                from io import BytesIO
-            
+
                 prs = Presentation(ppt_path)
-            
+
                 # 🔹 Extract incident
                 incident, desc, date, azure = extract_slide1_content(prs.slides[0])
                 incident = clean_incident(incident)
+
                 st.info(f"🔍 Detected Incident: {incident}")
-            
+
                 # 🔹 Fetch SNOW
                 snow_data = fetch_snow_data_from_incident(incident)
+
                 if snow_data:
                     st.success("✅ SNOW data loaded")
                 else:
                     st.warning("⚠️ SNOW not found — using PPT fallback")
-            
-                if not snow_data:
-                    st.warning("⚠️ SNOW not found, using PPT fallback")
-            
+
                     snow_data = {
                         "number": incident,
                         "short_description": desc.split("\n")[0] if desc else "",
@@ -89,20 +81,23 @@ def render():
                         "azure_bug": azure,
                         "ptc_case": ""
                     }
-            
+
+                # 🔥 CRITICAL FIX — BUILD REPORT SECTIONS
+                root, l2, res = build_report_sections(snow_data)
+
                 # 🔹 Extract PPT content
                 ppt_data = extract_ppt_content(ppt_path, tmpdir)
-            
-                # 🔹 Generate SINGLE document
+
+                # 🔹 Generate document
                 doc_bytes = generate_word_doc_wrapper(
                     snow_data,
-                    st.session_state.get("root", ""),
-                    st.session_state.get("l2", ""),
-                    st.session_state.get("res", ""),
-                    st.session_state.get("images", {}),
-                    ppt_data=ppt_data   # 🔥 KEY LINE
+                    root,
+                    l2,
+                    res,
+                    {},  # images
+                    ppt_data=ppt_data
                 )
-            
+
                 st.download_button(
                     "📄 Download Combined Report",
                     doc_bytes,
