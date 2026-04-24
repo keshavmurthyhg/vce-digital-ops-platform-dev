@@ -9,6 +9,35 @@ import uuid
 import re
 
 
+#================= Hyperlink helper =======================
+def add_hyperlink(paragraph, url, text):
+    part = paragraph.part
+    r_id = part.relate_to(
+        url,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        is_external=True,
+    )
+
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), r_id)
+
+    run = OxmlElement("w:r")
+    text_elem = OxmlElement("w:t")
+    text_elem.text = str(text)
+    run.append(text_elem)
+    hyperlink.append(run)
+
+    paragraph._p.append(hyperlink)
+
+#================= Azure Detection =======================
+
+def extract_azure_bug(text):
+    if not text:
+        return ""
+
+    match = re.search(r"\b(\d{5,})\b", text)
+    return match.group(1) if match else ""
+    
 # ---------------- CLEAN TEXT ---------------- #
 def clean_text(text):
     if not text:
@@ -52,7 +81,8 @@ def extract_slide1_content(slide):
 
         description.append(txt.strip())
 
-    return incident or "N/A", " ".join(description) or "N/A", date or ""
+    azure = extract_azure_bug(" ".join(texts))
+    return incident or "N/A", " ".join(description) or "N/A", date or "", azure
 
 
 # ---------------- TABLE STYLE ---------------- #
@@ -72,29 +102,30 @@ def add_header_table(doc, incident, description, date):
     table.style = "Table Grid"
 
     def fill(r, c, key, val):
-        h = table.rows[r].cells[c]
-        v = table.rows[r].cells[c + 1]
+    h = table.rows[r].cells[c]
+    v = table.rows[r].cells[c + 1]
 
-        p = h.paragraphs[0]
-        p.text = key.upper()
-        for run in p.runs:
-            run.bold = True
-        set_cell_bg(h)
+    p = h.paragraphs[0]
+    p.text = key.upper()
+    for run in p.runs:
+        run.bold = True
+    set_cell_bg(h)
 
-        v.paragraphs[0].text = str(val or "")
+    p = v.paragraphs[0]
 
-    fill(0, 0, "Incident", incident)
-    fill(0, 2, "Created By", "PPT Import")
+    # 🔗 Incident clickable
+    if key.lower() == "incident" and val:
+        url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={val}"
+        add_hyperlink(p, url, val)
 
-    fill(1, 0, "Azure Bug", "")
-    fill(1, 2, "Created Date", date)
+    # 🔗 Azure clickable
+    elif key.lower() == "azure bug" and val:
+        url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{val}"
+        add_hyperlink(p, url, val)
 
-    fill(2, 0, "PTC Case", "")
-    fill(2, 2, "Assigned To", "")
-
-    fill(3, 0, "Priority", "")
-    fill(3, 2, "Resolved Date", "")
-
+    else:
+        p.text = str(val or "")
+        
     doc.add_paragraph("")
 
     # Description table
@@ -157,7 +188,7 @@ def ppt_to_word(ppt_path, output_docx):
 
     if len(prs.slides) > 0:
         slide1 = prs.slides[0]
-        incident, description, date = extract_slide1_content(slide1)
+        incident, description, date, azure = extract_slide1_content(slide1)
 
         add_header_table(doc, incident, description, date)
 
