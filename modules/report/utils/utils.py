@@ -2,17 +2,35 @@ from datetime import datetime
 import re
 from io import BytesIO
 
-from reportlab.platypus import Image, Spacer
-
 # ---------------- COMMON ---------------- #
 
 def clean_text(text):
+    """
+    Cleans text for safe Word/PDF rendering.
+    - Removes invalid XML characters (critical for python-docx)
+    - Removes unwanted privacy lines
+    """
     if not text:
         return ""
-    return re.sub(r"How does the user want.*?\d+", "", str(text), flags=re.I).strip()
 
-import re
-from datetime import datetime
+    text = str(text)
+
+    # ✅ Remove invalid XML characters
+    text = "".join(
+        ch for ch in text
+        if ord(ch) in (9, 10, 13) or 32 <= ord(ch) <= 126 or ord(ch) > 127
+    )
+
+    # ✅ Remove privacy line (your logic)
+    text = re.sub(
+        r"How does the user want to be contacted.*?\?",
+        "",
+        text,
+        flags=re.I
+    )
+
+    return text.strip()
+
 
 def clean_nan(val):
     if val is None:
@@ -20,6 +38,7 @@ def clean_nan(val):
     if str(val).lower() == "nan":
         return ""
     return str(val)
+
 
 def format_date(date_str):
     if not date_str:
@@ -29,28 +48,30 @@ def format_date(date_str):
     except:
         return str(date_str)
 
+
 def format_description(text):
     if not text:
         return ""
 
     text = str(text)
 
-    # 🔴 Remove EVERYTHING after the privacy trigger line
+    # Remove everything after privacy question
     text = re.split(
         r"How does the user want to be contacted.*?\?",
         text,
         flags=re.I
     )[0]
 
-    return text.strip()
+    return clean_text(text)
+
 
 def make_link(url, text):
     if not text:
         return ""
     return f'<link href="{url}">{text}</link>'
 
+
 #============ AZURE NUMBER EXTRACTOR ============== #
-import re
 
 def extract_azure_id(text):
     if not text:
@@ -58,19 +79,22 @@ def extract_azure_id(text):
 
     text = str(text)
 
-    # ✅ Match full Azure URL
+    # Match Azure DevOps URL
     match = re.search(r'_workitems/edit/(\d+)', text)
     if match:
         return match.group(1)
 
-    # ✅ Backup: match any /digits (for safety)
+    # Backup match (numbers)
     match = re.search(r'/(\d{5,})', text)
     if match:
         return match.group(1)
 
     return None
-    
+
+
 # ---------------- PDF ---------------- #
+
+from reportlab.platypus import Image, Spacer
 
 def add_images_pdf(elements, image_list):
     if not image_list:
@@ -131,7 +155,7 @@ def add_hyperlink(paragraph, url, text):
 
     run = OxmlElement("w:r")
     text_elem = OxmlElement("w:t")
-    text_elem.text = str(text)
+    text_elem.text = clean_text(text)
 
     run.append(text_elem)
     hyperlink.append(run)
