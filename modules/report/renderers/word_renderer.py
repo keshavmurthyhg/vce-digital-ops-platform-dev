@@ -5,7 +5,7 @@ from modules.report.utils.links import apply_word_link
 from modules.report.utils.utils import format_date, set_cell_bg, format_description
 
 
-def generate_word_doc(data, root, l2, res, images):
+def generate_word_doc(data, root, l2, res, images, ppt_data=None):
 
     doc = Document()
     doc.add_heading("INCIDENT REPORT", 0).alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -79,3 +79,25 @@ def generate_word_doc(data, root, l2, res, images):
     buffer.seek(0)
 
     return buffer.getvalue()
+
+from docx.shared import Inches
+import os
+
+# ---------------- PPT CONTENT ---------------- #
+if ppt_data:
+
+    doc.add_page_break()
+
+    for slide in ppt_data:
+
+        doc.add_heading(slide["title"], level=1)
+
+        for txt in slide["texts"]:
+            doc.add_paragraph(txt)
+
+        for img in slide["images"]:
+            if os.path.exists(img):
+                try:
+                    doc.add_picture(img, width=Inches(5))
+                except Exception:
+                    continue
