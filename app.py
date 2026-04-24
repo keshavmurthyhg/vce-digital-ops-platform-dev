@@ -29,7 +29,7 @@ elif page == "Report":
 
 elif page == "Excel Compare":
     excel_compare_ui()
-elif page == "Converer"
+elif page == "Converer":
     st.subheader("📊 PPT to Word & PDF Converter")
 
     uploaded_ppt = st.file_uploader(
