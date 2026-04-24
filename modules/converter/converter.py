@@ -9,6 +9,10 @@ def convert_ppt(ppt_path, output_folder):
     pdf_path = os.path.join(output_folder, f"{base}.pdf")
 
     ppt_to_word(ppt_path, docx_path)
-    doc_to_pdf(docx_path, pdf_path)
+    try:
+        doc_to_pdf(docx_path, output_folder)
+        pdf_path = os.path.join(output_folder, f"{base}.pdf")
+    except Exception as e:
+        pdf_path = None
 
     return docx_path, pdf_path
