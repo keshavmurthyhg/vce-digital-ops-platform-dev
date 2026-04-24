@@ -32,5 +32,5 @@ elif page == "Report":
 
 elif page == "Excel Compare":
     excel_compare_ui()
-elif page == "Converer":
+elif page == "Converter":
     converter_ui()
