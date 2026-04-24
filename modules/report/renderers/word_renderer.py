@@ -1,8 +1,10 @@
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.shared import Inches
 from modules.report.layout.footer import apply_word_footer
 from modules.report.utils.links import apply_word_link
 from modules.report.utils.utils import format_date, set_cell_bg, format_description
+import os
 
 
 def generate_word_doc(data, root, l2, res, images, ppt_data=None):
@@ -18,13 +20,11 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
         h = table.rows[r].cells[c]
         v = table.rows[r].cells[c + 1]
 
-        # HEADER CELL
         p = h.paragraphs[0]
         run = p.add_run(key.upper())
         run.bold = True
         set_cell_bg(h)
 
-        # VALUE CELL (WITH LINK)
         p = v.paragraphs[0]
         apply_word_link(p, key, val)
 
@@ -51,7 +51,7 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
         run.bold = True
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         set_cell_bg(t2.rows[0].cells[i])
-
+    
     # ✅ CLEAN DESCRIPTION (REMOVES PERSONAL INFO)
     t2.rows[1].cells[0].text = str(data.get("short_description") or "")
     t2.rows[1].cells[1].text = format_description(data.get("description"))
@@ -73,31 +73,29 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
     # FOOTER
     apply_word_footer(doc, data)
 
+    # ---------------- PPT CONTENT ---------------- #
+    if ppt_data:
+
+        doc.add_page_break()
+
+        for slide in ppt_data:
+
+            doc.add_heading(slide["title"], level=1)
+
+            for txt in slide["texts"]:
+                doc.add_paragraph(txt)
+
+            for img in slide["images"]:
+                if os.path.exists(img):
+                    try:
+                        doc.add_picture(img, width=Inches(5))
+                    except Exception:
+                        continue
+
+    # SAVE
     from io import BytesIO
     buffer = BytesIO()
     doc.save(buffer)
     buffer.seek(0)
 
     return buffer.getvalue()
-
-from docx.shared import Inches
-import os
-
-# ---------------- PPT CONTENT ---------------- #
-if ppt_data:
-
-    doc.add_page_break()
-
-    for slide in ppt_data:
-
-        doc.add_heading(slide["title"], level=1)
-
-        for txt in slide["texts"]:
-            doc.add_paragraph(txt)
-
-        for img in slide["images"]:
-            if os.path.exists(img):
-                try:
-                    doc.add_picture(img, width=Inches(5))
-                except Exception:
-                    continue
