@@ -38,7 +38,8 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
     fill(3, 0, "Priority", data.get("priority"))
     fill(3, 2, "Resolved Date", format_date(data.get("resolved_date")))
 
-    doc.add_paragraph("")
+    doc.add_paragraph("")  # spacing
+    doc.add_paragraph(clean_text(txt))
 
     # DESCRIPTION TABLE
     t2 = doc.add_table(rows=2, cols=2)
