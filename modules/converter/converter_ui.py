@@ -86,7 +86,7 @@ def render():
 
                 from pptx import Presentation
                 from modules.converter.ppt_to_doc import extract_slide1_content
-                from modules.data.snow_fetcher import fetch_snow_data_from_incident
+                from modules.data.snow_loader import load_snow_data
                 from modules.converter.ppt_extractor import extract_ppt_content
                 from modules.report.doc_generator import generate_word_doc_wrapper
 
@@ -98,27 +98,18 @@ def render():
 
                 st.info(f"🔍 Detected Incident: {incident}")
 
+                
                 # Fetch SNOW
-                raw_snow = fetch_snow_data_from_incident(incident)
-               
-                if raw_snow:
-                    st.success("✅ SNOW data loaded")
-                    snow_data = normalize_snow_data(raw_snow)
-                else:
-                    st.warning("⚠️ SNOW not found — using PPT fallback")
-
-                    snow_data = {
-                        "number": incident,
-                        "short_description": desc.split("\n")[0] if desc else "",
-                        "description": desc,
-                        "created_by": "PPT",
-                        "created_date": date,
-                        "assigned_to": "",
-                        "priority": "",
-                        "resolved_date": "",
-                        "azure_bug": azure,
-                        "ptc_case": ""
-                    }
+                raw_snow = load_snow_data(incident)
+                
+                if raw_snow is None:
+                    st.error("❌ Incident not found in SNOW")
+                    return
+                
+                st.success("✅ SNOW data loaded")
+                
+                # ✅ NO normalization
+                snow_data = raw_snow
 
                 # Build sections
                 root, l2, res = build_report_sections(snow_data)
