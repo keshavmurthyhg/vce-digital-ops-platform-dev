@@ -30,6 +30,9 @@ def fetch_snow_data_from_incident(incident):
             break
 
     # 🔄 Normalize structure
+    if not data:
+        return None   # ✅ VERY IMPORTANT
+    
     return {
         "number": data.get("number") or data.get("Number"),
     
@@ -50,4 +53,9 @@ def fetch_snow_data_from_incident(incident):
         "azure_bug": data.get("azure_bug") or data.get("Azure Bug"),
     
         "ptc_case": data.get("ptc_case") or data.get("PTC Case"),
+    
+        # ✅ ADD THESE (YOU WERE MISSING)
+        "work_notes": data.get("work_notes") or data.get("Work Notes"),
+        "comments": data.get("comments") or data.get("Comments"),
+        "close_notes": data.get("close_notes") or data.get("Close Notes"),
     }
