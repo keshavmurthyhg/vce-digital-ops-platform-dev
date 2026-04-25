@@ -136,6 +136,37 @@ def render():
                     ppt_data=ppt_data
                 )
 
+                st.subheader("📄 Preview")
+
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    st.markdown("**Incident Details**")
+                    st.write("INCIDENT:", snow_data.get("number"))
+                    st.write("AZURE BUG:", snow_data.get("azure_bug"))
+                    st.write("PTC CASE:", snow_data.get("ptc_case"))
+                    st.write("PRIORITY:", snow_data.get("priority"))
+                
+                with col2:
+                    st.write("CREATED BY:", snow_data.get("created_by"))
+                    st.write("CREATED DATE:", snow_data.get("created_date"))
+                    st.write("ASSIGNED TO:", snow_data.get("assigned_to"))
+                    st.write("RESOLVED DATE:", snow_data.get("resolved_date"))
+                
+                st.markdown("---")
+                
+                st.markdown("**Description**")
+                
+                col3, col4 = st.columns(2)
+                
+                with col3:
+                    st.write("SHORT DESCRIPTION")
+                    st.write(snow_data.get("short_description"))
+                
+                with col4:
+                    st.write("DESCRIPTION")
+                    st.write(snow_data.get("description"))
+                
                 st.download_button(
                     "📄 Download Combined Report",
                     doc_bytes,
