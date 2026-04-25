@@ -116,9 +116,10 @@ def render():
                 st.success("✅ SNOW data loaded")
                 
                 # ✅ Convert row → dict (CRITICAL)
-                #snow_data = row.iloc[0].to_dict()
+                
                 raw_data = row.iloc[0].to_dict()
                 snow_data = normalize_snow_data(raw_data)
+                
                 # Build sections
                 root, l2, res = build_report_sections(snow_data)
 
