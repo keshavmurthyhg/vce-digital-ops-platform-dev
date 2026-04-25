@@ -12,36 +12,34 @@ def normalize_snow_data(data):
     if not data:
         return {}
 
+    def extract_name(val):
+        if isinstance(val, dict):
+            return val.get("display_value") or val.get("name")
+        return val
+
     return {
         "number": data.get("number"),
 
-        "created_by": data.get("opened_by") or data.get("created_by"),
-        "created_date": data.get("opened_at") or data.get("created_date"),
+        # ✅ FIXED FIELD MAPPING
+        "created_by": extract_name(data.get("opened_by")),
+        "created_date": data.get("opened_at"),
 
-        "assigned_to": data.get("assigned_to"),
+        "assigned_to": extract_name(data.get("assigned_to")),
 
-        # ✅ FIXED
         "priority": data.get("priority"),
 
-        "resolved_date": data.get("closed_at") or data.get("resolved_date"),
+        "resolved_date": data.get("closed_at"),
 
-        "short_description": (
-            data.get("short_description")
-            or (data.get("description") or "")[:150]
-        ),
+        # ✅ TEXT
+        "short_description": data.get("short_description"),
+        "description": data.get("description") or "",
 
-        "description": (
-            data.get("description")
-            or data.get("comments")
-            or data.get("work_notes")
-            or ""
-        ),
-
-        # ✅ ADD THESE (MISSING BEFORE)
+        # ✅ EXTRA FIELDS (IMPORTANT)
         "work_notes": data.get("work_notes"),
         "comments": data.get("comments"),
         "resolution": data.get("close_notes"),
 
+        # ✅ LINKS
         "azure_bug": data.get("azure_bug"),
         "ptc_case": data.get("ptc_case"),
     }
