@@ -100,7 +100,7 @@ def render():
 
                 # Fetch SNOW
                 raw_snow = fetch_snow_data_from_incident(incident)
-                st.write("MATCHED ROW:", raw_snow)
+                #st.write("MATCHED ROW:", raw_snow) # DEBUG
                 if raw_snow:
                     st.success("✅ SNOW data loaded")
                     snow_data = normalize_snow_data(raw_snow)
