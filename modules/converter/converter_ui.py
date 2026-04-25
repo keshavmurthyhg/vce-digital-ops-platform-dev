@@ -6,6 +6,8 @@ import re
 from modules.report.builders.analysis_builder import build_report_sections
 from modules.converter.converter import convert_ppt
 
+
+# ---------------- NORMALIZER ---------------- #
 def normalize_snow_data(data):
     if not data:
         return {}
@@ -17,11 +19,16 @@ def normalize_snow_data(data):
         "created_date": data.get("opened_at") or data.get("created_date"),
 
         "assigned_to": data.get("assigned_to"),
+
         "priority": f"Priority {data.get('priority')}" if data.get("priority") else "",
 
         "resolved_date": data.get("closed_at") or data.get("resolved_date"),
 
-        "short_description": data.get("short_description") or "",
+        "short_description": (
+            data.get("short_description")
+            or (data.get("description") or "")[:150]
+        ),
+
         "description": (
             data.get("description")
             or data.get("comments")
@@ -32,15 +39,16 @@ def normalize_snow_data(data):
         "azure_bug": data.get("azure_bug"),
         "ptc_case": data.get("ptc_case"),
     }
-    
+
+
 def clean_incident(incident):
     if not incident:
         return None
-
     match = re.search(r'INC\d{7,}', str(incident))
     return match.group(0) if match else None
 
 
+# ---------------- UI ---------------- #
 def render():
     st.subheader("📊 PPT Converter")
 
@@ -52,11 +60,10 @@ def render():
 
             ppt_path = os.path.join(tmpdir, uploaded_ppt.name)
 
-            # Save file
             with open(ppt_path, "wb") as f:
                 f.write(uploaded_ppt.read())
 
-            # ---------------- CONVERT ---------------- #
+            # -------- CONVERT -------- #
             if st.button("Convert PPT"):
 
                 docx_path, pdf_path = convert_ppt(ppt_path, tmpdir)
@@ -70,7 +77,7 @@ def render():
                 else:
                     st.warning("⚠️ PDF not available")
 
-            # ---------------- COMBINED ---------------- #
+            # -------- COMBINED -------- #
             if st.button("Generate Combined Report"):
 
                 from pptx import Presentation
@@ -81,17 +88,18 @@ def render():
 
                 prs = Presentation(ppt_path)
 
-                # 🔹 Extract incident
+                # Extract
                 incident, desc, date, azure = extract_slide1_content(prs.slides[0])
                 incident = clean_incident(incident)
 
                 st.info(f"🔍 Detected Incident: {incident}")
 
-                # 🔹 Fetch SNOW
-                snow_data = fetch_snow_data_from_incident(incident)
+                # Fetch SNOW
+                raw_snow = fetch_snow_data_from_incident(incident)
 
-                if snow_data:
+                if raw_snow:
                     st.success("✅ SNOW data loaded")
+                    snow_data = normalize_snow_data(raw_snow)
                 else:
                     st.warning("⚠️ SNOW not found — using PPT fallback")
 
@@ -108,19 +116,19 @@ def render():
                         "ptc_case": ""
                     }
 
-                # 🔥 CRITICAL FIX — BUILD REPORT SECTIONS
+                # Build sections
                 root, l2, res = build_report_sections(snow_data)
 
-                # 🔹 Extract PPT content
+                # PPT data
                 ppt_data = extract_ppt_content(ppt_path, tmpdir)
 
-                # 🔹 Generate document
+                # Generate
                 doc_bytes = generate_word_doc_wrapper(
                     snow_data,
                     root,
                     l2,
                     res,
-                    {},  # images
+                    {},
                     ppt_data=ppt_data
                 )
 
