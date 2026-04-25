@@ -120,6 +120,10 @@ def add_header_table(doc, incident, description, date, azure):
             url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{val}"
             add_hyperlink(p, url, val)
 
+        elif key.lower() == "ptc case" and val:
+            url = f"https://support.ptc.com/appserver/cs/view/solution.jsp?n={val}"
+            add_hyperlink(p, url, val)
+        
         else:
             p.text = str(val or "")
 
