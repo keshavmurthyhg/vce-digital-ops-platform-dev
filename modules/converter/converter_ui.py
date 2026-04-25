@@ -5,6 +5,7 @@ import re
 
 from modules.report.builders.analysis_builder import build_report_sections
 from modules.converter.converter import convert_ppt
+from modules.report.utils.utils import format_date
 
 
 # ---------------- NORMALIZER ---------------- #
@@ -25,11 +26,11 @@ def normalize_snow_data(data):
         "created_by": get("opened by"),
         "created_date": get("created"),
 
-        "assigned_to": get("assigned_to"),
+        "assigned_to": get("assigned to"),
 
         "priority": get("priority"),
 
-        "resolved_date": get("vendor closed"),
+        "resolved_date": get("resolved"),
 
         "short_description": get("short description"),
         "description": get("description") or "",
@@ -40,7 +41,7 @@ def normalize_snow_data(data):
         "resolution": get("resolution notes"),
 
         # ✅ LINKS
-        "azure_bug": None,  # not present in your data
+        "azure_bug": extract_azure_id(get("resolution notes") or ""),
         "ptc_case": get("vendor ticket"),
     }
 
@@ -137,34 +138,44 @@ def render():
 
                 st.subheader("📄 Preview")
 
+                # -------- TABLE 1 -------- #
+                st.markdown("### Incident Details")
+                
+                t1 = [
+                    ["INCIDENT", snow_data.get("number"), "CREATED BY", snow_data.get("created_by")],
+                    ["AZURE BUG", snow_data.get("azure_bug"), "CREATED DATE", format_date(snow_data.get("created_date"))],
+                    ["PTC CASE", snow_data.get("ptc_case"), "ASSIGNED TO", snow_data.get("assigned_to")],
+                    ["PRIORITY", snow_data.get("priority"), "RESOLVED DATE", format_date(snow_data.get("resolved_date"))],
+                ]
+                
+                for row in t1:
+                    col1, col2, col3, col4 = st.columns(4)
+                
+                    with col1:
+                        st.markdown(f"**{row[0]}**")
+                
+                    with col2:
+                        st.markdown(make_ui_link(row[0], row[1]))
+                
+                    with col3:
+                        st.markdown(f"**{row[2]}**")
+                
+                    with col4:
+                        st.markdown(make_ui_link(row[2], row[3]))
+                
+                # -------- TABLE 2 -------- #
+                st.markdown("---")
+                st.markdown("### Description")
+                
                 col1, col2 = st.columns(2)
                 
                 with col1:
-                    st.markdown("**Incident Details**")
-                    st.write("INCIDENT:", snow_data.get("number"))
-                    st.write("AZURE BUG:", snow_data.get("azure_bug"))
-                    st.write("PTC CASE:", snow_data.get("ptc_case"))
-                    st.write("PRIORITY:", snow_data.get("priority"))
+                    st.markdown("**SHORT DESCRIPTION**")
+                    st.write(snow_data.get("short_description") or "-")
                 
                 with col2:
-                    st.write("CREATED BY:", snow_data.get("created_by"))
-                    st.write("CREATED DATE:", snow_data.get("created_date"))
-                    st.write("ASSIGNED TO:", snow_data.get("assigned_to"))
-                    st.write("RESOLVED DATE:", snow_data.get("resolved_date"))
-                
-                st.markdown("---")
-                
-                st.markdown("**Description**")
-                
-                col3, col4 = st.columns(2)
-                
-                with col3:
-                    st.write("SHORT DESCRIPTION")
-                    st.write(snow_data.get("short_description"))
-                
-                with col4:
-                    st.write("DESCRIPTION")
-                    st.write(snow_data.get("description"))
+                    st.markdown("**DESCRIPTION**")
+                    st.write(snow_data.get("description") or "-")
                 
                 st.download_button(
                     "📄 Download Combined Report",
