@@ -120,12 +120,17 @@ from docx.shared import Inches
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 
+from docx.shared import Inches
+from io import BytesIO
+
 def add_images_word(doc, image_list):
     if not image_list:
         return
 
     for img in image_list:
         try:
+            doc.add_paragraph("")  # ✅ spacing BEFORE
+
             if hasattr(img, "read"):
                 img_bytes = BytesIO(img.read())
                 img.seek(0)
@@ -133,10 +138,11 @@ def add_images_word(doc, image_list):
                 img_bytes = img
 
             doc.add_picture(img_bytes, width=Inches(5.5))
-            doc.add_paragraph("")
-        except:
-            pass
 
+            doc.add_paragraph("")  # ✅ spacing AFTER
+
+        except Exception:
+            pass
 
 def add_hyperlink(paragraph, url, text):
     if not text:
