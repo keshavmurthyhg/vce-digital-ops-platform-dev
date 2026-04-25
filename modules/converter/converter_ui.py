@@ -6,6 +6,7 @@ import re
 from modules.report.builders.analysis_builder import build_report_sections
 from modules.converter.converter import convert_ppt
 from modules.report.utils.utils import format_date
+from modules.report.utils.links import make_ui_link
 
 
 
@@ -152,8 +153,7 @@ def render():
                     ppt_data=ppt_data
                 )
 
-               from modules.report.utils.links import make_ui_link
-
+               
                 st.subheader("📄 Preview")
                 
                 # -------- TABLE 1 -------- #
