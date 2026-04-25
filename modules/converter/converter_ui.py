@@ -8,7 +8,24 @@ from modules.converter.converter import convert_ppt
 from modules.report.utils.utils import format_date
 
 
+
+# ---------------- AZURE BUG EXTRACTION ---------------- #
+
+def extract_azure_from_text(text):
+    if not text:
+        return None
+
+    # Match Azure work item ID (last digits in URL)
+    match = re.search(r'/edit/(\d+)', text)
+    if match:
+        return match.group(1)
+
+    # fallback: any 6+ digit number
+    match = re.search(r'\b\d{6,}\b', text)
+    return match.group(0) if match else None
+
 # ---------------- NORMALIZER ---------------- #
+
 def normalize_snow_data(data):
     if not data:
         return {}
@@ -22,26 +39,25 @@ def normalize_snow_data(data):
     return {
         "number": get("number"),
 
-        # ✅ FIXED MAPPING BASED ON YOUR DATA
+        # ✅ CORRECT MAPPING
         "created_by": get("opened by"),
-        "created_date": get("created"),
+        "created_date": format_date(get("created")),
 
         "assigned_to": get("assigned to"),
-
         "priority": get("priority"),
 
-        "resolved_date": get("resolved"),
+        "resolved_date": format_date(get("closed", "vendor closed")),
 
         "short_description": get("short description"),
         "description": get("description") or "",
 
-        # ✅ IMPORTANT TEXT FIELDS
+        # TEXT FIELDS
         "work_notes": get("work notes"),
         "comments": get("additional comments"),
         "resolution": get("resolution notes"),
 
-        # ✅ LINKS
-        "azure_bug": extract_azure_id(get("resolution notes") or ""),
+        # LINKS
+        "azure_bug": extract_azure_from_text(get("resolution notes") or ""),
         "ptc_case": get("vendor ticket"),
     }
 
@@ -136,46 +152,40 @@ def render():
                     ppt_data=ppt_data
                 )
 
-                st.subheader("📄 Preview")
+               from modules.report.utils.links import make_ui_link
 
+                st.subheader("📄 Preview")
+                
                 # -------- TABLE 1 -------- #
                 st.markdown("### Incident Details")
                 
                 t1 = [
-                    ["INCIDENT", snow_data.get("number"), "CREATED BY", snow_data.get("created_by")],
-                    ["AZURE BUG", snow_data.get("azure_bug"), "CREATED DATE", format_date(snow_data.get("created_date"))],
-                    ["PTC CASE", snow_data.get("ptc_case"), "ASSIGNED TO", snow_data.get("assigned_to")],
-                    ["PRIORITY", snow_data.get("priority"), "RESOLVED DATE", format_date(snow_data.get("resolved_date"))],
+                    ["INCIDENT", snow_data["number"], "CREATED BY", snow_data["created_by"]],
+                    ["AZURE BUG", snow_data["azure_bug"], "CREATED DATE", snow_data["created_date"]],
+                    ["PTC CASE", snow_data["ptc_case"], "ASSIGNED TO", snow_data["assigned_to"]],
+                    ["PRIORITY", snow_data["priority"], "RESOLVED DATE", snow_data["resolved_date"]],
                 ]
                 
                 for row in t1:
-                    col1, col2, col3, col4 = st.columns(4)
+                    c1, c2, c3, c4 = st.columns(4)
                 
-                    with col1:
-                        st.markdown(f"**{row[0]}**")
+                    c1.markdown(f"**{row[0]}**")
+                    c2.markdown(make_ui_link(row[0], row[1]))
                 
-                    with col2:
-                        st.markdown(make_ui_link(row[0], row[1]))
-                
-                    with col3:
-                        st.markdown(f"**{row[2]}**")
-                
-                    with col4:
-                        st.markdown(make_ui_link(row[2], row[3]))
+                    c3.markdown(f"**{row[2]}**")
+                    c4.markdown(make_ui_link(row[2], row[3]))
                 
                 # -------- TABLE 2 -------- #
                 st.markdown("---")
                 st.markdown("### Description")
                 
-                col1, col2 = st.columns(2)
+                c1, c2 = st.columns(2)
                 
-                with col1:
-                    st.markdown("**SHORT DESCRIPTION**")
-                    st.write(snow_data.get("short_description") or "-")
+                c1.markdown("**SHORT DESCRIPTION**")
+                c1.write(snow_data["short_description"] or "-")
                 
-                with col2:
-                    st.markdown("**DESCRIPTION**")
-                    st.write(snow_data.get("description") or "-")
+                c2.markdown("**DESCRIPTION**")
+                c2.write(snow_data["description"] or "-")
                 
                 st.download_button(
                     "📄 Download Combined Report",
