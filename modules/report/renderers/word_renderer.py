@@ -89,9 +89,9 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
             for img in slide["images"]:
                 if os.path.exists(img):
                     try:
-                        doc.add_picture(img, width=Inches(doc.add_paragraph("")
+                        doc.add_paragraph("")
                         doc.add_picture(img, width=Inches(5))
-                        doc.add_paragraph("")5))
+                        doc.add_paragraph("")
                     except Exception:
                         continue
 
