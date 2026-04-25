@@ -74,6 +74,7 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
     # FOOTER
     apply_word_footer(doc, data)
 
+    
     # ---------------- PPT CONTENT ---------------- #
     if ppt_data:
 
