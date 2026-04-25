@@ -100,16 +100,23 @@ def render():
 
                 
                 # Fetch SNOW
-                raw_snow = load_snow_data(incident)
+                df = load_snow_data()
+
+                if df is None or df.empty:
+                    st.error("❌ Failed to load SNOW data")
+                    return
                 
-                if raw_snow is None:
+                # 🔍 Filter by incident
+                row = df[df["number"] == incident]
+                
+                if row.empty:
                     st.error("❌ Incident not found in SNOW")
                     return
                 
                 st.success("✅ SNOW data loaded")
                 
-                # ✅ NO normalization
-                snow_data = raw_snow
+                # ✅ Convert row → dict (CRITICAL)
+                snow_data = row.iloc[0].to_dict()
 
                 # Build sections
                 root, l2, res = build_report_sections(snow_data)
