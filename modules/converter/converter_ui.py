@@ -20,7 +20,8 @@ def normalize_snow_data(data):
 
         "assigned_to": data.get("assigned_to"),
 
-        "priority": f"Priority {data.get('priority')}" if data.get("priority") else "",
+        # ✅ FIXED
+        "priority": data.get("priority"),
 
         "resolved_date": data.get("closed_at") or data.get("resolved_date"),
 
@@ -35,6 +36,11 @@ def normalize_snow_data(data):
             or data.get("work_notes")
             or ""
         ),
+
+        # ✅ ADD THESE (MISSING BEFORE)
+        "work_notes": data.get("work_notes"),
+        "comments": data.get("comments"),
+        "resolution": data.get("close_notes"),
 
         "azure_bug": data.get("azure_bug"),
         "ptc_case": data.get("ptc_case"),
