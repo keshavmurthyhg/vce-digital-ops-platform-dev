@@ -114,7 +114,7 @@ def render():
                     return
                 
                 st.success("✅ SNOW data loaded")
-                
+                st.write("DEBUG ROW:", raw_data)
                 # ✅ Convert row → dict (CRITICAL)
                 
                 raw_data = row.iloc[0].to_dict()
