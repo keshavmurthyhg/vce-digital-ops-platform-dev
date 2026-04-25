@@ -12,38 +12,37 @@ def normalize_snow_data(data):
     if not data:
         return {}
 
-    def extract_name(val):
-        if isinstance(val, dict):
-            return val.get("display_value") or val.get("name")
-        return val
+    def get(*keys):
+        for k in keys:
+            if k in data and data[k]:
+                return data[k]
+        return None
 
     return {
-        "number": data.get("number"),
+        "number": get("number"),
 
-        # ✅ FIXED FIELD MAPPING
-        "created_by": extract_name(data.get("opened_by")),
-        "created_date": data.get("opened_at"),
+        # ✅ FIXED MAPPING BASED ON YOUR DATA
+        "created_by": get("opened by"),
+        "created_date": get("created"),
 
-        "assigned_to": extract_name(data.get("assigned_to")),
+        "assigned_to": get("assigned_to"),
 
-        "priority": data.get("priority"),
+        "priority": get("priority"),
 
-        "resolved_date": data.get("closed_at"),
+        "resolved_date": get("vendor closed"),
 
-        # ✅ TEXT
-        "short_description": data.get("short_description"),
-        "description": data.get("description") or "",
+        "short_description": get("short description"),
+        "description": get("description") or "",
 
-        # ✅ EXTRA FIELDS (IMPORTANT)
-        "work_notes": data.get("work_notes"),
-        "comments": data.get("comments"),
-        "resolution": data.get("close_notes"),
+        # ✅ IMPORTANT TEXT FIELDS
+        "work_notes": get("work notes"),
+        "comments": get("additional comments"),
+        "resolution": get("resolution notes"),
 
         # ✅ LINKS
-        "azure_bug": data.get("azure_bug"),
-        "ptc_case": data.get("ptc_case"),
+        "azure_bug": None,  # not present in your data
+        "ptc_case": get("vendor ticket"),
     }
-
 
 def clean_incident(incident):
     if not incident:
