@@ -76,16 +76,16 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
     
     # ---------------- PPT CONTENT ---------------- #
     if ppt_data:
-
+    
         doc.add_page_break()
-
+    
         for slide in ppt_data:
-
+    
             doc.add_heading(slide["title"], level=1)
-
+    
             for txt in slide["texts"]:
                 doc.add_paragraph(clean_text(txt))
-
+    
             for img in slide["images"]:
                 if os.path.exists(img):
                     try:
