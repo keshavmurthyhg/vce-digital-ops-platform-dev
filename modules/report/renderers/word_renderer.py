@@ -39,8 +39,7 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
     fill(3, 2, "Resolved Date", format_date(data.get("resolved_date")))
 
     doc.add_paragraph("")  # spacing
-    doc.add_paragraph(clean_text(txt))
-
+    
     # DESCRIPTION TABLE
     t2 = doc.add_table(rows=2, cols=2)
     t2.style = "Table Grid"
@@ -90,7 +89,9 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
             for img in slide["images"]:
                 if os.path.exists(img):
                     try:
+                        doc.add_picture(img, width=Inches(doc.add_paragraph("")
                         doc.add_picture(img, width=Inches(5))
+                        doc.add_paragraph("")5))
                     except Exception:
                         continue
 
