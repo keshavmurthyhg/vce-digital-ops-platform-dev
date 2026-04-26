@@ -15,6 +15,87 @@ from modules.report.builders.analysis_builder import (
 from modules.report.utils.utils import clean_nan, format_date, format_description
 from modules.report.utils.utils import extract_azure_id
 
+
+# ---------------- PREVIEW TABLES ---------------- #
+
+def render_preview_table(data):
+    def val(x):
+        return x if x else "-"
+
+    def link(label, value):
+        return make_ui_link(label, value) if value else "-"
+
+    html = f"""
+    <style>
+    .tbl {{
+        width: 100%;
+        border-collapse: collapse;
+        font-family: Arial;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }}
+    .tbl td {{
+        border: 1px solid black;
+        padding: 6px;
+        vertical-align: middle;
+    }}
+    .hdr {{
+        font-weight: bold;
+        background: #f2f2f2;
+    }}
+    </style>
+
+    <table class="tbl">
+        <tr>
+            <td class="hdr">INCIDENT</td>
+            <td>{link("incident", data.get("number"))}</td>
+            <td class="hdr">CREATED BY</td>
+            <td>{val(data.get("created_by"))}</td>
+        </tr>
+        <tr>
+            <td class="hdr">AZURE BUG</td>
+            <td>{link("azure bug", data.get("azure_bug"))}</td>
+            <td class="hdr">CREATED DATE</td>
+            <td>{val(data.get("created_date"))}</td>
+        </tr>
+        <tr>
+            <td class="hdr">PTC CASE</td>
+            <td>{link("ptc case", data.get("ptc_case"))}</td>
+            <td class="hdr">ASSIGNED TO</td>
+            <td>{val(data.get("assigned_to"))}</td>
+        </tr>
+        <tr>
+            <td class="hdr">PRIORITY</td>
+            <td>{val(data.get("priority"))}</td>
+            <td class="hdr">RESOLVED DATE</td>
+            <td>{val(data.get("resolved_date"))}</td>
+        </tr>
+    </table>
+    """
+
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def render_description_table(data):
+    def val(x):
+        return x if x else "-"
+
+    html = f"""
+    <table class="tbl">
+        <tr>
+            <td class="hdr">SHORT DESCRIPTION</td>
+            <td class="hdr">DESCRIPTION</td>
+        </tr>
+        <tr>
+            <td>{val(data.get("short_description"))}</td>
+            <td>{val(data.get("description"))}</td>
+        </tr>
+    </table>
+    """
+
+    st.markdown(html, unsafe_allow_html=True)
+
+
 # ---------------- HELPER ---------------- #
 
 def get_incident(df, inc):
@@ -25,7 +106,6 @@ def get_incident(df, inc):
 
     r = row.iloc[0]
 
-    # ✅ extract once BEFORE dict
     resolution_text = r.get("resolution notes", "")
     azure_id = extract_azure_id(resolution_text)
 
@@ -41,35 +121,32 @@ def get_incident(df, inc):
 
         "work_notes": r.get("work notes", ""),
         "comments": r.get("additional comments", ""),
-
-        # ✅ use extracted text
         "resolution": resolution_text,
 
-        # ✅ FIXED AZURE EXTRACTION
         "azure_bug": azure_id if azure_id else clean_nan(r.get("azure bug")),
-
         "ptc_case": clean_nan(r.get("vendor ticket")),
     }
+
+
 # ---------------- MAIN UI ---------------- #
 
 def render_main(df):
     st.title("Incident Report Generator")
-    
-    # ---------------- INIT STATE ---------------- #
+
+    # INIT STATE
     for key in ["root", "l2", "res", "images"]:
         if key not in st.session_state:
             st.session_state[key] = "" if key != "images" else {"root": [], "l2": [], "res": []}
 
-    # ---------------- INCIDENT SELECT ---------------- #
+    # INCIDENT SELECT
     col1, col2, col3 = st.columns([3, 1, 4])
 
     with col1:
         incident_col = "number" if "number" in df.columns else df.columns[0]
-        
+
         incident = st.selectbox(
             "Select Incident",
             df[incident_col].dropna().astype(str).unique()
-        
         )
 
     with col2:
@@ -79,8 +156,7 @@ def render_main(df):
 
     msg = st.empty()
 
-    
-    # ---------------- FETCH LOGIC ---------------- #
+    # FETCH LOGIC
     if fetch:
         data = get_incident(df, incident)
 
@@ -104,11 +180,11 @@ def render_main(df):
         else:
             msg.error("Not found")
 
-    # ---------------- BULK INPUT ---------------- #
+    # BULK INPUT
     st.markdown("### Bulk Incident Numbers")
     bulk_input = st.text_area("Enter comma-separated incident numbers", key="bulk_ids")
 
-    # ---------------- ACTION BUTTONS ---------------- #
+    # ACTION BUTTONS
     colA, colB, colC, colD, colE = st.columns(5)
 
     with colA:
@@ -122,68 +198,30 @@ def render_main(df):
 
     with colD:
         clear_btn = st.button("Clear", use_container_width=True)
-    
+
     with colE:
         preview_btn = st.button("Preview", use_container_width=True)
 
-    # ---------------- CLEAR ---------------- #
+    # CLEAR
     if clear_btn:
         for key in ["root", "l2", "res", "images", "data"]:
             if key in st.session_state:
                 del st.session_state[key]
         st.rerun()
 
-     # ---------------- PREVIEW ---------------- #
-    
+    # PREVIEW (UPDATED)
     if preview_btn and "data" in st.session_state:
         data = st.session_state["data"]
-    
+
         st.markdown("### Preview")
-    
-        # -------- TABLE 1 -------- #
-        t1 = [
-            ["INCIDENT", data["number"], "CREATED BY", data["created_by"]],
-            ["AZURE BUG", data["azure_bug"], "CREATED DATE", data["created_date"]],
-            ["PTC CASE", data["ptc_case"], "ASSIGNED TO", data["assigned_to"]],
-            ["PRIORITY", data["priority"], "RESOLVED DATE", data["resolved_date"]],
-        ]
-    
+
         st.markdown("#### Incident Details")
+        render_preview_table(data)
 
-        for row in t1:
-            col1, col2, col3, col4 = st.columns(4)
-        
-            with col1:
-                st.markdown(f"**{row[0]}**")
-        
-            with col2:
-                st.markdown(make_ui_link(row[0], row[1]))
-        
-            with col3:
-                st.markdown(f"**{row[2]}**")
-        
-            with col4:
-                st.markdown(make_ui_link(row[2], row[3]))
-    
-        # -------- TABLE 2 -------- #
-        t2 = [
-            ["SHORT DESCRIPTION", "DESCRIPTION"],
-            [data["short_description"], format_description(data["description"])]
-        ]
-    
         st.markdown("#### Description")
+        render_description_table(data)
 
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**SHORT DESCRIPTION**")
-            st.write(data["short_description"])
-        
-        with col2:
-            st.markdown("**DESCRIPTION**")
-            st.write(format_description(data["description"]))
-    
-    # ---------------- EDITABLE BLOCKS ---------------- #
+    # EDITABLE BLOCKS
     st.subheader("Edit Report Details")
 
     st.session_state["root"] = st.text_area(
@@ -192,11 +230,7 @@ def render_main(df):
         height=150
     )
 
-    root_imgs = st.file_uploader(
-        "Root Images",
-        accept_multiple_files=True,
-        key="root_img"
-    )
+    root_imgs = st.file_uploader("Root Images", accept_multiple_files=True, key="root_img")
 
     st.session_state["l2"] = st.text_area(
         "TECHNICAL ANALYSIS",
@@ -204,11 +238,7 @@ def render_main(df):
         height=150
     )
 
-    l2_imgs = st.file_uploader(
-        "L2 Images",
-        accept_multiple_files=True,
-        key="l2_img"
-    )
+    l2_imgs = st.file_uploader("L2 Images", accept_multiple_files=True, key="l2_img")
 
     st.session_state["res"] = st.text_area(
         "RESOLUTION & RECOMMENDATION",
@@ -216,87 +246,44 @@ def render_main(df):
         height=150
     )
 
-    res_imgs = st.file_uploader(
-        "Resolution Images",
-        accept_multiple_files=True,
-        key="res_img"
-    )
+    res_imgs = st.file_uploader("Resolution Images", accept_multiple_files=True, key="res_img")
 
     st.session_state["images"] = {
         "root": root_imgs or [],
         "l2": l2_imgs or [],
         "res": res_imgs or []
     }
-    
-    # ---------------- PDF DOWNLOAD ---------------- #
-    
+
+    # PDF
     if generate_pdf_btn:
         if "data" not in st.session_state:
             st.warning("Fetch incident first")
         else:
             data = st.session_state["data"]
-    
-            try:
-                pdf_bytes = generate_pdf(
-                    data,
-                    st.session_state.get("root"),
-                    st.session_state.get("l2"),
-                    st.session_state.get("res"),
-                    st.session_state.get("images")
-                )
-    
-                st.session_state["pdf_bytes"] = pdf_bytes   # ✅ IMPORTANT
-                st.success("PDF generated successfully")
-    
-            except Exception as e:
-                st.error(f"PDF Error: {e}")
-    
-    # ---------------- WORD DOWNLOAD ---------------- #
-    
+
+            pdf_bytes = generate_pdf(
+                data,
+                st.session_state.get("root"),
+                st.session_state.get("l2"),
+                st.session_state.get("res"),
+                st.session_state.get("images")
+            )
+
+            st.download_button("Download PDF", pdf_bytes, "report.pdf")
+
+    # WORD
     if generate_word_btn:
         if "data" not in st.session_state:
             st.warning("Fetch incident first")
         else:
             data = st.session_state["data"]
-    
-            try:
-                word_bytes = generate_word_doc_wrapper(
-                    data,
-                    st.session_state.get("root"),
-                    st.session_state.get("l2"),
-                    st.session_state.get("res"),
-                    st.session_state.get("images")
-                )
-    
-                st.session_state["word_bytes"] = word_bytes   # ✅ STORE
-                st.success("Word generated successfully")
-    
-            except Exception as e:
-                st.error(f"Word Error: {e}")
-            
-    # ---------------- BULK GENERATE ---------------- #
-    
-    if bulk_btn:
-        ids = [x.strip() for x in bulk_input.split(",") if x.strip()]
-    
-        if not ids:
-            st.warning("Enter incident numbers")
-        else:
-            try:
-                bulk_data = st.session_state.get("bulk_data")
 
-                if bulk_data:
-                    data_list = bulk_data
-                else:
-                    data_list = []
-                    for inc in ids:
-                        row = get_incident(df, inc)
-                        if row is not None:
-                            data_list.append(row.to_dict())
-                zip_bytes = generate_bulk_zip(reports)
-    
-                st.session_state["zip_bytes"] = zip_bytes
-                st.success("Zip generated successfully")
-    
-            except Exception as e:
-                st.error(f"Zip Error: {e}")
+            word_bytes = generate_word_doc_wrapper(
+                data,
+                st.session_state.get("root"),
+                st.session_state.get("l2"),
+                st.session_state.get("res"),
+                st.session_state.get("images")
+            )
+
+            st.download_button("Download Word", word_bytes, "report.docx")
