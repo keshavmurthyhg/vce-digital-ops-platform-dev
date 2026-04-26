@@ -19,11 +19,27 @@ from modules.report.utils.utils import extract_azure_id
 # ---------------- PREVIEW TABLES ---------------- #
 
 def render_preview_table(data):
+
     def val(x):
         return x if x else "-"
 
-    def link(label, value):
-        return make_ui_link(label, value) if value else "-"
+    def link(value, type_):
+        if not value:
+            return "-"
+
+        if type_ == "incident":
+            url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={value}"
+
+        elif type_ == "azure":
+            url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{value}"
+
+        elif type_ == "ptc":
+            url = f"https://support.ptc.com/appserver/cs/view/solution.jsp?n={value}"
+
+        else:
+            return value
+
+        return f'<a href="{url}" target="_blank">{value}</a>'
 
     html = f"""
     <style>
@@ -37,7 +53,6 @@ def render_preview_table(data):
     .tbl td {{
         border: 1px solid black;
         padding: 6px;
-        vertical-align: middle;
     }}
     .hdr {{
         font-weight: bold;
@@ -48,19 +63,19 @@ def render_preview_table(data):
     <table class="tbl">
         <tr>
             <td class="hdr">INCIDENT</td>
-            <td>{link("incident", data.get("number"))}</td>
+            <td>{link(data.get("number"), "incident")}</td>
             <td class="hdr">CREATED BY</td>
             <td>{val(data.get("created_by"))}</td>
         </tr>
         <tr>
             <td class="hdr">AZURE BUG</td>
-            <td>{link("azure bug", data.get("azure_bug"))}</td>
+            <td>{link(data.get("azure_bug"), "azure")}</td>
             <td class="hdr">CREATED DATE</td>
             <td>{val(data.get("created_date"))}</td>
         </tr>
         <tr>
             <td class="hdr">PTC CASE</td>
-            <td>{link("ptc case", data.get("ptc_case"))}</td>
+            <td>{link(data.get("ptc_case"), "ptc")}</td>
             <td class="hdr">ASSIGNED TO</td>
             <td>{val(data.get("assigned_to"))}</td>
         </tr>
@@ -74,8 +89,6 @@ def render_preview_table(data):
     """
 
     st.markdown(html, unsafe_allow_html=True)
-
-
 def render_description_table(data):
     def val(x):
         return x if x else "-"
