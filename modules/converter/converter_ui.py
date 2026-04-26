@@ -6,31 +6,26 @@ import re
 from modules.report.builders.analysis_builder import build_report_sections
 from modules.converter.converter import convert_ppt
 from modules.report.utils.utils import format_date
-from modules.report.utils.links import make_ui_link
+from modules.data.snow_loader import load_snow_data
+from modules.converter.ppt_extractor import extract_ppt_content
+from modules.report.doc_generator import generate_word_doc_wrapper
+from pptx import Presentation
+from modules.converter.ppt_to_doc import extract_slide1_content
 
 
-
-# ---------------- AZURE BUG EXTRACTION ---------------- #
-
-def extract_azure_from_text(text):
+# ---------------- AZURE BUG ---------------- #
+def extract_azure(text):
     if not text:
         return None
-
-    # Match Azure work item ID (last digits in URL)
     match = re.search(r'/edit/(\d+)', text)
     if match:
         return match.group(1)
-
-    # fallback: any 6+ digit number
     match = re.search(r'\b\d{6,}\b', text)
     return match.group(0) if match else None
 
+
 # ---------------- NORMALIZER ---------------- #
-
 def normalize_snow_data(data):
-    if not data:
-        return {}
-
     def get(*keys):
         for k in keys:
             if k in data and data[k]:
@@ -39,34 +34,115 @@ def normalize_snow_data(data):
 
     return {
         "number": get("number"),
-
-        # ✅ CORRECT MAPPING
         "created_by": get("opened by"),
         "created_date": format_date(get("created")),
-
         "assigned_to": get("assigned to"),
         "priority": get("priority"),
-
         "resolved_date": format_date(get("closed", "vendor closed")),
-
         "short_description": get("short description"),
         "description": get("description") or "",
-
-        # TEXT FIELDS
         "work_notes": get("work notes"),
         "comments": get("additional comments"),
         "resolution": get("resolution notes"),
-
-        # LINKS
-        "azure_bug": extract_azure_from_text(get("resolution notes") or ""),
+        "azure_bug": extract_azure(get("resolution notes")),
         "ptc_case": get("vendor ticket"),
     }
 
-def clean_incident(incident):
-    if not incident:
+
+# ---------------- CLEAN INCIDENT ---------------- #
+def clean_incident(val):
+    if not val:
         return None
-    match = re.search(r'INC\d{7,}', str(incident))
-    return match.group(0) if match else None
+    m = re.search(r'INC\d{7,}', str(val))
+    return m.group(0) if m else None
+
+
+# ---------------- LINK BUILDER ---------------- #
+def link(val, type_):
+    if not val:
+        return "-"
+
+    if type_ == "incident":
+        return f'<a href="https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={val}" target="_blank">{val}</a>'
+
+    if type_ == "azure":
+        return f'<a href="https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{val}" target="_blank">{val}</a>'
+
+    if type_ == "ptc":
+        return f'<a href="https://support.ptc.com/appserver/cs/view/solution.jsp?n={val}" target="_blank">{val}</a>'
+
+    return val
+
+
+# ---------------- TABLE PREVIEW ---------------- #
+def render_preview_table(data):
+
+    html = f"""
+    <style>
+    .tbl {{
+        width: 100%;
+        border-collapse: collapse;
+        font-family: Arial;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }}
+    .tbl td {{
+        border: 1px solid black;
+        padding: 6px;
+    }}
+    .hdr {{
+        font-weight: bold;
+        background: #f2f2f2;
+    }}
+    </style>
+
+    <table class="tbl">
+        <tr>
+            <td class="hdr">INCIDENT</td>
+            <td>{link(data["number"], "incident")}</td>
+            <td class="hdr">CREATED BY</td>
+            <td>{data["created_by"] or "-"}</td>
+        </tr>
+        <tr>
+            <td class="hdr">AZURE BUG</td>
+            <td>{link(data["azure_bug"], "azure")}</td>
+            <td class="hdr">CREATED DATE</td>
+            <td>{data["created_date"] or "-"}</td>
+        </tr>
+        <tr>
+            <td class="hdr">PTC CASE</td>
+            <td>{link(data["ptc_case"], "ptc")}</td>
+            <td class="hdr">ASSIGNED TO</td>
+            <td>{data["assigned_to"] or "-"}</td>
+        </tr>
+        <tr>
+            <td class="hdr">PRIORITY</td>
+            <td>{data["priority"] or "-"}</td>
+            <td class="hdr">RESOLVED DATE</td>
+            <td>{data["resolved_date"] or "-"}</td>
+        </tr>
+    </table>
+    """
+
+    st.markdown(html, unsafe_allow_html=True)
+
+
+def render_description_table(data):
+
+    html = f"""
+    <table class="tbl">
+        <tr>
+            <td class="hdr">SHORT DESCRIPTION</td>
+            <td class="hdr">DESCRIPTION</td>
+        </tr>
+        <tr>
+            <td>{data["short_description"] or "-"}</td>
+            <td>{data["description"] or "-"}</td>
+        </tr>
+    </table>
+    """
+
+    st.markdown(html, unsafe_allow_html=True)
 
 
 # ---------------- UI ---------------- #
@@ -86,7 +162,6 @@ def render():
 
             # -------- CONVERT -------- #
             if st.button("Convert PPT"):
-
                 docx_path, pdf_path = convert_ppt(ppt_path, tmpdir)
 
                 with open(docx_path, "rb") as f:
@@ -101,49 +176,36 @@ def render():
             # -------- COMBINED -------- #
             if st.button("Generate Combined Report"):
 
-                from pptx import Presentation
-                from modules.converter.ppt_to_doc import extract_slide1_content
-                from modules.data.snow_loader import load_snow_data
-                from modules.converter.ppt_extractor import extract_ppt_content
-                from modules.report.doc_generator import generate_word_doc_wrapper
-
                 prs = Presentation(ppt_path)
-
-                # Extract
                 incident, desc, date, azure = extract_slide1_content(prs.slides[0])
                 incident = clean_incident(incident)
 
                 st.info(f"🔍 Detected Incident: {incident}")
 
-                
-                # Fetch SNOW
                 df = load_snow_data()
 
                 if df is None or df.empty:
                     st.error("❌ Failed to load SNOW data")
                     return
-                
-                # 🔍 Filter by incident
+
                 row = df[df["number"] == incident]
-                
+
                 if row.empty:
                     st.error("❌ Incident not found in SNOW")
                     return
-                
+
                 st.success("✅ SNOW data loaded")
-                
-                # ✅ Convert row → dict (CRITICAL)
-                
+
                 raw_data = row.iloc[0].to_dict()
                 snow_data = normalize_snow_data(raw_data)
-                
+
                 # Build sections
                 root, l2, res = build_report_sections(snow_data)
 
-                # PPT data
+                # PPT content (UNCHANGED)
                 ppt_data = extract_ppt_content(ppt_path, tmpdir)
 
-                # Generate
+                # Generate Word
                 doc_bytes = generate_word_doc_wrapper(
                     snow_data,
                     root,
@@ -153,40 +215,12 @@ def render():
                     ppt_data=ppt_data
                 )
 
-               
+                # -------- PREVIEW -------- #
                 st.subheader("📄 Preview")
-                
-                # -------- TABLE 1 -------- #
-                st.markdown("### Incident Details")
-                
-                t1 = [
-                    ["INCIDENT", snow_data["number"], "CREATED BY", snow_data["created_by"]],
-                    ["AZURE BUG", snow_data["azure_bug"], "CREATED DATE", snow_data["created_date"]],
-                    ["PTC CASE", snow_data["ptc_case"], "ASSIGNED TO", snow_data["assigned_to"]],
-                    ["PRIORITY", snow_data["priority"], "RESOLVED DATE", snow_data["resolved_date"]],
-                ]
-                
-                for row in t1:
-                    c1, c2, c3, c4 = st.columns(4)
-                
-                    c1.markdown(f"**{row[0]}**")
-                    c2.markdown(make_ui_link(row[0], row[1]))
-                
-                    c3.markdown(f"**{row[2]}**")
-                    c4.markdown(make_ui_link(row[2], row[3]))
-                
-                # -------- TABLE 2 -------- #
-                st.markdown("---")
-                st.markdown("### Description")
-                
-                c1, c2 = st.columns(2)
-                
-                c1.markdown("**SHORT DESCRIPTION**")
-                c1.write(snow_data["short_description"] or "-")
-                
-                c2.markdown("**DESCRIPTION**")
-                c2.write(snow_data["description"] or "-")
-                
+
+                render_preview_table(snow_data)
+                render_description_table(snow_data)
+
                 st.download_button(
                     "📄 Download Combined Report",
                     doc_bytes,
