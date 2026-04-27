@@ -1,38 +1,73 @@
 import re
 
 
+# ---------------- CLEAN HELPERS ---------------- #
+
 def clean_text(text):
-    return str(text or "")
-
-
-def remove_noise_lines(lines):
-    filtered = []
-    for l in lines:
-        l = l.strip()
-
-        if not l:
-            continue
-
-        if any(x in l.lower() for x in [
-            "keep you posted",
-            "waiting",
-            "thanks",
-            "(", ")",
-            "attachment",
-            "has been attached",
-            "additional comments",
-            "work notes"
-        ]):
-            continue
-
-        filtered.append(l)
-
-    return filtered
+    return str(text or "").strip()
 
 
 def split_sentences(text):
     return re.split(r'(?<=[.!?])\s+', text) if text else []
 
+
+def remove_noise_lines(lines):
+    cleaned = []
+
+    for l in lines:
+        l = l.strip()
+        if not l:
+            continue
+
+        l_low = l.lower()
+
+        # remove useless / conversational
+        if any(x in l_low for x in [
+            "keep you posted",
+            "waiting",
+            "thanks",
+            "as discussed",
+            "as confirmed",
+            "over teams",
+            "closing the incident",
+            "attachment",
+            "has been attached",
+            "work notes",
+            "additional comments",
+            "(",
+            ")"
+        ]):
+            continue
+
+        cleaned.append(l)
+
+    return cleaned
+
+
+# ---------------- PROBLEM ---------------- #
+
+def summarize_problem(short_desc, desc):
+    lines = []
+
+    if short_desc:
+        lines.append(short_desc.strip())
+
+    desc_lines = split_sentences(desc)
+
+    for l in desc_lines:
+        l = l.strip()
+
+        # remove unclear sentences
+        if l.lower().startswith("this"):
+            continue
+
+        if len(l) > 20:
+            lines.append(l)
+
+    return lines[:3]
+
+
+# ---------------- ROOT CAUSE ---------------- #
 
 def detect_root_cause_type(text):
     t = text.lower()
@@ -50,38 +85,69 @@ def detect_root_cause_type(text):
 
 
 def summarize_root_cause(lines):
-    # extract meaningful cause (not actions)
     cause_lines = []
 
     for l in lines:
-        if any(k in l.lower() for k in [
-            "blocked", "missing", "not available",
-            "permission", "not allowed"
+        l_low = l.lower()
+
+        if any(k in l_low for k in [
+            "blocked",
+            "missing",
+            "not available",
+            "not allowed",
+            "permission"
         ]):
             cause_lines.append(l)
 
     if not cause_lines:
         cause_lines = lines[:2]
 
-    return cause_lines
+    return cause_lines[:3]
 
+
+# ---------------- RESOLUTION ---------------- #
 
 def summarize_resolution(lines):
-    result = []
+    cleaned = []
 
     for l in lines:
-        if "created" in l.lower() or "provided" in l.lower():
-            result.append(l)
+        l_low = l.lower()
 
-        elif "allow" in l.lower():
-            # expand incomplete line
-            result.append(l.replace("This allows", "This change allows users to"))
+        # remove conversational
+        if any(x in l_low for x in [
+            "as discussed",
+            "as confirmed",
+            "over teams",
+            "closing the incident",
+            "we will",
+            "thanks"
+        ]):
+            continue
 
-    if not result:
-        result = lines[:2]
+        # keep only meaningful actions
+        if any(k in l_low for k in [
+            "created",
+            "provided",
+            "enabled",
+            "granted",
+            "fixed",
+            "implemented"
+        ]):
+            cleaned.append(l)
 
-    return result
+        # expand weak statements
+        elif "allow" in l_low:
+            cleaned.append(
+                l.replace("This allows", "This change enables users to")
+            )
 
+    if not cleaned:
+        cleaned = lines[:2]
+
+    return cleaned[:3]
+
+
+# ---------------- MAIN FUNCTION ---------------- #
 
 def generate_rca(data):
 
@@ -96,31 +162,26 @@ def generate_rca(data):
         data.get("resolution_notes") or data.get("resolution")
     )
 
-    # ---------------- PROBLEM ---------------- #
-    problem_text = f"{short_desc}. {desc}"
-    problem_lines = remove_noise_lines(split_sentences(problem_text))
+    # ---------- PROBLEM ---------- #
+    problem_lines = summarize_problem(short_desc, desc)
+    problem = "\n".join(f"• {l}" for l in problem_lines)
 
-    problem = "\n".join(f"• {l}" for l in problem_lines[:3])
-
-    # ---------------- ROOT CAUSE ---------------- #
+    # ---------- ROOT CAUSE ---------- #
     rc_source = " ".join([work, comments, add_comments])
     rc_lines = remove_noise_lines(split_sentences(rc_source))
 
     rc_type = detect_root_cause_type(rc_source)
-
     cause_lines = summarize_root_cause(rc_lines)
 
     root_cause = f"Root Cause Type: {rc_type}\n"
-    root_cause += "\n".join(f"• {l}" for l in cause_lines[:3])
+    root_cause += "\n".join(f"• {l}" for l in cause_lines)
 
-    # ---------------- RESOLUTION ---------------- #
-    res_lines = remove_noise_lines(
-        split_sentences(resolution_notes if resolution_notes else rc_source)
-    )
+    # ---------- RESOLUTION ---------- #
+    res_source = resolution_notes if resolution_notes else rc_source
+    res_lines = remove_noise_lines(split_sentences(res_source))
 
     res_lines = summarize_resolution(res_lines)
-
-    resolution = "\n".join(f"• {l}" for l in res_lines[:3])
+    resolution = "\n".join(f"• {l}" for l in res_lines)
 
     return {
         "problem": problem,
