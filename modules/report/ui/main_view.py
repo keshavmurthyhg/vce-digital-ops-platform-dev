@@ -1,16 +1,10 @@
 import streamlit as st
 from io import BytesIO
 import zipfile
-
+from modules.report.utils.rca_generator import generate_rca
 from modules.report.utils.links import make_ui_link
 from modules.report.doc_generator import generate_pdf, generate_word_doc_wrapper
 from modules.report.bulk_generator import build_bulk_reports, generate_bulk_zip
-from modules.report.builders.analysis_builder import (
-    build_root_cause,
-    build_l2_analysis,
-    build_resolution,
-    merge_with_user_input
-)
 
 from modules.report.utils.utils import clean_nan, format_date, format_description
 from modules.report.utils.utils import extract_azure_id
@@ -176,18 +170,11 @@ def render_main(df):
         if data:
             st.session_state["data"] = data
 
-            st.session_state["root"] = merge_with_user_input(
-                build_root_cause(data["work_notes"]),
-                st.session_state.get("root")
-            )
-            st.session_state["l2"] = merge_with_user_input(
-                build_l2_analysis(data["comments"]),
-                st.session_state.get("l2")
-            )
-            st.session_state["res"] = merge_with_user_input(
-                build_resolution(data["resolution"]),
-                st.session_state.get("res")
-            )
+            rca = generate_rca(data)
+
+            st.session_state["root"] = rca["problem"]
+            st.session_state["l2"] = rca["analysis"]
+            st.session_state["res"] = rca["resolution"]
 
             msg.success("Loaded")
         else:
