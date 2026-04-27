@@ -108,44 +108,47 @@ def summarize_root_cause(lines):
 # ---------------- RESOLUTION ---------------- #
 
 def summarize_resolution(lines):
+
     cleaned = []
 
     for l in lines:
         l_low = l.lower().strip()
 
-        # ❌ remove all conversational / weak lines
+        # ❌ remove noise / conversation
         if any(x in l_low for x in [
             "as discussed",
             "as confirmed",
             "over teams",
             "closing the incident",
-            "we will",
             "thanks",
-            "this allows",
-            "this change allows",
-            "this change enables"
+            "we will",
+            "please",
+            "kindly"
         ]):
             continue
 
-        # ✅ keep only strong action statements
-        if any(k in l_low for k in [
-            "created",
-            "provided",
-            "enabled",
-            "granted",
-            "fixed",
-            "implemented",
-            "permission"
+        # ❌ remove validation / test logs
+        if any(x in l_low for x in [
+            "validation",
+            "test user",
+            "environment",
+            "objects tested",
+            "observation"
         ]):
-            cleaned.append(l.strip())
+            continue
 
-    # 🔥 FORCE meaningful resolution (no weak fallback)
+        # ❌ remove empty / weak lines
+        if len(l.strip()) < 10:
+            continue
+
+        # ✅ keep meaningful resolution statements
+        cleaned.append(l.strip())
+
+    # 🔥 IMPORTANT: NO ASSUMPTION
     if not cleaned:
-        return [
-            "Modify permission granted for VP in Released state",
-            "Edit Association functionality restored for VP objects"
-        ]
+        return ["Resolution details not available"]
 
+    # keep top meaningful lines
     return cleaned[:3]
 
 
