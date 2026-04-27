@@ -31,11 +31,19 @@ def generate_rca(data):
 
     # ---------------- ANALYSIS ---------------- #
     analysis_points = []
+
+    KEYWORDS = [
+        "error", "fail", "issue", "not working",
+        "unable", "blocked", "exception", "missing"
+    ]
+    
     for s in sentences:
-        if any(k in s.lower() for k in [
-            "error", "fail", "issue", "not working", "unable", "blocked"
-        ]):
+        if any(k in s.lower() for k in KEYWORDS):
             analysis_points.append(s)
+    
+    # ✅ fallback if nothing matched
+    if not analysis_points:
+        analysis_points = sentences[:3]
 
     analysis = "\n".join(f"• {s}" for s in analysis_points[:3]) or "• Analysis not available"
 
