@@ -30,24 +30,11 @@ def prepare_data(data):
     Central place for all sanitization & formatting
     """
     data = enrich_data(data)
-    
-    safe_data = data.copy()
-      
-    safe_data["description"] = format_description(data.get("description"))
-
-    return safe_data
-
-
-def prepare_data(data):
-    """
-    Central place for all sanitization & formatting
-    """
-    data = enrich_data(data)
     safe_data = data.copy()
 
     # existing logic
     safe_data["description"] = format_description(data.get("description"))
-st.write("DEBUG BEFORE RCA:", data.get("short_description"))
+
     # ✅ ADD RCA GENERATION
     rca = generate_rca(data)
 
@@ -56,7 +43,7 @@ st.write("DEBUG BEFORE RCA:", data.get("short_description"))
     safe_data["resolution"] = rca["resolution"]
 
     return safe_data
-st.write("DEBUG AFTER RCA:", safe_data.get("problem"))
+
 def safe_images(images):
     if not isinstance(images, dict):
         return {"root": [], "l2": [], "res": []}
