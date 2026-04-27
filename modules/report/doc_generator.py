@@ -2,7 +2,7 @@ from modules.report.renderers.pdf_renderer import generate_pdf_doc
 from modules.report.renderers.word_renderer import generate_word_doc
 from modules.report.utils.utils import format_description
 from modules.report.utils.utils import extract_azure_id
-
+from modules.report.utils.rca_generator import generate_rca
 
 def enrich_data(data):
     print("===== DEBUG AZURE EXTRACTION =====")
@@ -37,7 +37,6 @@ def prepare_data(data):
 
     return safe_data
 
-from modules.report.utils.rca_generator import generate_rca
 
 def prepare_data(data):
     """
@@ -48,7 +47,7 @@ def prepare_data(data):
 
     # existing logic
     safe_data["description"] = format_description(data.get("description"))
-
+st.write("DEBUG BEFORE RCA:", data.get("short_description"))
     # ✅ ADD RCA GENERATION
     rca = generate_rca(data)
 
@@ -57,7 +56,7 @@ def prepare_data(data):
     safe_data["resolution"] = rca["resolution"]
 
     return safe_data
-
+st.write("DEBUG AFTER RCA:", safe_data.get("problem"))
 def safe_images(images):
     if not isinstance(images, dict):
         return {"root": [], "l2": [], "res": []}
