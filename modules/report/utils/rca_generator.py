@@ -114,7 +114,7 @@ def summarize_resolution(lines):
     for l in lines:
         l_low = l.lower().strip()
 
-        # ❌ remove noise / conversation
+        # ❌ remove conversation noise
         if any(x in l_low for x in [
             "as discussed",
             "as confirmed",
@@ -127,7 +127,11 @@ def summarize_resolution(lines):
         ]):
             continue
 
-        # ❌ remove validation / test logs
+        # ❌ remove weak / incomplete lines
+        if l_low.startswith("this allows"):
+            continue
+
+        # ❌ remove validation logs
         if any(x in l_low for x in [
             "validation",
             "test user",
@@ -137,59 +141,13 @@ def summarize_resolution(lines):
         ]):
             continue
 
-        # ❌ remove empty / weak lines
-        if len(l.strip()) < 10:
+        if len(l.strip()) < 15:
             continue
 
-        # ✅ keep meaningful resolution statements
         cleaned.append(l.strip())
 
-    # 🔥 IMPORTANT: NO ASSUMPTION
+    # ✅ fallback only if NOTHING meaningful
     if not cleaned:
         return ["Resolution details not available"]
 
-    # keep top meaningful lines
     return cleaned[:3]
-
-
-# ---------------- MAIN FUNCTION ---------------- #
-
-def generate_rca(data):
-
-    short_desc = clean_text(data.get("short_description"))
-    desc = clean_text(data.get("description"))
-
-    work = clean_text(data.get("work_notes"))
-    comments = clean_text(data.get("comments"))
-    add_comments = clean_text(data.get("additional_comments"))
-
-    resolution_notes = clean_text(
-        data.get("resolution_notes") or data.get("resolution")
-    )
-
-    # ---------- PROBLEM ---------- #
-    problem_lines = summarize_problem(short_desc, desc)
-    problem = "\n".join(f"• {l}" for l in problem_lines)
-
-    # ---------- ROOT CAUSE ---------- #
-    rc_source = " ".join([work, comments, add_comments])
-    rc_lines = remove_noise_lines(split_sentences(rc_source))
-
-    rc_type = detect_root_cause_type(rc_source)
-    cause_lines = summarize_root_cause(rc_lines)
-
-    root_cause = f"Root Cause Type: {rc_type}\n"
-    root_cause += "\n".join(f"• {l}" for l in cause_lines)
-
-    # ---------- RESOLUTION ---------- #
-    res_source = resolution_notes if resolution_notes else rc_source
-    res_lines = remove_noise_lines(split_sentences(res_source))
-
-    res_lines = summarize_resolution(res_lines)
-    resolution = "\n".join(f"• {l}" for l in res_lines)
-
-    return {
-        "problem": problem,
-        "analysis": root_cause,
-        "resolution": resolution
-    }
