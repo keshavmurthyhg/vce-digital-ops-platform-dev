@@ -225,7 +225,7 @@ def render_main(df):
     st.subheader("Edit Report Details")
 
     st.session_state["root"] = st.text_area(
-        "PROBLEM STATEMENT & ROOT CAUSE",
+        "PROBLEM STATEMENT",
         value=st.session_state.get("root", ""),
         height=150
     )
@@ -233,7 +233,7 @@ def render_main(df):
     root_imgs = st.file_uploader("Root Images", accept_multiple_files=True, key="root_img")
 
     st.session_state["l2"] = st.text_area(
-        "TECHNICAL ANALYSIS",
+        "TECHNICAL ANALYSIS & ROOT CAUSE",
         value=st.session_state.get("l2", ""),
         height=150
     )
