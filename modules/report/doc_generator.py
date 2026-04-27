@@ -31,15 +31,20 @@ def prepare_data(data):
     """
     data = enrich_data(data)
     safe_data = data.copy()
+
+    # ✅ DEBUG INSIDE FUNCTION
     st.write("DEBUG BEFORE RCA:", data.get("short_description"))
-    # existing logic
+
     safe_data["description"] = format_description(data.get("description"))
 
-    # ✅ ADD RCA GENERATION
+    # ✅ RCA
     rca = generate_rca(data)
 
     safe_data["problem"] = rca["problem"]
+
+    # ✅ DEBUG AFTER
     st.write("DEBUG AFTER RCA:", safe_data.get("problem"))
+
     safe_data["analysis"] = rca["analysis"]
     safe_data["resolution"] = rca["resolution"]
 
