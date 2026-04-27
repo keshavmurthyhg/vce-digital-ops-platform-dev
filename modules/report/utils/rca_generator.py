@@ -1,11 +1,7 @@
 import re
 
 
-# ---------------- CLEAN HELPERS ---------------- #
-
-def clean_text(text):
-    return str(text or "").strip()
-
+# ---------------- HELPERS ---------------- #
 
 def split_sentences(text):
     return re.split(r'(?<=[.!?])\s+', text) if text else []
@@ -21,7 +17,7 @@ def remove_noise_lines(lines):
 
         l_low = l.lower()
 
-        # remove useless / conversational
+        # remove noise
         if any(x in l_low for x in [
             "keep you posted",
             "waiting",
@@ -33,9 +29,7 @@ def remove_noise_lines(lines):
             "attachment",
             "has been attached",
             "work notes",
-            "additional comments",
-            "(",
-            ")"
+            "additional comments"
         ]):
             continue
 
@@ -52,12 +46,9 @@ def summarize_problem(short_desc, desc):
     if short_desc:
         lines.append(short_desc.strip())
 
-    desc_lines = split_sentences(desc)
-
-    for l in desc_lines:
+    for l in split_sentences(desc):
         l = l.strip()
 
-        # remove unclear sentences
         if l.lower().startswith("this"):
             continue
 
@@ -108,13 +99,12 @@ def summarize_root_cause(lines):
 # ---------------- RESOLUTION ---------------- #
 
 def summarize_resolution(lines):
-
     cleaned = []
 
     for l in lines:
         l_low = l.lower().strip()
 
-        # ❌ remove conversation noise
+        # remove noise
         if any(x in l_low for x in [
             "as discussed",
             "as confirmed",
@@ -127,11 +117,10 @@ def summarize_resolution(lines):
         ]):
             continue
 
-        # ❌ remove weak / incomplete lines
+        # remove weak lines
         if l_low.startswith("this allows"):
             continue
 
-        # ❌ remove validation logs
         if any(x in l_low for x in [
             "validation",
             "test user",
@@ -146,50 +135,43 @@ def summarize_resolution(lines):
 
         cleaned.append(l.strip())
 
-    # ✅ fallback only if NOTHING meaningful
     if not cleaned:
         return ["Resolution details not available"]
 
     return cleaned[:3]
 
+
+# ---------------- MAIN RCA ---------------- #
+
 def generate_rca(data):
-    """
-    Main RCA builder
-    """
-
-    # ---------------- INPUT ---------------- #
-    short_desc = data.get("short_description", "")
-    desc = data.get("description", "")
-    work_notes = data.get("work_notes", "")
-    comments = data.get("comments", "")
-    resolution = data.get("close_notes", "")
-
-    # ---------------- CLEAN DESCRIPTION ---------------- #
     from modules.report.utils.analysis_builder import clean_description
 
-    desc_clean = clean_description(desc)
+    short_desc = data.get("short_description", "")
+    desc = clean_description(data.get("description", ""))
+    work_notes = data.get("work_notes", "")
+    comments = data.get("comments", "")
+    resolution = data.get("resolution", "")
 
-    # ---------------- PROBLEM ---------------- #
-    problem_lines = summarize_problem(short_desc, desc_clean)
+    # PROBLEM
+    problem_lines = summarize_problem(short_desc, desc)
 
-    # ---------------- ROOT CAUSE ---------------- #
-    combined_notes = "\n".join([work_notes, comments])
-    note_lines = split_sentences(combined_notes)
-    note_lines = remove_noise_lines(note_lines)
+    # ROOT CAUSE
+    combined = "\n".join([work_notes, comments])
+    lines = split_sentences(combined)
+    lines = remove_noise_lines(lines)
 
-    root_type = detect_root_cause_type(combined_notes)
-    root_lines = summarize_root_cause(note_lines)
+    root_type = detect_root_cause_type(combined)
+    root_lines = summarize_root_cause(lines)
 
     root_output = [f"Root Cause Type: {root_type}"] + root_lines
 
-    # ---------------- RESOLUTION ---------------- #
+    # RESOLUTION
     res_lines = split_sentences(resolution)
     res_lines = remove_noise_lines(res_lines)
     res_lines = summarize_resolution(res_lines)
 
-    # ---------------- FINAL ---------------- #
     return {
         "problem": "\n".join(f"• {l}" for l in problem_lines),
-        "root_cause": "\n".join(f"• {l}" for l in root_output),
+        "analysis": "\n".join(f"• {l}" for l in root_output),
         "resolution": "\n".join(f"• {l}" for l in res_lines),
     }
