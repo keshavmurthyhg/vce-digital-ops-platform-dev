@@ -151,3 +151,45 @@ def summarize_resolution(lines):
         return ["Resolution details not available"]
 
     return cleaned[:3]
+
+def generate_rca(data):
+    """
+    Main RCA builder
+    """
+
+    # ---------------- INPUT ---------------- #
+    short_desc = data.get("short_description", "")
+    desc = data.get("description", "")
+    work_notes = data.get("work_notes", "")
+    comments = data.get("comments", "")
+    resolution = data.get("close_notes", "")
+
+    # ---------------- CLEAN DESCRIPTION ---------------- #
+    from modules.report.utils.analysis_builder import clean_description
+
+    desc_clean = clean_description(desc)
+
+    # ---------------- PROBLEM ---------------- #
+    problem_lines = summarize_problem(short_desc, desc_clean)
+
+    # ---------------- ROOT CAUSE ---------------- #
+    combined_notes = "\n".join([work_notes, comments])
+    note_lines = split_sentences(combined_notes)
+    note_lines = remove_noise_lines(note_lines)
+
+    root_type = detect_root_cause_type(combined_notes)
+    root_lines = summarize_root_cause(note_lines)
+
+    root_output = [f"Root Cause Type: {root_type}"] + root_lines
+
+    # ---------------- RESOLUTION ---------------- #
+    res_lines = split_sentences(resolution)
+    res_lines = remove_noise_lines(res_lines)
+    res_lines = summarize_resolution(res_lines)
+
+    # ---------------- FINAL ---------------- #
+    return {
+        "problem": "\n".join(f"• {l}" for l in problem_lines),
+        "root_cause": "\n".join(f"• {l}" for l in root_output),
+        "resolution": "\n".join(f"• {l}" for l in res_lines),
+    }
