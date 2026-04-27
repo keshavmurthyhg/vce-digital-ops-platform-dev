@@ -37,11 +37,31 @@ def prepare_data(data):
 
     return safe_data
 
+from modules.report.utils.rca_generator import generate_rca
+
+def prepare_data(data):
+    """
+    Central place for all sanitization & formatting
+    """
+    data = enrich_data(data)
+    safe_data = data.copy()
+
+    # existing logic
+    safe_data["description"] = format_description(data.get("description"))
+
+    # ✅ ADD RCA GENERATION
+    rca = generate_rca(data)
+
+    safe_data["problem"] = rca["problem"]
+    safe_data["analysis"] = rca["analysis"]
+    safe_data["resolution"] = rca["resolution"]
+
+    return safe_data
+
 def safe_images(images):
     if not isinstance(images, dict):
         return {"root": [], "l2": [], "res": []}
     return images
-
 
 def generate_pdf(data, root, l2, res, images=None):
     images = safe_images(images)
