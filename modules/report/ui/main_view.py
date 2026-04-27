@@ -1,16 +1,11 @@
 import streamlit as st
-from io import BytesIO
-import zipfile
 from modules.report.utils.rca_generator import generate_rca
-from modules.report.utils.links import make_ui_link
 from modules.report.doc_generator import generate_pdf, generate_word_doc_wrapper
 from modules.report.bulk_generator import build_bulk_reports, generate_bulk_zip
-
-from modules.report.utils.utils import clean_nan, format_date, format_description
-from modules.report.utils.utils import extract_azure_id
+from modules.report.utils.utils import clean_nan, format_date, extract_azure_id
 
 
-# ---------------- PREVIEW TABLES ---------------- #
+# ---------------- PREVIEW TABLE ---------------- #
 
 def render_preview_table(data):
 
@@ -36,62 +31,46 @@ def render_preview_table(data):
         return f'<a href="{url}" target="_blank">{value}</a>'
 
     html = f"""
-    <style>
-    .tbl {{
-        width: 100%;
-        border-collapse: collapse;
-        font-family: Arial;
-        font-size: 14px;
-        margin-bottom: 20px;
-    }}
-    .tbl td {{
-        border: 1px solid black;
-        padding: 6px;
-    }}
-    .hdr {{
-        font-weight: bold;
-        background: #f2f2f2;
-    }}
-    </style>
-
-    <table class="tbl">
+    <table style="width:100%; border-collapse: collapse; font-size:14px;">
         <tr>
-            <td class="hdr">INCIDENT</td>
+            <td><b>INCIDENT</b></td>
             <td>{link(data.get("number"), "incident")}</td>
-            <td class="hdr">CREATED BY</td>
+            <td><b>CREATED BY</b></td>
             <td>{val(data.get("created_by"))}</td>
         </tr>
         <tr>
-            <td class="hdr">AZURE BUG</td>
+            <td><b>AZURE BUG</b></td>
             <td>{link(data.get("azure_bug"), "azure")}</td>
-            <td class="hdr">CREATED DATE</td>
+            <td><b>CREATED DATE</b></td>
             <td>{val(data.get("created_date"))}</td>
         </tr>
         <tr>
-            <td class="hdr">PTC CASE</td>
+            <td><b>PTC CASE</b></td>
             <td>{link(data.get("ptc_case"), "ptc")}</td>
-            <td class="hdr">ASSIGNED TO</td>
+            <td><b>ASSIGNED TO</b></td>
             <td>{val(data.get("assigned_to"))}</td>
         </tr>
         <tr>
-            <td class="hdr">PRIORITY</td>
+            <td><b>PRIORITY</b></td>
             <td>{val(data.get("priority"))}</td>
-            <td class="hdr">RESOLVED DATE</td>
+            <td><b>RESOLVED DATE</b></td>
             <td>{val(data.get("resolved_date"))}</td>
         </tr>
     </table>
     """
 
     st.markdown(html, unsafe_allow_html=True)
+
+
 def render_description_table(data):
     def val(x):
         return x if x else "-"
 
     html = f"""
-    <table class="tbl">
+    <table style="width:100%; border-collapse: collapse; font-size:14px;">
         <tr>
-            <td class="hdr">SHORT DESCRIPTION</td>
-            <td class="hdr">DESCRIPTION</td>
+            <td><b>SHORT DESCRIPTION</b></td>
+            <td><b>DESCRIPTION</b></td>
         </tr>
         <tr>
             <td>{val(data.get("short_description"))}</td>
@@ -103,11 +82,14 @@ def render_description_table(data):
     st.markdown(html, unsafe_allow_html=True)
 
 
-# ---------------- HELPER ---------------- #
+# ---------------- GET INCIDENT ---------------- #
 
 def get_incident(df, inc):
+
     incident_col = "number" if "number" in df.columns else df.columns[0]
-    row = df[df["number"].astype(str).str.upper() == inc.upper()]
+
+    row = df[df[incident_col].astype(str).str.upper() == inc.upper()]
+
     if row.empty:
         return None
 
@@ -138,6 +120,7 @@ def get_incident(df, inc):
 # ---------------- MAIN UI ---------------- #
 
 def render_main(df):
+
     st.title("Incident Report Generator")
 
     # INIT STATE
@@ -146,7 +129,7 @@ def render_main(df):
             st.session_state[key] = "" if key != "images" else {"root": [], "l2": [], "res": []}
 
     # INCIDENT SELECT
-    col1, col2, col3 = st.columns([3, 1, 4])
+    col1, col2 = st.columns([4, 1])
 
     with col1:
         incident_col = "number" if "number" in df.columns else df.columns[0]
@@ -163,7 +146,7 @@ def render_main(df):
 
     msg = st.empty()
 
-    # FETCH LOGIC
+    # FETCH
     if fetch:
         data = get_incident(df, incident)
 
@@ -176,22 +159,22 @@ def render_main(df):
             st.session_state["l2"] = rca["analysis"]
             st.session_state["res"] = rca["resolution"]
 
-            msg.success("Loaded")
+            msg.success("Loaded successfully")
         else:
-            msg.error("Not found")
+            msg.error("Incident not found")
 
-    # BULK INPUT
+    # BULK
     st.markdown("### Bulk Incident Numbers")
     bulk_input = st.text_area("Enter comma-separated incident numbers", key="bulk_ids")
 
-    # ACTION BUTTONS
+    # BUTTONS
     colA, colB, colC, colD, colE = st.columns(5)
 
     with colA:
-        generate_pdf_btn = st.button("Generate PDF", use_container_width=True)
+        pdf_btn = st.button("Generate PDF", use_container_width=True)
 
     with colB:
-        generate_word_btn = st.button("Generate Word", use_container_width=True)
+        word_btn = st.button("Generate Word", use_container_width=True)
 
     with colC:
         bulk_btn = st.button("Bulk Generate", use_container_width=True)
@@ -204,24 +187,18 @@ def render_main(df):
 
     # CLEAR
     if clear_btn:
-        for key in ["root", "l2", "res", "images", "data"]:
-            if key in st.session_state:
-                del st.session_state[key]
+        st.session_state.clear()
         st.rerun()
 
-    # PREVIEW (UPDATED)
+    # PREVIEW
     if preview_btn and "data" in st.session_state:
         data = st.session_state["data"]
 
         st.markdown("### Preview")
-
-        st.markdown("#### Incident Details")
         render_preview_table(data)
-
-        st.markdown("#### Description")
         render_description_table(data)
 
-    # EDITABLE BLOCKS
+    # EDIT
     st.subheader("Edit Report Details")
 
     st.session_state["root"] = st.text_area(
@@ -233,7 +210,7 @@ def render_main(df):
     root_imgs = st.file_uploader("Root Images", accept_multiple_files=True, key="root_img")
 
     st.session_state["l2"] = st.text_area(
-        "TECHNICAL ANALYSIS & ROOT CAUSE",
+        "ROOT CAUSE",
         value=st.session_state.get("l2", ""),
         height=150
     )
@@ -255,35 +232,31 @@ def render_main(df):
     }
 
     # PDF
-    if generate_pdf_btn:
+    if pdf_btn:
         if "data" not in st.session_state:
             st.warning("Fetch incident first")
         else:
-            data = st.session_state["data"]
-
             pdf_bytes = generate_pdf(
-                data,
-                st.session_state.get("root"),
-                st.session_state.get("l2"),
-                st.session_state.get("res"),
-                st.session_state.get("images")
+                st.session_state["data"],
+                st.session_state["root"],
+                st.session_state["l2"],
+                st.session_state["res"],
+                st.session_state["images"]
             )
 
             st.download_button("Download PDF", pdf_bytes, "report.pdf")
 
     # WORD
-    if generate_word_btn:
+    if word_btn:
         if "data" not in st.session_state:
             st.warning("Fetch incident first")
         else:
-            data = st.session_state["data"]
-
             word_bytes = generate_word_doc_wrapper(
-                data,
-                st.session_state.get("root"),
-                st.session_state.get("l2"),
-                st.session_state.get("res"),
-                st.session_state.get("images")
+                st.session_state["data"],
+                st.session_state["root"],
+                st.session_state["l2"],
+                st.session_state["res"],
+                st.session_state["images"]
             )
 
             st.download_button("Download Word", word_bytes, "report.docx")
