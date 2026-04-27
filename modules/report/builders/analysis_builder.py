@@ -17,9 +17,44 @@ def clean_text(text):
 
     return text
 
+# =============== CLEAN DESCRIPTION =================== #
 
 def split_lines(text):
     return [l.strip() for l in text.split("\n") if l.strip()]
+
+def clean_description(text):
+    if not text:
+        return ""
+
+    lines = text.split("\n")
+    cleaned = []
+
+    for l in lines:
+        l_low = l.lower().strip()
+
+        # ❌ remove contact / noise
+        if any(x in l_low for x in [
+            "how does the user",
+            "contact",
+            "ms teams",
+            "phone",
+            "mobile",
+            "+",
+            "email",
+            "reach"
+        ]):
+            continue
+
+        # ❌ remove numbers (phone-like)
+        if any(char.isdigit() for char in l) and len(l) > 8:
+            if "+" in l or "phone" in l_low:
+                continue
+
+        # keep meaningful lines
+        if len(l.strip()) > 10:
+            cleaned.append(l.strip())
+
+    return "\n".join(cleaned)
 
 
 # ---------------- KEYWORD DETECTION ---------------- #
