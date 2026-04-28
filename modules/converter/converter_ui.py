@@ -3,7 +3,7 @@ import tempfile
 import os
 import re
 
-from modules.report.utils.rca_generator import generate_rca
+from modules.report.domain.rca_generator import generate_rca
 from modules.converter.converter import convert_ppt
 from modules.report.utils.utils import format_date
 from modules.data.snow_loader import load_snow_data
