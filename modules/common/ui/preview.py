@@ -1,73 +1,92 @@
 import streamlit as st
-from modules.common.utils.formatters import format_date
 
 
-def safe(val):
-    return val if val not in [None, "", "None"] else "-"
+def _val(x):
+    return x if x and x != "-" else "-"
+
+
+def _link(value, type_):
+    if not value or value == "-":
+        return "-"
+
+    if type_ == "incident":
+        url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={value}"
+
+    elif type_ == "azure":
+        url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{value}"
+
+    elif type_ == "ptc":
+        url = f"https://support.ptc.com/appserver/cs/view/solution.jsp?n={value}"
+
+    else:
+        return value
+
+    return f'<a href="{url}" target="_blank">{value}</a>'
 
 
 def render_preview(data):
 
-    st.subheader("Preview")
-
-    html = f"""
+    style = """
     <style>
-        .report-table {{
-            border-collapse: collapse;
-            width: 100%;
-            font-size: 14px;
-        }}
-        .report-table td {{
-            border: 1px solid black;
-            padding: 6px;
-        }}
-        .report-header {{
-            font-weight: bold;
-            background-color: #f2f2f2;
-        }}
+    .tbl {
+        width: 100%;
+        border-collapse: collapse;
+        font-family: Arial;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }
+    .tbl td {
+        border: 1px solid black;
+        padding: 8px;
+    }
+    .hdr {
+        font-weight: bold;
+        background: #f2f2f2;
+        width: 20%;
+    }
     </style>
+    """
 
-    <table class="report-table">
+    table1 = f"""
+    <table class="tbl">
         <tr>
-            <td class="report-header">INCIDENT</td>
-            <td>{safe(data.get("number"))}</td>
-            <td class="report-header">CREATED BY</td>
-            <td>{safe(data.get("opened_by"))}</td>
+            <td class="hdr">INCIDENT</td>
+            <td>{_link(data.get("number"), "incident")}</td>
+            <td class="hdr">CREATED BY</td>
+            <td>{_val(data.get("created_by"))}</td>
         </tr>
         <tr>
-            <td class="report-header">AZURE BUG</td>
-            <td>{safe(data.get("azure_bug"))}</td>
-            <td class="report-header">CREATED DATE</td>
-            <td>{format_date(data.get("created"))}</td>
+            <td class="hdr">AZURE BUG</td>
+            <td>{_link(data.get("azure_bug"), "azure")}</td>
+            <td class="hdr">CREATED DATE</td>
+            <td>{_val(data.get("created_date"))}</td>
         </tr>
         <tr>
-            <td class="report-header">PTC CASE</td>
-            <td>{safe(data.get("ptc_case"))}</td>
-            <td class="report-header">ASSIGNED TO</td>
-            <td>{safe(data.get("assigned_to"))}</td>
+            <td class="hdr">PTC CASE</td>
+            <td>{_link(data.get("ptc_case"), "ptc")}</td>
+            <td class="hdr">ASSIGNED TO</td>
+            <td>{_val(data.get("assigned_to"))}</td>
         </tr>
         <tr>
-            <td class="report-header">PRIORITY</td>
-            <td>{safe(data.get("priority"))}</td>
-            <td class="report-header">RESOLVED DATE</td>
-            <td>{format_date(data.get("resolved"))}</td>
+            <td class="hdr">PRIORITY</td>
+            <td>{_val(data.get("priority"))}</td>
+            <td class="hdr">RESOLVED DATE</td>
+            <td>{_val(data.get("resolved_date"))}</td>
         </tr>
     </table>
     """
 
-    st.markdown(html, unsafe_allow_html=True)
-
-    desc_html = f"""
-    <table class="report-table">
+    table2 = f"""
+    <table class="tbl">
         <tr>
-            <td class="report-header">SHORT DESCRIPTION</td>
-            <td class="report-header">DESCRIPTION</td>
+            <td class="hdr">SHORT DESCRIPTION</td>
+            <td class="hdr">DESCRIPTION</td>
         </tr>
         <tr>
-            <td>{safe(data.get("short_description"))}</td>
-            <td>{safe(data.get("description"))}</td>
+            <td>{_val(data.get("short_description"))}</td>
+            <td>{_val(data.get("description"))}</td>
         </tr>
     </table>
     """
 
-    st.markdown(desc_html, unsafe_allow_html=True)
+    st.markdown(style + table1 + table2, unsafe_allow_html=True)
