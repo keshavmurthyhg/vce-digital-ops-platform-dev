@@ -30,32 +30,21 @@ def clean_text(text: str) -> str:
 
     text = str(text)
 
-    # 🔴 Remove contact / phone / MS Teams lines
+    # 🔴 Remove contact block fully
     text = re.sub(
-        r"How does the user.*?phone number:.*?\d+",
+        r"How does the user want to be contacted.*?(MS Teams|phone number).*?\d+",
         "",
         text,
         flags=re.IGNORECASE | re.DOTALL
     )
 
-    text = re.sub(
-        r"MS Teams.*?\d+",
-        "",
-        text,
-        flags=re.IGNORECASE
-    )
+    # 🔴 Remove MS Teams lines
+    text = re.sub(r"MS Teams.*", "", text, flags=re.IGNORECASE)
 
-    text = re.sub(
-        r"phone number\s*:\s*\+?\d+",
-        "",
-        text,
-        flags=re.IGNORECASE
-    )
-
-    # 🔴 Remove standalone phone numbers
+    # 🔴 Remove phone numbers
     text = re.sub(r"\+?\d{10,15}", "", text)
 
-    # 🔴 Remove extra spaces / newlines
+    # 🔴 Clean spacing
     text = re.sub(r"\n+", "\n", text)
     text = re.sub(r"\s{2,}", " ", text)
 
