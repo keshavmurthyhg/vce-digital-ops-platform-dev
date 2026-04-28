@@ -2,9 +2,10 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches
 from modules.report.layout.footer import apply_word_footer
-from modules.report.utils.links import apply_word_link
-from modules.report.utils.utils import format_date, set_cell_bg, format_description
-from modules.report.utils.utils import clean_text
+from modules.common.utils.links import apply_word_link
+from modules.common.utils.formatters import format_date
+from modules.common.utils.text_cleaner import clean_text, format_description
+from modules.common.utils.formatters import set_cell_bg
 import os
 
 
