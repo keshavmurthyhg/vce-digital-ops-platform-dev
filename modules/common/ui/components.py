@@ -17,10 +17,22 @@ def render_preview_table(data):
             <td style="{CELL_STYLE}">{safe_text(data.get("created_by"))}</td>
         </tr>
         <tr>
-            <td style="{HEADER_CELL_STYLE}">AZURE</td>
+            <td style="{HEADER_CELL_STYLE}">AZURE BUG</td>
             <td style="{CELL_STYLE}">{make_ui_link("azure", data.get("azure_bug"))}</td>
-            <td style="{HEADER_CELL_STYLE}">DATE</td>
+            <td style="{HEADER_CELL_STYLE}">CREATED DATE</td>
             <td style="{CELL_STYLE}">{safe_text(data.get("created_date"))}</td>
+        </tr>
+        <tr>
+            <td style="{HEADER_CELL_STYLE}">PTC CASE</td>
+            <td style="{CELL_STYLE}">{safe_text(data.get("ptc_case"))}</td>
+            <td style="{HEADER_CELL_STYLE}">ASSIGNED TO</td>
+            <td style="{CELL_STYLE}">{safe_text(data.get("assigned_to"))}</td>
+        </tr>
+        <tr>
+            <td style="{HEADER_CELL_STYLE}">PRIORITY</td>
+            <td style="{CELL_STYLE}">{safe_text(data.get("priority"))}</td>
+            <td style="{HEADER_CELL_STYLE}">RESOLVED DATE</td>
+            <td style="{CELL_STYLE}">{safe_text(data.get("resolved_date"))}</td>
         </tr>
     </table>
     """
