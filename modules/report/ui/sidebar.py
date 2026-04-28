@@ -83,21 +83,21 @@ def render_sidebar(df):
     # ---------------- DOWNLOAD ---------------- #
     st.sidebar.markdown("### Download")
 
-    if "pdf_bytes" in st.session_state and "data" in st.session_state:
+    if st.session_state.get("pdf_ready") and "data" in st.session_state:
         st.sidebar.download_button(
             "⬇ Download PDF",
             st.session_state["pdf_bytes"],
             file_name=f"{st.session_state['data']['number']}.pdf"
         )
 
-    if "word_bytes" in st.session_state and "data" in st.session_state:
+    if st.session_state.get("word_ready") and "data" in st.session_state:
         st.sidebar.download_button(
             "⬇ Download Word",
             st.session_state["word_bytes"],
             file_name=f"{st.session_state['data']['number']}.docx"
         )
 
-    if "zip_bytes" in st.session_state:
+    if st.session_state.get("zip_ready") and "data" in st.session_state:
         st.sidebar.download_button(
             "⬇ Download ZIP",
             st.session_state["zip_bytes"],
