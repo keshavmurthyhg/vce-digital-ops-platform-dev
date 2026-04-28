@@ -1,24 +1,25 @@
 import streamlit as st
 
 def render_buttons():
-    col1, col2, col3, col4, col5 = st.columns(5)
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
 
     with col1:
         fetch = st.button("Fetch")
 
     with col2:
-        pdf = st.button("Generate PDF")
-
-    with col3:
-        word = st.button("Generate Word")
-
-    with col4:
-        bulk = st.button("Bulk Generate")
-
-    with col5:
         preview = st.button("Preview")
 
-    clear = st.button("Clear")
+    with col3:
+        clear = st.button("Clear")
+        
+    with col4:
+        word = st.button("Generate Word")
+
+    with col5:
+        pdf = st.button("Generate PDF")
+
+    with col6:
+        bulk = st.button("Bulk Generate")
 
     return {
         "fetch": fetch,
