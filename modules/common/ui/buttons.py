@@ -1,6 +1,6 @@
 import streamlit as st
 
-def render_action_buttons():
+def render_buttons():
     colA, colB, colC, colD, colE = st.columns(5)
 
     return {
