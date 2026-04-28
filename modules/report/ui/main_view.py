@@ -10,7 +10,19 @@ def render_main(df):
     st.title("Incident Report Generator")
 
     # ---------------- INCIDENT ---------------- #
-    incident = st.selectbox("Select Incident", df["number"].dropna().unique())
+    #incident = st.selectbox("Select Incident", df["number"].dropna().unique())
+    col1, col2 = st.columns([5,1])
+    
+    with col1:
+        incident = st.selectbox(
+            "Select Incident",
+            df["number"].dropna().unique(),
+            key="incident_select"
+        )
+    
+    with col2:
+        fetch_btn = st.button("Fetch", use_container_width=True)
+    
 
     # ---------------- BULK ---------------- #
     st.subheader("Bulk Incident Numbers")
