@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import date, timedelta
 
+
 def render_sidebar(df):
 
     st.sidebar.header("Filters")
@@ -11,141 +12,96 @@ def render_sidebar(df):
         options=sorted(df["priority"].dropna().unique())
     )
 
-    date_range = st.sidebar.date_input(
-        "Created Date Range",
-        value=(),
-    )
+    date_range = st.sidebar.date_input("Created Date Range", value=())
 
     preset = st.sidebar.selectbox(
         "Quick Filter",
         ["None", "Last 7 Days", "Last 30 Days"]
     )
 
-    from datetime import date, timedelta
-    
+    # ---------------- PRESET ---------------- #
     if preset == "Last 7 Days":
         date_range = (date.today() - timedelta(days=7), date.today())
-    
     elif preset == "Last 30 Days":
         date_range = (date.today() - timedelta(days=30), date.today())
-    
-    # Apply filters
+
+    # ---------------- FILTER ---------------- #
     filtered = df.copy()
 
-    # Priority filter
     if priorities:
         filtered = filtered[filtered["priority"].isin(priorities)]
 
-    # 🔹 Convert timestamp safely
     filtered["created"] = pd.to_datetime(filtered["created"], errors="coerce")
 
-    # 🔹 Date filter (safe handling)
     if isinstance(date_range, tuple) and len(date_range) == 2:
         start, end = date_range
-    
-        filtered["created"] = pd.to_datetime(filtered["created"], errors="coerce")
-    
+
         filtered = filtered[
             (filtered["created"].dt.date >= start) &
             (filtered["created"].dt.date <= end)
         ]
 
-    # 🔹 Apply to bulk
+    # ---------------- ACTION ---------------- #
     st.sidebar.markdown("### Actions")
 
     if st.sidebar.button("Apply to Bulk", key="apply_bulk_btn"):
-        st.session_state["apply_bulk"] = True
-
-    if st.session_state.get("apply_bulk"):
 
         df = st.session_state.get("filtered_df")
         bulk_input = st.session_state.get("bulk_incidents", "")
-    
+
         if df is None:
             st.sidebar.error("No data available")
-    
+
         elif not bulk_input.strip():
             st.sidebar.warning("Enter bulk incident numbers first")
-    
+
         else:
             bulk_ids = [i.strip() for i in bulk_input.split(",") if i.strip()]
-    
-            # ✅ UPDATE TEXTBOX VALUE
+
             st.session_state["bulk_incidents"] = ", ".join(bulk_ids)
-    
+
             bulk_data = []
-    
+
             for inc in bulk_ids:
-                incident_col = next(
-                    (c for c in df.columns if "number" in c.lower()),
-                    None
-                )
-    
-                if not incident_col:
-                    continue
-    
-                row = df[df[incident_col].astype(str).str.upper() == inc.upper()]
-    
+                row = df[df["number"].astype(str).str.upper() == inc.upper()]
+
                 if row.empty:
                     continue
-    
+
                 data = row.iloc[0].to_dict()
-    
+
                 data["problem"] = st.session_state.get("problem", "")
-                data["analysis"] = st.session_state.get("analysis", "")
+                data["root_cause"] = st.session_state.get("root_cause", "")
                 data["resolution"] = st.session_state.get("resolution", "")
-                data["images"] = st.session_state.get("images", {})
-    
+
                 bulk_data.append(data)
-    
+
             st.session_state["bulk_data"] = bulk_data
-    
+
             st.sidebar.success(f"Applied to {len(bulk_data)} incidents")
 
-        handle_apply_to_bulk()
-    
-    #================= DOWNLOAD BUTTONS ================================
+    # ---------------- DOWNLOAD ---------------- #
     st.sidebar.markdown("### Download")
-    
+
     if "pdf_bytes" in st.session_state and "data" in st.session_state:
         st.sidebar.download_button(
             "⬇ Download PDF",
-            data=st.session_state["pdf_bytes"],
-            file_name=f"{st.session_state['data']['number']}.pdf",
-            mime="application/pdf"
+            st.session_state["pdf_bytes"],
+            file_name=f"{st.session_state['data']['number']}.pdf"
         )
-    
+
     if "word_bytes" in st.session_state and "data" in st.session_state:
         st.sidebar.download_button(
             "⬇ Download Word",
-            data=st.session_state["word_bytes"],
-            file_name=f"{st.session_state['data']['number']}.docx",
-            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            st.session_state["word_bytes"],
+            file_name=f"{st.session_state['data']['number']}.docx"
         )
-    
+
     if "zip_bytes" in st.session_state:
         st.sidebar.download_button(
             "⬇ Download ZIP",
-            data=st.session_state["zip_bytes"],
-            file_name="Bulk_Report.zip",
-            mime="application/zip"
+            st.session_state["zip_bytes"],
+            file_name="Bulk_Report.zip"
         )
-    
-    # ✅ CRITICAL FIX
+
     return filtered
-
-import streamlit as st
-
-def handle_apply_to_bulk():
-
-    if st.sidebar.button("Apply to Bulk", key="apply_bulk_btn"):
-
-        if "data" in st.session_state:
-            inc = st.session_state["data"].get("number")
-
-            existing = st.session_state.get("bulk_incidents", "")
-
-            if inc and inc not in existing:
-                st.session_state["bulk_incidents"] = (
-                    f"{existing},{inc}" if existing else inc
-                )
