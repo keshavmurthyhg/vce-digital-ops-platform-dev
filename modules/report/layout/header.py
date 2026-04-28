@@ -1,6 +1,6 @@
 from reportlab.platypus import Table, TableStyle, Paragraph
 from reportlab.lib import colors
-from modules.report.utils.links import get_url, make_pdf_link
+from modules.common.utils.links import get_url, make_pdf_link
 
 def build_pdf_header(data, wrap_link, format_date):
 
