@@ -34,19 +34,6 @@ def render_main(df):
     # ---------------- BUTTONS (CLEAN) ---------------- #
     actions = render_action_buttons()
 
-    # ---------------- APPLY TO BULK ---------------- #
-    if st.sidebar.button("Apply to Bulk", key="apply_bulk_btn"):
-
-        if "data" in st.session_state:
-            inc = st.session_state["data"].get("number")
-
-            existing = st.session_state.get("bulk_incidents", "")
-
-            if inc and inc not in existing:
-                st.session_state["bulk_incidents"] = (
-                    f"{existing},{inc}" if existing else inc
-                )
-
     # ---------------- FETCH ---------------- #
     if fetch_btn:
         row = df[df["number"] == incident].iloc[0].to_dict()
