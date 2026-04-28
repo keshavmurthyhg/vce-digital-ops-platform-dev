@@ -1,20 +1,22 @@
-def clean_description(text):
+import re
+
+def clean_text(text):
     if not text:
         return ""
 
-    lines = text.split("\n")
-    cleaned = []
+    # remove phone numbers
+    text = re.sub(r'\+?\d[\d\s\-]{7,}', '', text)
 
-    for l in lines:
-        l_low = l.lower()
+    # remove contact phrases
+    text = re.sub(r'How does the user.*', '', text, flags=re.IGNORECASE)
+    text = re.sub(r'contact.*', '', text, flags=re.IGNORECASE)
 
-        if any(x in l_low for x in [
-            "contact", "phone", "email", "ms teams",
-            "how does the user"
-        ]):
-            continue
+    return text.strip()
 
-        if len(l.strip()) > 10:
-            cleaned.append(l.strip())
 
-    return " ".join(cleaned)
+def format_description(text):
+    return clean_text(text)
+
+
+def add_images_pdf(*args, **kwargs):
+    return
