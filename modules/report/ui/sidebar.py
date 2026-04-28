@@ -102,6 +102,7 @@ def render_sidebar(df):
     
             st.sidebar.success(f"Applied to {len(bulk_data)} incidents")
 
+        handle_apply_to_bulk()
     
     #================= DOWNLOAD BUTTONS ================================
     st.sidebar.markdown("### Download")
