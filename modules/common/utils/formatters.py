@@ -1,36 +1,54 @@
 import re
-
 from datetime import datetime
 from reportlab.lib import colors
 
+
+# ---------------- DATE ---------------- #
 def format_date(val):
     if not val:
         return "-"
     try:
         return datetime.strftime(val, "%d-%b-%Y")
-    except:
+    except Exception:
         return str(val)
 
 
+# ---------------- WORD TABLE ---------------- #
 def set_cell_bg(cell):
     from docx.oxml import parse_xml
     from docx.oxml.ns import nsdecls
 
-    shading = parse_xml(r'<w:shd {} w:fill="D9D9D9"/>'.format(nsdecls('w')))
+    shading = parse_xml(
+        r'<w:shd {} w:fill="D9D9D9"/>'.format(nsdecls('w'))
+    )
     cell._tc.get_or_add_tcPr().append(shading)
 
+
+# ---------------- SAFE TEXT ---------------- #
 def safe_text(val):
     if val is None:
         return "-"
-    return str(val)
+    val = str(val).strip()
+    if val.lower() in ["nan", "none", ""]:
+        return "-"
+    return val
 
-def clean_text(text: str) -> str:
+
+# ---------------- CLEAN DESCRIPTION ---------------- #
+def format_description(text: str) -> str:
+    """
+    Clean ServiceNow description:
+    - remove contact info
+    - remove phone numbers
+    - remove MS Teams lines
+    """
+
     if not text:
         return ""
 
     text = str(text)
 
-    # 🔴 Remove contact block fully
+    # 🔴 Remove full contact block
     text = re.sub(
         r"How does the user want to be contacted.*?(MS Teams|phone number).*?\d+",
         "",
@@ -39,12 +57,21 @@ def clean_text(text: str) -> str:
     )
 
     # 🔴 Remove MS Teams lines
-    text = re.sub(r"MS Teams.*", "", text, flags=re.IGNORECASE)
+    text = re.sub(
+        r"MS Teams.*",
+        "",
+        text,
+        flags=re.IGNORECASE
+    )
 
     # 🔴 Remove phone numbers
-    text = re.sub(r"\+?\d{10,15}", "", text)
+    text = re.sub(
+        r"\+?\d[\d\s]{7,}",
+        "",
+        text
+    )
 
-    # 🔴 Clean spacing
+    # 🔴 Normalize spacing
     text = re.sub(r"\n+", "\n", text)
     text = re.sub(r"\s{2,}", " ", text)
 
