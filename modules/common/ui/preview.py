@@ -89,4 +89,5 @@ def render_preview(data):
     </table>
     """
 
+    # ✅ CRITICAL FIX HERE
     st.markdown(style + table1 + table2, unsafe_allow_html=True)
