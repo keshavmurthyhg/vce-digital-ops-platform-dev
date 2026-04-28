@@ -41,3 +41,11 @@ def apply_word_link(paragraph, key, value):
     run = paragraph.add_run(str(value or "-"))
     if url:
         run.font.color.rgb = (0, 0, 255)
+
+def make_ui_link(type_, value):
+    url = get_url(type_, value)
+    if not value:
+        return "-"
+    if not url:
+        return str(value)
+    return f'<a href="{url}" target="_blank">{value}</a>'
