@@ -2,22 +2,14 @@ import streamlit as st
 from modules.common.utils.formatters import format_date
 
 
-# 🔥 SAFE LINK (NO DEPENDENCY ON BROKEN LINK MODULE)
-def safe_link(val):
-    try:
-        if not val or str(val).strip() in ["", "-", "None"]:
-            return "-"
-        # simple safe clickable link (no external dependency)
-        return f'<a href="#" style="color:#1f77b4;text-decoration:none;">{val}</a>'
-    except Exception:
-        return str(val) if val else "-"
+def safe(val):
+    return val if val not in [None, "", "None"] else "-"
 
 
 def render_preview(data):
 
     st.subheader("Preview")
 
-    # ---------- TABLE 1 ----------
     html = f"""
     <style>
         .report-table {{
@@ -38,25 +30,25 @@ def render_preview(data):
     <table class="report-table">
         <tr>
             <td class="report-header">INCIDENT</td>
-            <td>{safe_link(data.get("number"))}</td>
+            <td>{safe(data.get("number"))}</td>
             <td class="report-header">CREATED BY</td>
-            <td>{data.get("opened_by") or "-"}</td>
+            <td>{safe(data.get("opened_by"))}</td>
         </tr>
         <tr>
             <td class="report-header">AZURE BUG</td>
-            <td>{safe_link(data.get("azure_bug"))}</td>
+            <td>{safe(data.get("azure_bug"))}</td>
             <td class="report-header">CREATED DATE</td>
             <td>{format_date(data.get("created"))}</td>
         </tr>
         <tr>
             <td class="report-header">PTC CASE</td>
-            <td>{safe_link(data.get("ptc_case"))}</td>
+            <td>{safe(data.get("ptc_case"))}</td>
             <td class="report-header">ASSIGNED TO</td>
-            <td>{data.get("assigned_to") or "-"}</td>
+            <td>{safe(data.get("assigned_to"))}</td>
         </tr>
         <tr>
             <td class="report-header">PRIORITY</td>
-            <td>{data.get("priority") or "-"}</td>
+            <td>{safe(data.get("priority"))}</td>
             <td class="report-header">RESOLVED DATE</td>
             <td>{format_date(data.get("resolved"))}</td>
         </tr>
@@ -65,7 +57,6 @@ def render_preview(data):
 
     st.markdown(html, unsafe_allow_html=True)
 
-    # ---------- TABLE 2 ----------
     desc_html = f"""
     <table class="report-table">
         <tr>
@@ -73,8 +64,8 @@ def render_preview(data):
             <td class="report-header">DESCRIPTION</td>
         </tr>
         <tr>
-            <td>{data.get("short_description") or "-"}</td>
-            <td>{data.get("description") or "-"}</td>
+            <td>{safe(data.get("short_description"))}</td>
+            <td>{safe(data.get("description"))}</td>
         </tr>
     </table>
     """
