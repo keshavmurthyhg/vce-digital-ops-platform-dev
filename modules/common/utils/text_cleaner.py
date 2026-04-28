@@ -4,26 +4,27 @@ def clean_text(text: str) -> str:
     if not text:
         return ""
 
-    lines = str(text).split("\n")
-    cleaned = []
+    text = str(text)
 
-    for line in lines:
-        line_lower = line.lower()
+    # 🔴 Remove contact block fully
+    text = re.sub(
+        r"How does the user want to be contacted.*?(MS Teams|phone number).*?\d+",
+        "",
+        text,
+        flags=re.IGNORECASE | re.DOTALL
+    )
 
-        # ❌ remove unwanted lines
-        if (
-            "how does the user want to be contacted" in line_lower
-            or "ms teams" in line_lower
-            or "phone number" in line_lower
-        ):
-            continue
+    # 🔴 Remove MS Teams lines
+    text = re.sub(r"MS Teams.*", "", text, flags=re.IGNORECASE)
 
-        # ❌ remove numbers
-        line = re.sub(r"\+?\d{10,15}", "", line)
+    # 🔴 Remove phone numbers
+    text = re.sub(r"\+?\d{10,15}", "", text)
 
-        cleaned.append(line.strip())
+    # 🔴 Clean spacing
+    text = re.sub(r"\n+", "\n", text)
+    text = re.sub(r"\s{2,}", " ", text)
 
-    return "\n".join([l for l in cleaned if l])
+    return text.strip()
 
 
 def format_description(text):
