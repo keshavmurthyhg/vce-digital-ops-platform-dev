@@ -2,8 +2,8 @@ import streamlit as st
 
 from modules.report.renderers.pdf_renderer import generate_pdf_doc
 from modules.report.renderers.word_renderer import generate_word_doc
-from modules.report.utils.utils import format_description
-from modules.report.utils.utils import extract_azure_id
+from modules.common.utils.text_cleaner import format_description
+from modules.common.utils.links import extract_azure_id
 from modules.report.domain.rca_generator import generate_rca
 
 def enrich_data(data):
