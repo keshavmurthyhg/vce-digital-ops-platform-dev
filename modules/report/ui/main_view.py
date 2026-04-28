@@ -3,6 +3,7 @@ import streamlit as st
 from modules.common.ui.preview import render_preview
 from modules.common.ui.buttons import render_action_buttons
 from modules.report.services.rca_service import build_rca
+from modules.report.services.data_mapper import map_incident
 
 
 def render_main(df):
@@ -38,60 +39,11 @@ def render_main(df):
     if fetch_btn:
         row_raw = df[df["number"] == incident].iloc[0].to_dict()
     
-        # 🔥 STANDARDIZE KEYS
-        def get_display(val):
-            if isinstance(val, dict):
-                return val.get("display_value") or val.get("value")
-            return val
-        
-        
-        row = {
-            "number": row_raw.get("number"),
-        
-            "short_description": (
-                row_raw.get("short_description")
-                or row_raw.get("short description")
-                or "-"
-            ),
-        
-            "description": row_raw.get("description") or "-",
-        
-            "priority": get_display(row_raw.get("priority")) or "-",
-        
-            "opened_by": get_display(
-                row_raw.get("opened_by") or row_raw.get("sys_created_by")
-            ) or "-",
-        
-            "assigned_to": get_display(row_raw.get("assigned_to")) or "-",
-        
-            "created": (
-                row_raw.get("sys_created_on")
-                or row_raw.get("opened_at")
-                or row_raw.get("created")
-            ),
-        
-            "resolved": (
-                row_raw.get("closed_at")
-                or row_raw.get("resolved_at")
-            ),
-        
-            # 🔥 CRITICAL (your missing fields)
-            "azure_bug": (
-                row_raw.get("azure_bug")
-                or row_raw.get("u_azure_bug")
-                or "-"
-            ),
-        
-            "ptc_case": (
-                row_raw.get("ptc_case")
-                or row_raw.get("u_ptc_case")
-                or "-"
-            ),
-        }
+        row = map_incident(row_raw)
     
         st.session_state["data"] = row
         st.session_state.update(build_rca(row))
-
+        
     # ---------------- PREVIEW ---------------- #
     if actions["preview"] and "data" in st.session_state:
         render_preview(st.session_state["data"])
