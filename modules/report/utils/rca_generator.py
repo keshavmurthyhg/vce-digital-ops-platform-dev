@@ -144,10 +144,10 @@ def summarize_resolution(lines):
 # ---------------- MAIN RCA ---------------- #
 
 def generate_rca(data):
-    from modules.report.utils.text_cleaner import clean_description
+    from modules.report.utils.utils import format_description
 
     short_desc = data.get("short_description", "")
-    desc = clean_description(data.get("description", ""))
+    desc = format_description(data.get("description", ""))
     work_notes = data.get("work_notes", "")
     comments = data.get("comments", "")
     resolution = data.get("resolution", "")
