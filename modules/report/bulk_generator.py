@@ -42,9 +42,9 @@ def build_bulk_reports(df, incident_list, images_map=None):
 
         results.append({
             "data": data,
-            "root": root,
-            "l2": l2,
-            "res": res,
+            "root": rca["problem"],
+            "l2": rca["analysis"],
+            "res": rca["resolution"],
             "images": images
         })
 
