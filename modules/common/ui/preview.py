@@ -1,4 +1,5 @@
 import streamlit as st
+from modules.common.ui.styles import get_table_style
 
 
 def _val(x):
@@ -11,13 +12,10 @@ def _link(value, type_):
 
     if type_ == "incident":
         url = f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={value}"
-
     elif type_ == "azure":
         url = f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{value}"
-
     elif type_ == "ptc":
         url = f"https://support.ptc.com/appserver/cs/view/solution.jsp?n={value}"
-
     else:
         return value
 
@@ -26,26 +24,11 @@ def _link(value, type_):
 
 def render_preview(data):
 
-    style = """
-    <style>
-    .tbl {
-        width: 100%;
-        border-collapse: collapse;
-        font-family: Arial;
-        font-size: 14px;
-        margin-bottom: 20px;
-    }
-    .tbl td {
-        border: 1px solid black;
-        padding: 8px;
-    }
-    .hdr {
-        font-weight: bold;
-        background: #f2f2f2;
-        width: 20%;
-    }
-    </style>
-    """
+    if not data:
+        st.warning("No data available for preview")
+        return
+
+    style = get_table_style()
 
     table1 = f"""
     <table class="tbl">
@@ -89,5 +72,7 @@ def render_preview(data):
     </table>
     """
 
-    # ✅ CRITICAL FIX HERE
-    st.markdown(style + table1 + table2, unsafe_allow_html=True)
+    # 🔥 IMPORTANT FIX
+    html = style + table1 + table2
+
+    st.markdown(html, unsafe_allow_html=True)
