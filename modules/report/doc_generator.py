@@ -1,3 +1,5 @@
+import streamlit as st
+
 from modules.report.renderers.pdf_renderer import generate_pdf_doc
 from modules.report.renderers.word_renderer import generate_word_doc
 from modules.report.utils.utils import format_description
