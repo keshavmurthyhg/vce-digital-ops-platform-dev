@@ -36,28 +36,22 @@ def render_main(df):
 
     # ---------------- FETCH ---------------- #
     if fetch_btn:
-        row = df[df["number"] == incident].iloc[0].to_row = df[df["number"] == incident].iloc[0].to_dict()
-
-        # 🔥 STANDARDIZE KEYS (CRITICAL)
+        row_raw = df[df["number"] == incident].iloc[0].to_dict()
+    
+        # 🔥 STANDARDIZE KEYS
         row = {
-            "number": row.get("number"),
-            "short_description": row.get("short_description") or row.get("short description"),
-            "description": row.get("description"),
-            "priority": row.get("priority"),
-            "opened_by": row.get("opened_by") or row.get("created_by"),
-            "assigned_to": row.get("assigned_to"),
-            "created": row.get("created") or row.get("opened_at"),
-            "resolved": row.get("resolved_at") or row.get("closed_at"),
-            "azure_bug": row.get("azure_bug"),
-            "ptc_case": row.get("ptc_case"),
+            "number": row_raw.get("number"),
+            "short_description": row_raw.get("short_description") or row_raw.get("short description"),
+            "description": row_raw.get("description"),
+            "priority": row_raw.get("priority"),
+            "opened_by": row_raw.get("opened_by") or row_raw.get("created_by"),
+            "assigned_to": row_raw.get("assigned_to"),
+            "created": row_raw.get("created") or row_raw.get("opened_at"),
+            "resolved": row_raw.get("resolved_at") or row_raw.get("closed_at"),
+            "azure_bug": row_raw.get("azure_bug"),
+            "ptc_case": row_raw.get("ptc_case"),
         }
-        
-        st.session_state["data"] = row
-        
-        dict()
-
-        row["short_description"] = row.get("short_description") or row.get("short description")
-
+    
         st.session_state["data"] = row
         st.session_state.update(build_rca(row))
 
