@@ -1,16 +1,23 @@
 import streamlit as st
 from modules.common.utils.formatters import format_date
-from modules.common.utils.links import make_ui_link
 
 
+# 🔥 SAFE LINK (NO DEPENDENCY ON BROKEN LINK MODULE)
 def safe_link(val):
-    return make_ui_link(val) if val else "-"
+    try:
+        if not val or str(val).strip() in ["", "-", "None"]:
+            return "-"
+        # simple safe clickable link (no external dependency)
+        return f'<a href="#" style="color:#1f77b4;text-decoration:none;">{val}</a>'
+    except Exception:
+        return str(val) if val else "-"
 
 
 def render_preview(data):
 
     st.subheader("Preview")
 
+    # ---------- TABLE 1 ----------
     html = f"""
     <style>
         .report-table {{
@@ -58,6 +65,7 @@ def render_preview(data):
 
     st.markdown(html, unsafe_allow_html=True)
 
+    # ---------- TABLE 2 ----------
     desc_html = f"""
     <table class="report-table">
         <tr>
