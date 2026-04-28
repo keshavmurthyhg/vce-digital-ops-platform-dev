@@ -29,7 +29,7 @@ def render_preview_table(data):
 
 def render_description_table(data):
 
-    desc = clean_description(data.get("description"))
+    desc = format_description(data.get("description"))
 
     html = f"""
     <table style="{TABLE_STYLE}">
