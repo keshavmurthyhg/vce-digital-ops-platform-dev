@@ -8,8 +8,9 @@ from modules.report.layout.body import build_sections
 from modules.report.layout.styles import get_pdf_styles
 from modules.report.layout.footer import pdf_footer
 
-from modules.report.utils.utils import format_date, add_images_pdf
 from modules.common.utils.links import get_url, make_pdf_link
+from modules.common.utils.formatters import format_date
+from modules.common.utils.text_cleaner import add_images_pdf
 
 
 def generate_pdf_doc(data, root, l2, res, images):
