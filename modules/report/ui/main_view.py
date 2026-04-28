@@ -25,3 +25,48 @@ def render_main(df):
     if buttons.get("clear"):
         st.session_state.clear()
         st.rerun()
+
+    if "data" in st.session_state:
+    
+        st.subheader("Edit Report Details")
+    
+        # ---------------- PROBLEM ---------------- #
+        st.text_area(
+            "PROBLEM STATEMENT",
+            key="problem",
+            height=120
+        )
+
+        # Upload Root Images
+        st.file_uploader(
+            "Problem Images",
+            accept_multiple_files=True,
+            key="problem_images"
+    
+        # ---------------- ROOT CAUSE ---------------- #
+        st.text_area(
+            "ROOT CAUSE",
+            key="root_cause",
+            height=150
+        )
+    
+        # Upload Root Images
+        st.file_uploader(
+            "Root Images",
+            accept_multiple_files=True,
+            key="root_images"
+        )
+    
+        # ---------------- RESOLUTION ---------------- #
+        st.text_area(
+            "RESOLUTION & RECOMMENDATION",
+            key="resolution",
+            height=150
+        )
+    
+        # Upload Resolution Images
+        st.file_uploader(
+            "Resolution Images",
+            accept_multiple_files=True,
+            key="resolution_images"
+        )
