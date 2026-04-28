@@ -144,7 +144,7 @@ def summarize_resolution(lines):
 # ---------------- MAIN RCA ---------------- #
 
 def generate_rca(data):
-    from modules.report.utils.analysis_builder import clean_description
+    from modules.report.utils.text_cleaner import clean_description
 
     short_desc = data.get("short_description", "")
     desc = clean_description(data.get("description", ""))
