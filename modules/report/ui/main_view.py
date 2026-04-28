@@ -13,15 +13,15 @@ def render_main(df):
 
     buttons = render_buttons()
 
-    if buttons["fetch"]:
+    if buttons.get("fetch"):
         row = df[df["number"] == incident].iloc[0].to_dict()
         st.session_state["data"] = row
         st.session_state.update(build_rca(row))
-
-    if buttons["preview"] and "data" in st.session_state:
+    
+    if buttons.get("preview") and "data" in st.session_state:
         render_preview_table(st.session_state["data"])
         render_description_table(st.session_state["data"])
-
-    if buttons["clear"]:
+    
+    if buttons.get("clear"):
         st.session_state.clear()
         st.rerun()
