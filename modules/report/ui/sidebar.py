@@ -53,7 +53,7 @@ def render_sidebar(df):
     # 🔹 Apply to bulk
     st.sidebar.markdown("### Actions")
 
-    if st.sidebar.button("Apply to Bulk"):
+    if st.sidebar.button("Apply to Bulk", key="apply_bulk_btn"):
         st.session_state["apply_bulk"] = True
 
     if st.session_state.get("apply_bulk"):
