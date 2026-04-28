@@ -36,7 +36,25 @@ def render_main(df):
 
     # ---------------- FETCH ---------------- #
     if fetch_btn:
-        row = df[df["number"] == incident].iloc[0].to_dict()
+        row = df[df["number"] == incident].iloc[0].to_row = df[df["number"] == incident].iloc[0].to_dict()
+
+        # 🔥 STANDARDIZE KEYS (CRITICAL)
+        row = {
+            "number": row.get("number"),
+            "short_description": row.get("short_description") or row.get("short description"),
+            "description": row.get("description"),
+            "priority": row.get("priority"),
+            "opened_by": row.get("opened_by") or row.get("created_by"),
+            "assigned_to": row.get("assigned_to"),
+            "created": row.get("created") or row.get("opened_at"),
+            "resolved": row.get("resolved_at") or row.get("closed_at"),
+            "azure_bug": row.get("azure_bug"),
+            "ptc_case": row.get("ptc_case"),
+        }
+        
+        st.session_state["data"] = row
+        
+        dict()
 
         row["short_description"] = row.get("short_description") or row.get("short description")
 
