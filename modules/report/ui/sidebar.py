@@ -132,3 +132,19 @@ def render_sidebar(df):
     
     # ✅ CRITICAL FIX
     return filtered
+
+import streamlit as st
+
+def handle_apply_to_bulk():
+
+    if st.sidebar.button("Apply to Bulk", key="apply_bulk_btn"):
+
+        if "data" in st.session_state:
+            inc = st.session_state["data"].get("number")
+
+            existing = st.session_state.get("bulk_incidents", "")
+
+            if inc and inc not in existing:
+                st.session_state["bulk_incidents"] = (
+                    f"{existing},{inc}" if existing else inc
+                )
