@@ -1,9 +1,5 @@
 from modules.report.doc_generator import generate_pdf, generate_word_doc_wrapper
-from modules.report.builders.analysis_builder import (
-    build_root_cause,
-    build_l2_analysis,
-    build_resolution
-)
+from modules.report.utils.rca_generator import generate_rca
 
 
 def build_bulk_reports(df, incident_list, images_map=None):
@@ -33,9 +29,14 @@ def build_bulk_reports(df, incident_list, images_map=None):
             "ptc_case": r.get("vendor ticket"),
         }
 
-        root = build_root_cause(data["work_notes"])
-        l2 = build_l2_analysis(data["comments"])
-        res = build_resolution(data["resolution"])
+        rca = generate_rca(data)
+
+        report = {
+            "data": data,
+            "problem": rca["problem"],
+            "analysis": rca["analysis"],
+            "resolution": rca["resolution"]
+        }
 
         images = images_map.get(inc, {}) if images_map else {}
 
