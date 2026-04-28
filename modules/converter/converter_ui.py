@@ -5,7 +5,7 @@ import re
 
 from modules.report.domain.rca_generator import generate_rca
 from modules.converter.converter import convert_ppt
-from modules.report.utils.utils import format_date
+from modules.common.utils.formatters import format_date
 from modules.data.snow_loader import load_snow_data
 from modules.converter.ppt_extractor import extract_ppt_content
 from modules.report.doc_generator import generate_word_doc_wrapper
