@@ -4,7 +4,7 @@ from modules.report.renderers.pdf_renderer import generate_pdf_doc
 from modules.report.renderers.word_renderer import generate_word_doc
 from modules.report.utils.utils import format_description
 from modules.report.utils.utils import extract_azure_id
-from modules.report.utils.rca_generator import generate_rca
+from modules.report.domain.rca_generator import generate_rca
 
 def enrich_data(data):
     print("===== DEBUG AZURE EXTRACTION =====")
