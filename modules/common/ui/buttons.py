@@ -1,12 +1,24 @@
 import streamlit as st
 
-def render_buttons():
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+def render_action_buttons():
 
-    fetch   = col1.button("Fetch")
-    preview = col2.button("Preview")
-    clear   = col3.button("Clear")
-    word    = col4.button("Generate Word")
-    pdf     = col5.button("Generate PDF")
-    bulk    = col6.button("Bulk Generate")
-    
+    cols = st.columns(5)
+
+    actions = {}
+
+    with cols[0]:
+        actions["pdf"] = st.button("Generate PDF", use_container_width=True)
+
+    with cols[1]:
+        actions["word"] = st.button("Generate Word", use_container_width=True)
+
+    with cols[2]:
+        actions["bulk"] = st.button("Bulk Generate", use_container_width=True)
+
+    with cols[3]:
+        actions["preview"] = st.button("Preview", use_container_width=True)
+
+    with cols[4]:
+        actions["clear"] = st.button("Clear", use_container_width=True)
+
+    return actions
