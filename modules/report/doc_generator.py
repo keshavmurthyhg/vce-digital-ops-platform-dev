@@ -33,7 +33,7 @@ def prepare_data(data):
     safe_data = data.copy()
 
     # ✅ DEBUG INSIDE FUNCTION
-    st.write("DEBUG BEFORE RCA:", data.get("short_description"))
+    #st.write("DEBUG BEFORE RCA:", data.get("short_description"))#
 
     safe_data["description"] = format_description(data.get("description"))
 
@@ -43,7 +43,7 @@ def prepare_data(data):
     safe_data["problem"] = rca["problem"]
 
     # ✅ DEBUG AFTER
-    st.write("DEBUG AFTER RCA:", safe_data.get("problem"))
+    #st.write("DEBUG AFTER RCA:", safe_data.get("problem"))#
 
     safe_data["analysis"] = rca["analysis"]
     safe_data["resolution"] = rca["resolution"]
