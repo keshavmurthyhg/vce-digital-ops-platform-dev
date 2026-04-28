@@ -3,7 +3,7 @@ import tempfile
 import os
 import re
 
-from modules.report.builders.analysis_builder import build_report_sections
+from modules.report.utils.rca_generator import generate_rca
 from modules.converter.converter import convert_ppt
 from modules.report.utils.utils import format_date
 from modules.data.snow_loader import load_snow_data
@@ -200,7 +200,11 @@ def render():
                 snow_data = normalize_snow_data(raw_data)
 
                 # Build sections
-                root, l2, res = build_report_sections(snow_data)
+                rca = generate_rca(snow_data)
+
+                root = rca["problem"]
+                l2 = rca["analysis"]
+                res = rca["resolution"]
 
                 # PPT content (UNCHANGED)
                 ppt_data = extract_ppt_content(ppt_path, tmpdir)
