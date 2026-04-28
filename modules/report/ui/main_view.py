@@ -1,32 +1,27 @@
 import streamlit as st
 
 from modules.common.ui.components import render_preview_table, render_description_table
-from modules.report.utils.rca_generator import generate_rca
+from modules.common.ui.buttons import render_buttons
+from modules.report.services.rca_service import build_rca
 
 
 def render_main(df):
 
     st.title("Incident Report Generator")
 
-    col1, col2 = st.columns([4, 1])
+    incident = st.selectbox("Select Incident", df["number"].dropna().unique())
 
-    with col1:
-        incident = st.selectbox("Select Incident", df["number"].dropna().unique())
+    buttons = render_buttons()
 
-    with col2:
-        st.write("")
-        st.write("")
-        fetch = st.button("Fetch", use_container_width=True)
+    if buttons["fetch"]:
+        row = df[df["number"] == incident].iloc[0].to_dict()
+        st.session_state["data"] = row
+        st.session_state.update(build_rca(row))
 
-    if fetch:
-        data = df[df["number"] == incident].iloc[0].to_dict()
-        st.session_state["data"] = data
-
-        rca = generate_rca(data)
-        st.session_state.update(rca)
-
-    if "data" in st.session_state:
-
-        st.markdown("### Preview")
+    if buttons["preview"] and "data" in st.session_state:
         render_preview_table(st.session_state["data"])
         render_description_table(st.session_state["data"])
+
+    if buttons["clear"]:
+        st.session_state.clear()
+        st.rerun()
