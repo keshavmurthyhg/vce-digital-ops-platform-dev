@@ -16,3 +16,8 @@ def set_cell_bg(cell):
 
     shading = parse_xml(r'<w:shd {} w:fill="D9D9D9"/>'.format(nsdecls('w')))
     cell._tc.get_or_add_tcPr().append(shading)
+
+def safe_text(val):
+    if val is None:
+        return "-"
+    return str(val)
