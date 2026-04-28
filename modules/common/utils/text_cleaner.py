@@ -1,17 +1,29 @@
 import re
 
-def clean_text(text):
+def clean_text(text: str) -> str:
     if not text:
         return ""
 
-    # remove phone numbers
-    text = re.sub(r'\+?\d[\d\s\-]{7,}', '', text)
+    lines = str(text).split("\n")
+    cleaned = []
 
-    # remove contact phrases
-    text = re.sub(r'How does the user.*', '', text, flags=re.IGNORECASE)
-    text = re.sub(r'contact.*', '', text, flags=re.IGNORECASE)
+    for line in lines:
+        line_lower = line.lower()
 
-    return text.strip()
+        # ❌ remove unwanted lines
+        if (
+            "how does the user want to be contacted" in line_lower
+            or "ms teams" in line_lower
+            or "phone number" in line_lower
+        ):
+            continue
+
+        # ❌ remove numbers
+        line = re.sub(r"\+?\d{10,15}", "", line)
+
+        cleaned.append(line.strip())
+
+    return "\n".join([l for l in cleaned if l])
 
 
 def format_description(text):
