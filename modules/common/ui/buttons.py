@@ -23,9 +23,9 @@ def render_buttons():
 
     return {
         "fetch": fetch,
-        "pdf": pdf,
-        "word": word,
-        "bulk": bulk,
         "preview": preview,
-        "clear": clear
+        "clean": clean,
+        "word": word,
+        "pdf": pdf,
+        "bulk": bulk
     }
