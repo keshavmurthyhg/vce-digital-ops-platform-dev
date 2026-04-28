@@ -64,8 +64,8 @@ def render_main(df):
     # ---------------- PREVIEW ---------------- #
     if preview_btn and "data" in st.session_state:
 
-        render_preview_table(st.session_state["data"])
-        render_description_table(st.session_state["data"])
+        from modules.common.ui.preview import render_preview
+        render_preview(st.session_state["data"])
 
     # ---------------- CLEAR ---------------- #
     if clear_btn:
