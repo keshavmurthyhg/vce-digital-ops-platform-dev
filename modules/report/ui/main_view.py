@@ -10,7 +10,15 @@ def render_main(df):
     st.title("Incident Report Generator")
 
     incident = st.selectbox("Select Incident", df["number"].dropna().unique())
+    
+    st.subheader("Bulk Incident Numbers")
 
+    bulk_input = st.text_area(
+        "Enter comma-separated incident numbers",
+        key="bulk_incidents",
+        height=100
+    )
+    
     buttons = render_buttons()
 
     if buttons.get("fetch"):
@@ -37,7 +45,7 @@ def render_main(df):
             height=120
         )
 
-        # Upload Root Images
+        # Upload Problem Images
         st.file_uploader(
             "Problem Images",
             accept_multiple_files=True,
