@@ -3,7 +3,42 @@ from reportlab.platypus import Paragraph
 
 # ---------------- URL BUILDERS ---------------- #
 
+def get_snow_url(id):from reportlab.platypus import Paragraph
+
+
 def get_snow_url(id):
+    return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={id}" if id else None
+
+
+def get_ptc_url(id):
+    return f"https://support.ptc.com/appserver/cs/view/case.jsp?n={id}" if id else None
+
+
+def get_azure_url(id):
+    return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{id}" if id else None
+
+
+def get_url(field, value):
+    if not value:
+        return None
+
+    field = field.lower()
+
+    if "incident" in field:
+        return get_snow_url(value)
+    if "ptc" in field:
+        return get_ptc_url(value)
+    if "azure" in field:
+        return get_azure_url(value)
+
+    return None
+
+
+def make_ui_link(field, value):
+    if not value:
+        return "-"
+    url = get_url(field, value)
+    return f'<a href="{url}" target="_blank">{value}</a>' if url else value
     return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={id}" if id else None
 
 
