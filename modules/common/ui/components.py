@@ -1,7 +1,7 @@
 import streamlit as st
 from modules.common.ui.styles import TABLE_STYLE, CELL_STYLE, HEADER_CELL_STYLE
 from modules.common.links.links import make_ui_link
-from modules.common.utils.text_cleaner import clean_description
+from modules.common.utils.text_cleaner import format_description
 from modules.common.utils.formatters import safe_text
 
 
