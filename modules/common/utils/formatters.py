@@ -8,7 +8,9 @@ def format_date(val):
     if not val:
         return "-"
     try:
-        return datetime.strftime(val, "%d-%b-%Y")
+        if isinstance(val, str):
+            val = datetime.fromisoformat(val)
+        return val.strftime("%d-%b-%Y")
     except Exception:
         return str(val)
 
