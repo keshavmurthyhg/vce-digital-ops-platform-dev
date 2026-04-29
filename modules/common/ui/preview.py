@@ -1,6 +1,6 @@
 import streamlit as st
 from modules.common.ui.styles import get_table_style
-from modules.report.utils.formatters import format_description
+from modules.common.utils.formatters import format_description
 
 def _val(x):
     return x if x and x != "-" else "-"
