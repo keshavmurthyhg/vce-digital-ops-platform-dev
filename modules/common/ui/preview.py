@@ -1,17 +1,12 @@
 import streamlit as st
 from modules.common.ui.styles import get_table_style
-from modules.common.utils.formatters import (
-    format_description,
-    format_date,
-    safe_text
-)
+from modules.common.utils.formatters import format_description, format_date, safe_text
 
-# ---------------- VALUE CLEAN ---------------- #
+
 def _val(x):
     return safe_text(x)
 
 
-# ---------------- LINK BUILDER ---------------- #
 def _link(value, type_):
     value = safe_text(value)
 
@@ -30,14 +25,12 @@ def _link(value, type_):
     return f'<a href="{url}" target="_blank">{value}</a>'
 
 
-# ---------------- PREVIEW ---------------- #
 def render_preview(data):
 
     if not data:
         st.warning("No data available for preview")
         return
 
-    # ✅ HEADER (COMMON)
     st.divider()
     st.subheader("Preview")
 
@@ -86,5 +79,4 @@ def render_preview(data):
     """
 
     html = style + table1 + table2
-
     st.markdown(html, unsafe_allow_html=True)
