@@ -107,65 +107,26 @@ def render_main(df):
 
     # ---------------- BULK GENERATE ---------------- #
     if actions.get("bulk"):
-    if not bulk_text:
-        st.warning("Please enter incident numbers")
-    else:
-        from modules.report.doc_generator import generate_pdf, generate_word_doc_wrapper
-        import zipfile
-        import io
-
-        incident_list = [i.strip() for i in bulk_text.split(",") if i.strip()]
-
-        if not incident_list:
-            st.warning("No valid incidents found")
-            return
-
-        zip_buffer = io.BytesIO()
-
-        with zipfile.ZipFile(zip_buffer, "w") as zipf:
-
-            for inc in incident_list:
-                row_df = df[df["number"] == inc]
-
-                if row_df.empty:
-                    continue
-
-                row_raw = row_df.iloc[0].to_dict()
-                data = map_incident(row_raw)
-
-                # Build RCA
-                rca = build_rca(data)
-
-                # Generate PDF
-                pdf_bytes = generate_pdf(
-                    data=data,
-                    root=rca.get("problem"),
-                    l2=rca.get("analysis"),
-                    res=rca.get("resolution"),
-                    images=None
+        if not bulk_text:
+            st.warning("Please enter incident numbers")
+        else:
+            from modules.report.bulk_generator import build_bulk_reports, generate_bulk_zip
+    
+            incident_list = [i.strip() for i in bulk_text.split(",") if i.strip()]
+    
+            reports = build_bulk_reports(df, incident_list, images_map={})
+    
+            if not reports:
+                st.warning("No reports generated")
+            else:
+                zip_buffer = generate_bulk_zip(reports)
+    
+                st.download_button(
+                    "Download Bulk Reports (ZIP)",
+                    data=zip_buffer,
+                    file_name="bulk_reports.zip",
+                    mime="application/zip"
                 )
-
-                zipf.writestr(f"{inc}.pdf", pdf_bytes)
-
-                # Generate Word
-                word_bytes = generate_word_doc_wrapper(
-                    data=data,
-                    root=rca.get("problem"),
-                    l2=rca.get("analysis"),
-                    res=rca.get("resolution"),
-                    images=None
-                )
-
-                zipf.writestr(f"{inc}.docx", word_bytes)
-
-        zip_buffer.seek(0)
-
-        st.download_button(
-            "Download Bulk Reports (ZIP)",
-            data=zip_buffer,
-            file_name="bulk_reports.zip",
-            mime="application/zip"
-        )
     
     # ---------------- CLEAR ---------------- #
     if actions.get("clear"):
