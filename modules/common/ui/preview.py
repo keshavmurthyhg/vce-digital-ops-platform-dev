@@ -83,10 +83,11 @@ def render_preview(data):
     # 🔥 IMPORTANT FIX
     html = style + table1 + table2
 
-    import streamlit.components.v1 as components
+    st.markdown(html, unsafe_allow_html=True)
+    #import streamlit.components.v1 as components
     
-    components.html(
-        html,
-        height=800,
-        scrolling=True
-    )
+    #components.html(
+        #html,
+        #height=800,
+        #scrolling=True
+    #)
