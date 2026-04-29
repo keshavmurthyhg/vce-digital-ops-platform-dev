@@ -66,6 +66,8 @@ def render_main(df):
         if "data" not in st.session_state:
             st.warning("Please fetch an incident first")
         else:
+            st.divider()
+            st.subheader("Preview")   # ✅ HEADER ADDED
             render_preview(st.session_state["data"])
 
     # ---------------- CLEAR ---------------- #
