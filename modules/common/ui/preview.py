@@ -6,14 +6,9 @@ from modules.common.utils.formatters import format_date
 from modules.common.utils.formatters import safe_text
 
 def _link(value, type_):
-    value = safe_text(value)   # ✅ FIX HERE
+    value = safe_text(value)
 
     if value == "-":
-        return "-"
-
-
-def _link(value, type_):
-    if not value or value == "-":
         return "-"
 
     if type_ == "incident":
@@ -27,7 +22,10 @@ def _link(value, type_):
 
     return f'<a href="{url}" target="_blank">{value}</a>'
 
-
+def _val(x):
+    from modules.common.utils.formatters import safe_text
+    return safe_text(x)
+    
 def render_preview(data):
 
     if not data:
@@ -40,19 +38,19 @@ def render_preview(data):
     <table class="tbl">
         <tr>
             <td class="hdr">INCIDENT</td>
-            <td>{safe_text(_link(data.get("number"), "incident"))}</td>
+            <td>{_link(data.get("number"), "incident")}</td>
             <td class="hdr">CREATED BY</td>
             <td>{_val(data.get("created_by"))}</td>
         </tr>
         <tr>
             <td class="hdr">AZURE BUG</td>
-            <td>{safe_text(_link(data.get("azure_bug"), "azure"))}</td>
+            <td>{_link(data.get("azure_bug"), "azure"))</td>
             <td class="hdr">CREATED DATE</td>
             <td>{_val(format_date(data.get("created_date")))}</td>
         </tr>
         <tr>
             <td class="hdr">PTC CASE</td>
-            <td>{safe_text(_link(data.get("ptc_case"), "ptc"))}</td>
+            <td>{_link(data.get("ptc_case"), "ptc")}</td>
             <td class="hdr">ASSIGNED TO</td>
             <td>{_val(data.get("assigned_to"))}</td>
         </tr>
