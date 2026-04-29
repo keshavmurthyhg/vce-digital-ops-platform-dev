@@ -1,6 +1,7 @@
 import streamlit as st
 from modules.common.ui.styles import get_table_style
 from modules.common.utils.formatters import format_description
+from modules.common.utils.formatters import format_date
 
 import math
 
@@ -50,7 +51,7 @@ def render_preview(data):
             <td class="hdr">AZURE BUG</td>
             <td>{_link(data.get("azure_bug"), "azure")}</td>
             <td class="hdr">CREATED DATE</td>
-            <td>{_val(data.get("created_date"))}</td>
+            <td>{_val(format_date(data.get("created_date")))}</td>
         </tr>
         <tr>
             <td class="hdr">PTC CASE</td>
@@ -62,7 +63,7 @@ def render_preview(data):
             <td class="hdr">PRIORITY</td>
             <td>{_val(data.get("priority"))}</td>
             <td class="hdr">RESOLVED DATE</td>
-            <td>{_val(data.get("resolved_date"))}</td>
+            <td>{_val(format_date(data.get("resolved_date")))}</td>
         </tr>
     </table>
     """
