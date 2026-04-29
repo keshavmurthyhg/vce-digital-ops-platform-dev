@@ -1,49 +1,35 @@
+from modules.common.utils.parsers import extract_azure_id
+from modules.report.utils.formatters import format_description
+
 def get_display(val):
     if isinstance(val, dict):
         return val.get("display_value") or val.get("value")
     return val
 
 
-def map_incident(row_raw):
+def map_incident(row):
+
+    resolution_notes = row.get("Resolution notes") or ""
+
     return {
-        "number": row_raw.get("number"),
+        "number": row.get("Number"),
 
-        "short_description": (
-            row_raw.get("short_description")
-            or row_raw.get("short description")
-            or "-"
-        ),
+        # ✅ Azure from resolution notes
+        "azure_bug": extract_azure_id(resolution_notes),
 
-        "description": row_raw.get("description") or "-",
+        # ✅ PTC = Vendor Ticket
+        "ptc_case": row.get("Vendor ticket") or row.get("Vendor Ticket"),
 
-        "priority": get_display(row_raw.get("priority")) or "-",
+        "created_by": row.get("Opened by") or row.get("Created by"),
+        "assigned_to": row.get("Assigned to"),
 
-        "opened_by": get_display(
-            row_raw.get("opened_by") or row_raw.get("sys_created_by")
-        ) or "-",
+        "created_date": row.get("Created"),
+        "resolved_date": row.get("Resolved"),
 
-        "assigned_to": get_display(row_raw.get("assigned_to")) or "-",
+        "priority": row.get("Priority"),
 
-        "created": (
-            row_raw.get("sys_created_on")
-            or row_raw.get("opened_at")
-            or row_raw.get("created")
-        ),
+        "short_description": row.get("Short description"),
 
-        "resolved": (
-            row_raw.get("closed_at")
-            or row_raw.get("resolved_at")
-        ),
-
-        "azure_bug": (
-            row_raw.get("azure_bug")
-            or row_raw.get("u_azure_bug")
-            or "-"
-        ),
-
-        "ptc_case": (
-            row_raw.get("ptc_case")
-            or row_raw.get("u_ptc_case")
-            or "-"
-        ),
+        # ✅ Clean description here itself (better than preview)
+        "description": format_description(row.get("Description")),
     }
