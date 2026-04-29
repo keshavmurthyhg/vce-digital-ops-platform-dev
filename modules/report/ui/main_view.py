@@ -6,6 +6,7 @@ from modules.report.services.rca_service import build_rca
 from modules.report.services.data_mapper import map_incident
 
 
+
 def render_main(df):
 
     st.title("Incident Report Generator")
@@ -38,6 +39,12 @@ def render_main(df):
 
     # ---------------- BUTTONS ---------------- #
     actions = render_action_buttons()
+        return {
+            "pdf": st.button("Generate PDF"),
+            "word": st.button("Generate Word"),
+            "preview": st.button("Preview"),
+            "clear": st.button("Clear"),
+        }
 
     # ---------------- FETCH ---------------- #
     if fetch_btn:
@@ -70,6 +77,40 @@ def render_main(df):
             #st.subheader("Preview")   # ✅ HEADER ADDED
             render_preview(st.session_state["data"])
 
+    # ---------------- GENERATE PDF ---------------- #
+    if actions.get("pdf"):
+        if "data" not in st.session_state:
+            st.warning("Please fetch an incident first")
+        else:
+            from modules.report.generators.pdf_generator import generate_pdf
+    
+            file_path = generate_pdf(st.session_state["data"])
+    
+            with open(file_path, "rb") as f:
+                st.download_button(
+                    label="Download PDF",
+                    data=f,
+                    file_name="incident_report.pdf",
+                    mime="application/pdf"
+                )
+
+    # ---------------- GENERATE WORD ---------------- #
+    if actions.get("word"):
+        if "data" not in st.session_state:
+            st.warning("Please fetch an incident first")
+        else:
+            from modules.report.generators.word_generator import generate_word
+    
+            file_path = generate_word(st.session_state["data"])
+    
+            with open(file_path, "rb") as f:
+                st.download_button(
+                    label="Download Word",
+                    data=f,
+                    file_name="incident_report.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+            
     # ---------------- CLEAR ---------------- #
     if actions.get("clear"):
         st.session_state.clear()
