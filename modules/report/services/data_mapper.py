@@ -9,23 +9,23 @@ def get_display(val):
 
 def map_incident(row):
 
-    resolution_notes = row.get("resolution_notes") or ""
+    resolution_notes = row.get("Resolution_notes") or ""
 
     return {
-        "number": row.get("number"),
+        "number": row.get("Number"),
 
         # ✅ Azure
-        "azure_bug": extract_azure_id(resolution_notes),
+        "azure_bug": extract_azure_id(Resolution_notes),
 
         # ✅ Vendor ticket
-        "ptc_case": row.get("vendor_ticket"),
+        "ptc_case": row.get("Vendor_ticket"),
 
         # ✅ FIXED LOWERCASE KEYS
-        "created_by": row.get("opened_by") or row.get("created_by"),
-        "assigned_to": row.get("assigned_to"),
+        "created_by": row.get("Opened_by"),
+        "assigned_to": row.get("Assigned_to"),
 
-        "created_date": row.get("created"),
-        "resolved_date": row.get("resolved"),
+        "created_date": row.get("Created"),
+        "resolved_date": row.get("Resolved"),
 
         "priority": row.get("priority"),
 
