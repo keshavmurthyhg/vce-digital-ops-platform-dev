@@ -1,10 +1,17 @@
 import streamlit as st
 from modules.common.ui.styles import get_table_style
-from modules.common.utils.formatters import format_description
-from modules.common.utils.formatters import format_date
+from modules.common.utils.formatters import (
+    format_description,
+    format_date,
+    safe_text
+)
 
-from modules.common.utils.formatters import safe_text
+# ---------------- VALUE CLEAN ---------------- #
+def _val(x):
+    return safe_text(x)
 
+
+# ---------------- LINK BUILDER ---------------- #
 def _link(value, type_):
     value = safe_text(value)
 
@@ -22,18 +29,18 @@ def _link(value, type_):
 
     return f'<a href="{url}" target="_blank">{value}</a>'
 
-def _val(x):
-    from modules.common.utils.formatters import safe_text
-    return safe_text(x)
-    
+
+# ---------------- PREVIEW ---------------- #
 def render_preview(data):
 
     if not data:
         st.warning("No data available for preview")
         return
-            st.divider()
-            st.subheader("Preview")
-        
+
+    # ✅ HEADER (COMMON)
+    st.divider()
+    st.subheader("Preview")
+
     style = get_table_style()
 
     table1 = f"""
@@ -46,7 +53,7 @@ def render_preview(data):
         </tr>
         <tr>
             <td class="hdr">AZURE BUG</td>
-            <td>{_link(data.get("azure_bug"), "azure"))</td>
+            <td>{_link(data.get("azure_bug"), "azure")}</td>
             <td class="hdr">CREATED DATE</td>
             <td>{_val(format_date(data.get("created_date")))}</td>
         </tr>
@@ -78,14 +85,6 @@ def render_preview(data):
     </table>
     """
 
-    # 🔥 IMPORTANT FIX
     html = style + table1 + table2
 
     st.markdown(html, unsafe_allow_html=True)
-    #import streamlit.components.v1 as components
-    
-    #components.html(
-        #html,
-        #height=800,
-        #scrolling=True
-    #)
