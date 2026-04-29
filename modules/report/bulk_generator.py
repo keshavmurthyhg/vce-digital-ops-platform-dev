@@ -1,6 +1,5 @@
 from modules.report.doc_generator import generate_pdf, generate_word_doc_wrapper
-from modules.report.utils.rca_generator import generate_rca
-
+from modules.report.domain.rca_generator import generate_rca
 
 def build_bulk_reports(df, incident_list, images_map=None):
     results = []
