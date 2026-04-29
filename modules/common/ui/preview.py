@@ -31,7 +31,9 @@ def render_preview(data):
     if not data:
         st.warning("No data available for preview")
         return
-
+            st.divider()
+            st.subheader("Preview")
+        
     style = get_table_style()
 
     table1 = f"""
