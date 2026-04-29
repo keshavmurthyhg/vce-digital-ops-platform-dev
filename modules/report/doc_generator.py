@@ -57,30 +57,45 @@ def safe_images(images):
         return {"root": [], "l2": [], "res": []}
     return images
 
-def generate_pdf(data, root, l2, res, images=None):
-    images = safe_images(images)
+if actions.get("pdf"):
+    if "data" not in st.session_state:
+        st.warning("Please fetch an incident first")
+    else:
+        from modules.report.doc_generator import generate_pdf
 
-    data = prepare_data(data)
-    
-    return generate_pdf_doc(
-        data=data,
-        root=root,
-        l2=l2,
-        res=res,
-        images=images
-    )
+        pdf_bytes = generate_pdf(
+            data=st.session_state["data"],
+            root=st.session_state.get("problem"),
+            l2=st.session_state.get("root_cause"),
+            res=st.session_state.get("resolution"),
+            images=None
+        )
 
-def generate_word_doc_wrapper(data, root, l2, res, images=None, ppt_data=None):
-    images = safe_images(images)
+        st.download_button(
+            label="Download PDF",
+            data=pdf_bytes,
+            file_name="incident_report.pdf",
+            mime="application/pdf"
+        )
 
-    data = prepare_data(data)
-    
-    return generate_word_doc(
-        data=data,
-        root=root,
-        l2=l2,
-        res=res,
-        images=images,
-        ppt_data=ppt_data
-    )
+if actions.get("word"):
+    if "data" not in st.session_state:
+        st.warning("Please fetch an incident first")
+    else:
+        from modules.report.doc_generator import generate_word_doc_wrapper
+
+        word_bytes = generate_word_doc_wrapper(
+            data=st.session_state["data"],
+            root=st.session_state.get("problem"),
+            l2=st.session_state.get("root_cause"),
+            res=st.session_state.get("resolution"),
+            images=None
+        )
+
+        st.download_button(
+            label="Download Word",
+            data=word_bytes,
+            file_name="incident_report.docx",
+            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        )
 
