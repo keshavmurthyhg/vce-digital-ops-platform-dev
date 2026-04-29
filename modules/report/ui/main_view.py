@@ -25,7 +25,15 @@ def render_main(df):
 
     # ---------------- BULK ---------------- #
     st.subheader("Bulk Incident Numbers")
-    st.text_area("Enter comma-separated incident numbers", key="bulk_incidents", height=100)
+    # Auto-fill from sidebar bulk selection
+    bulk_default = st.session_state.get("bulk_incidents_list", [])
+    
+    bulk_text = st.text_area(
+        "Enter comma-separated incident numbers",
+        value=",".join(bulk_default),
+        key="bulk_incidents",
+        height=100
+    )
 
     # ---------------- BUTTONS ---------------- #
     actions = render_action_buttons()
