@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 
 from modules.common.ui.preview import render_preview
 from modules.common.ui.buttons import render_action_buttons
@@ -60,14 +59,11 @@ def render_main(df):
             st.error(f"Error loading incident: {e}")
 
     # ---------------- PREVIEW ---------------- #
-    if preview_clicked:
-    html_content = generate_html_report(data)  # your formatter output
-
-    components.html(
-        html_content,
-        height=800,
-        scrolling=True
-    )
+    if actions.get("preview"):
+        if "data" not in st.session_state:
+            st.warning("Please fetch an incident first")
+        else:
+            render_preview(st.session_state["data"])
 
     # ---------------- CLEAR ---------------- #
     if actions.get("clear"):
