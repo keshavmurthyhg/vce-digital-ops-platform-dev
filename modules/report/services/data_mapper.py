@@ -1,5 +1,5 @@
 from modules.common.utils.parsers import extract_azure_id
-from modules.report.utils.formatters import format_description
+from modules.common.utils.formatters import format_description
 
 def get_display(val):
     if isinstance(val, dict):
