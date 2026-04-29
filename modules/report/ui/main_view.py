@@ -6,7 +6,6 @@ from modules.report.services.rca_service import build_rca
 from modules.report.services.data_mapper import map_incident
 
 
-
 def render_main(df):
 
     st.title("Incident Report Generator")
@@ -22,38 +21,23 @@ def render_main(df):
         )
 
     with col2:
-        fetch_btn = st.button(
-            "Fetch",
-            use_container_width=True,
-            key="fetch_btn"
-        )
+        fetch_btn = st.button("Fetch", use_container_width=True)
 
     # ---------------- BULK ---------------- #
     st.subheader("Bulk Incident Numbers")
-
-    st.text_area(
-        "Enter comma-separated incident numbers",
-        key="bulk_incidents",
-        height=100
-    )
+    st.text_area("Enter comma-separated incident numbers", key="bulk_incidents", height=100)
 
     # ---------------- BUTTONS ---------------- #
     actions = render_action_buttons()
-      
+
     # ---------------- FETCH ---------------- #
     if fetch_btn:
         try:
             row_raw = df[df["number"] == incident].iloc[0].to_dict()
 
-            # ✅ DEBUG HERE to know the exact column names from source data#
-            #st.write("DEBUG ROW KEYS:", row_raw.keys())#
-            
-            # 🔥 Use mapper (single source of truth)
             row = map_incident(row_raw)
-
             st.session_state["data"] = row
 
-            # RCA
             rca = build_rca(row)
             st.session_state.update(rca)
 
@@ -67,8 +51,6 @@ def render_main(df):
         if "data" not in st.session_state:
             st.warning("Please fetch an incident first")
         else:
-            #st.divider()
-            #st.subheader("Preview")   # ✅ HEADER ADDED
             render_preview(st.session_state["data"])
 
     # ---------------- GENERATE PDF ---------------- #
@@ -76,35 +58,45 @@ def render_main(df):
         if "data" not in st.session_state:
             st.warning("Please fetch an incident first")
         else:
-            from modules.report.generators.pdf_generator import generate_pdf
-    
-            file_path = generate_pdf(st.session_state["data"])
-    
-            with open(file_path, "rb") as f:
-                st.download_button(
-                    label="Download PDF",
-                    data=f,
-                    file_name="incident_report.pdf",
-                    mime="application/pdf"
-                )
+            from modules.report.doc_generator import generate_pdf
+
+            pdf_bytes = generate_pdf(
+                data=st.session_state["data"],
+                root=st.session_state.get("problem"),
+                l2=st.session_state.get("root_cause"),
+                res=st.session_state.get("resolution"),
+                images=None
+            )
+
+            st.download_button(
+                "Download PDF",
+                pdf_bytes,
+                "incident_report.pdf",
+                mime="application/pdf"
+            )
 
     # ---------------- GENERATE WORD ---------------- #
     if actions.get("word"):
         if "data" not in st.session_state:
             st.warning("Please fetch an incident first")
         else:
-            from modules.report.generators.word_generator import generate_word
-    
-            file_path = generate_word(st.session_state["data"])
-    
-            with open(file_path, "rb") as f:
-                st.download_button(
-                    label="Download Word",
-                    data=f,
-                    file_name="incident_report.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
-            
+            from modules.report.doc_generator import generate_word_doc_wrapper
+
+            word_bytes = generate_word_doc_wrapper(
+                data=st.session_state["data"],
+                root=st.session_state.get("problem"),
+                l2=st.session_state.get("root_cause"),
+                res=st.session_state.get("resolution"),
+                images=None
+            )
+
+            st.download_button(
+                "Download Word",
+                word_bytes,
+                "incident_report.docx",
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+
     # ---------------- CLEAR ---------------- #
     if actions.get("clear"):
         st.session_state.clear()
@@ -115,38 +107,11 @@ def render_main(df):
 
         st.subheader("Edit Report Details")
 
-        st.text_area(
-            "PROBLEM STATEMENT",
-            key="problem",
-            height=120
-        )
+        st.text_area("PROBLEM STATEMENT", key="problem", height=120)
+        st.file_uploader("Problem Images", accept_multiple_files=True, key="problem_images")
 
-        st.file_uploader(
-            "Problem Images",
-            accept_multiple_files=True,
-            key="problem_images"
-        )
+        st.text_area("ROOT CAUSE", key="root_cause", height=150)
+        st.file_uploader("Root Images", accept_multiple_files=True, key="root_images")
 
-        st.text_area(
-            "ROOT CAUSE",
-            key="root_cause",
-            height=150
-        )
-
-        st.file_uploader(
-            "Root Images",
-            accept_multiple_files=True,
-            key="root_images"
-        )
-
-        st.text_area(
-            "RESOLUTION & RECOMMENDATION",
-            key="resolution",
-            height=150
-        )
-
-        st.file_uploader(
-            "Resolution Images",
-            accept_multiple_files=True,
-            key="resolution_images"
-        )
+        st.text_area("RESOLUTION & RECOMMENDATION", key="resolution", height=150)
+        st.file_uploader("Resolution Images", accept_multiple_files=True, key="resolution_images")
