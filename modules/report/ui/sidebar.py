@@ -45,40 +45,19 @@ def render_sidebar(df):
     st.sidebar.markdown("### Actions")
 
     if st.sidebar.button("Apply to Bulk", key="apply_bulk_btn"):
-
-        df = st.session_state.get("filtered_df")
-        bulk_input = st.session_state.get("bulk_incidents", "")
-
-        if df is None:
-            st.sidebar.error("No data available")
-
-        elif not bulk_input.strip():
-            st.sidebar.warning("Enter bulk incident numbers first")
-
+    
+        if filtered is None or filtered.empty:
+            st.sidebar.warning("No filtered data available")
         else:
-            bulk_ids = [i.strip() for i in bulk_input.split(",") if i.strip()]
-
-            st.session_state["bulk_incidents"] = ", ".join(bulk_ids)
-
-            bulk_data = []
-
-            for inc in bulk_ids:
-                row = df[df["number"].astype(str).str.upper() == inc.upper()]
-
-                if row.empty:
-                    continue
-
-                data = row.iloc[0].to_dict()
-
-                data["problem"] = st.session_state.get("problem", "")
-                data["root_cause"] = st.session_state.get("root_cause", "")
-                data["resolution"] = st.session_state.get("resolution", "")
-
-                bulk_data.append(data)
-
-            st.session_state["bulk_data"] = bulk_data
-
-            st.sidebar.success(f"Applied to {len(bulk_data)} incidents")
+            inc_list = filtered["number"].astype(str).tolist()
+    
+            # ✅ Used by main_view auto-fill
+            st.session_state["bulk_incidents_list"] = inc_list
+    
+            # ✅ Optional text version
+            st.session_state["bulk_incidents"] = ", ".join(inc_list)
+    
+            st.sidebar.success(f"Applied to {len(inc_list)} incidents")
 
     # ---------------- DOWNLOAD ---------------- #
     st.sidebar.markdown("### Download")
