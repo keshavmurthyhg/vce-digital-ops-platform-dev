@@ -39,13 +39,7 @@ def render_main(df):
 
     # ---------------- BUTTONS ---------------- #
     actions = render_action_buttons()
-        return {
-            "pdf": st.button("Generate PDF"),
-            "word": st.button("Generate Word"),
-            "preview": st.button("Preview"),
-            "clear": st.button("Clear"),
-        }
-
+      
     # ---------------- FETCH ---------------- #
     if fetch_btn:
         try:
