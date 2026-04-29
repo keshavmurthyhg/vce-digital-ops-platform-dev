@@ -3,16 +3,13 @@ from modules.common.ui.styles import get_table_style
 from modules.common.utils.formatters import format_description
 from modules.common.utils.formatters import format_date
 
-import math
+from modules.common.utils.formatters import safe_text
 
-def _val(x):
-    if x is None:
+def _link(value, type_):
+    value = safe_text(value)   # ✅ FIX HERE
+
+    if value == "-":
         return "-"
-    if isinstance(x, float) and math.isnan(x):
-        return "-"
-    if str(x).strip().lower() in ["nan", "none", ""]:
-        return "-"
-    return x
 
 
 def _link(value, type_):
@@ -43,19 +40,19 @@ def render_preview(data):
     <table class="tbl">
         <tr>
             <td class="hdr">INCIDENT</td>
-            <td>{_link(data.get("number"), "incident")}</td>
+            <td>{safe_text(_link(data.get("number"), "incident"))}</td>
             <td class="hdr">CREATED BY</td>
             <td>{_val(data.get("created_by"))}</td>
         </tr>
         <tr>
             <td class="hdr">AZURE BUG</td>
-            <td>{_link(data.get("azure_bug"), "azure")}</td>
+            <td>{safe_text(_link(data.get("azure_bug"), "azure"))}</td>
             <td class="hdr">CREATED DATE</td>
             <td>{_val(format_date(data.get("created_date")))}</td>
         </tr>
         <tr>
             <td class="hdr">PTC CASE</td>
-            <td>{_link(data.get("ptc_case"), "ptc")}</td>
+            <td>{safe_text(_link(data.get("ptc_case"), "ptc"))}</td>
             <td class="hdr">ASSIGNED TO</td>
             <td>{_val(data.get("assigned_to"))}</td>
         </tr>
