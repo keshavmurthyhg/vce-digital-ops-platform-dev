@@ -37,10 +37,13 @@ def make_pdf_link(value, url, styles):
 
 
 def apply_word_link(paragraph, key, value):
+    from docx.shared import RGBColor
+
     url = get_url(key.lower(), value)
     run = paragraph.add_run(str(value or "-"))
+
     if url:
-        run.font.color.rgb = (0, 0, 255)
+        run.font.color.rgb = RGBColor(0, 0, 255)
 
 def make_ui_link(type_, value):
     url = get_url(type_, value)
