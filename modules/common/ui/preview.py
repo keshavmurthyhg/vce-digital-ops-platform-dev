@@ -2,8 +2,16 @@ import streamlit as st
 from modules.common.ui.styles import get_table_style
 from modules.common.utils.formatters import format_description
 
+import math
+
 def _val(x):
-    return x if x and x != "-" else "-"
+    if x is None:
+        return "-"
+    if isinstance(x, float) and math.isnan(x):
+        return "-"
+    if str(x).strip().lower() in ["nan", "none", ""]:
+        return "-"
+    return x
 
 
 def _link(value, type_):
