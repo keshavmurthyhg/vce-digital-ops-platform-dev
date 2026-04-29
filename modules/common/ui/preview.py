@@ -1,6 +1,6 @@
 import streamlit as st
 from modules.common.ui.styles import get_table_style
-
+from modules.report.utils.formatters import format_description
 
 def _val(x):
     return x if x and x != "-" else "-"
@@ -67,7 +67,7 @@ def render_preview(data):
         </tr>
         <tr>
             <td>{_val(data.get("short_description"))}</td>
-            <td>{_val(data.get("description"))}</td>
+            <td>{_val(format_description(data.get("description")))}</td>
         </tr>
     </table>
     """
