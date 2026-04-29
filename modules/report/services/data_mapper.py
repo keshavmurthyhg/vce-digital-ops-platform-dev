@@ -6,6 +6,16 @@ def get_display(val):
         return val.get("display_value") or val.get("value")
     return val
 
+import math
+
+def clean_val(x):
+    if x is None:
+        return "-"
+    if isinstance(x, float) and math.isnan(x):
+        return "-"
+    if str(x).strip().lower() in ["nan", "none", ""]:
+        return "-"
+    return x
 
 def map_incident(row):
 
