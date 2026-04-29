@@ -44,8 +44,8 @@ def render_main(df):
         try:
             row_raw = df[df["number"] == incident].iloc[0].to_dict()
 
-            # ✅ DEBUG HERE
-            st.write("DEBUG ROW KEYS:", row_raw.keys())
+            # ✅ DEBUG HERE to know the exact column names from source data#
+            #st.write("DEBUG ROW KEYS:", row_raw.keys())#
             
             # 🔥 Use mapper (single source of truth)
             row = map_incident(row_raw)
