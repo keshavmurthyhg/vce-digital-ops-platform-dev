@@ -9,27 +9,26 @@ def get_display(val):
 
 def map_incident(row):
 
-    resolution_notes = row.get("Resolution notes") or ""
+    resolution_notes = row.get("resolution_notes") or ""
 
     return {
-        "number": row.get("Number"),
+        "number": row.get("number"),
 
-        # ✅ Azure from resolution notes
+        # ✅ Azure
         "azure_bug": extract_azure_id(resolution_notes),
 
-        # ✅ PTC = Vendor Ticket
-        "ptc_case": row.get("Vendor ticket") or row.get("Vendor Ticket"),
+        # ✅ Vendor ticket
+        "ptc_case": row.get("vendor_ticket"),
 
-        "created_by": row.get("Opened by") or row.get("Created by"),
-        "assigned_to": row.get("Assigned to"),
+        # ✅ FIXED LOWERCASE KEYS
+        "created_by": row.get("opened_by") or row.get("created_by"),
+        "assigned_to": row.get("assigned_to"),
 
-        "created_date": row.get("Created"),
-        "resolved_date": row.get("Resolved"),
+        "created_date": row.get("created"),
+        "resolved_date": row.get("resolved"),
 
-        "priority": row.get("Priority"),
+        "priority": row.get("priority"),
 
-        "short_description": row.get("Short description"),
-
-        # ✅ Clean description here itself (better than preview)
-        "description": format_description(row.get("Description")),
+        "short_description": row.get("short_description"),
+        "description": format_description(row.get("description")),
     }
