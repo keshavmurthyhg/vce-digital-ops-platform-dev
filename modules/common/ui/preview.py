@@ -79,4 +79,9 @@ def render_preview(data):
     """
 
     html = style + table1 + table2
-    st.markdown(html, unsafe_allow_html=True)
+
+    st.components.v1.html(
+        html,
+        height=450,
+        scrolling=True
+    )
