@@ -59,8 +59,8 @@ def generate_word_doc(data, root, l2, res, images, ppt_data=None):
     t2.rows[1].cells[1].text = clean_text(format_description(data.get("description")))
     # BODY
     sections = {
-        "PROBLEM STATEMENT & ROOT CAUSE": root,
-        "TECHNICAL ANALYSIS": l2,
+        "PROBLEM STATEMENT": root,
+        "ROOT CAUSE": l2,
         "RESOLUTION & RECOMMENDATION": res
     }
 
