@@ -83,12 +83,18 @@ def render_preview(data):
     # Dynamic height based on content length
     desc_len = len(str(data.get("description", "") or ""))
     
-    if desc_len < 300:
-        preview_height = 180
-    elif desc_len < 800:
-        preview_height = 250
-    else:
-        preview_height = 350
+    # Base height for table 1 + table 2 headers
+    preview_height = 260
+    
+    # Add extra height for longer descriptions
+    if desc_len > 300:
+        preview_height += 80
+    
+    if desc_len > 800:
+        preview_height += 100
+    
+    if desc_len > 1500:
+        preview_height += 120
     
     components.html(
         html,
