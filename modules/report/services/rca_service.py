@@ -255,12 +255,46 @@ def build_rca(row):
             "resolution": ""
         }
 
-    # Actual Snow columns
-    short_desc = get_field_value(row, "short description")
-    description = get_field_value(row, "description")
-    work_notes = get_field_value(row, "work notes")
-    additional_comments = get_field_value(row, "additional comments")
-    resolution_notes = get_field_value(row, "resolution notes")
+    # Convert pandas row safely
+    if hasattr(row, "to_dict"):
+        row_dict = row.to_dict()
+    else:
+        row_dict = dict(row)
+
+    # Normalize column names
+    normalized_row = {}
+
+    for key, value in row_dict.items():
+        clean_key = str(key).strip().lower()
+        normalized_row[clean_key] = value
+
+    # Debug once (remove later)
+    print("AVAILABLE RCA KEYS:", normalized_row.keys())
+
+    short_desc = get_field_value(
+        normalized_row,
+        "short description"
+    )
+
+    description = get_field_value(
+        normalized_row,
+        "description"
+    )
+
+    work_notes = get_field_value(
+        normalized_row,
+        "work notes"
+    )
+
+    additional_comments = get_field_value(
+        normalized_row,
+        "additional comments"
+    )
+
+    resolution_notes = get_field_value(
+        normalized_row,
+        "resolution notes"
+    )
 
     return {
         "problem_statement": build_problem(
