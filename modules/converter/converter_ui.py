@@ -132,7 +132,8 @@ def render_preview_table(data):
     </table>
     """
 
-    st.markdown(html, unsafe_allow_html=True)
+    #st.markdown(html, unsafe_allow_html=True)#
+    st.components.v1.html(html, height=250, scrolling=True)
 
 
 def render_description_table(data):
