@@ -21,7 +21,11 @@ def render_main(df):
         )
 
     with col2:
-        fetch_btn = st.button("Fetch", use_container_width=True)
+        st.markdown("###")  # aligns button with selectbox field
+        fetch_btn = st.button(
+            "Fetch",
+            use_container_width=True
+        )
 
     # ---------------- BULK ---------------- #
     st.subheader("Bulk Incident Numbers")
