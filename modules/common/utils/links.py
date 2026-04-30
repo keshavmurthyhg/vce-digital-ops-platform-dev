@@ -12,18 +12,31 @@ def extract_azure_id(text):
     return match.group(0) if match else None
 
 
-def get_url(type_, value):
-    if not value:
+def get_url(field, value):
+    if not value or value == "-":
         return None
 
-    if type_ == "incident":
-        return f"https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={value}"
+    value = str(value).strip()
 
-    if type_ == "azure":
-        return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{value}"
+    field = field.lower()
 
-    if type_ == "ptc":
-        return f"https://support.ptc.com/appserver/cs/view/case.jsp?n={value}"
+    if field == "incident":
+        return (
+            "https://volvoitsm.service-now.com/"
+            f"nav_to.do?uri=incident.do?sysparm_query=number={value}"
+        )
+
+    elif field == "azure bug":
+        return (
+            "https://dev.azure.com/VolvoGroup-DVP/"
+            f"VCEWindchillPLM/_workitems/edit/{value}"
+        )
+
+    elif field == "ptc case":
+        return (
+            "https://support.ptc.com/"
+            f"appserver/cs/view/case.jsp?n={value}"
+        )
 
     return None
 
