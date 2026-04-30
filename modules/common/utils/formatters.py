@@ -26,15 +26,66 @@ def set_cell_bg(cell):
     cell._tc.get_or_add_tcPr().append(shading)
 
 
-# ---------------- SAFE TEXT ---------------- #
-def safe_text(val):
-    if val is None:
-        return "-"
-    val = str(val).strip()
-    if val.lower() in ["nan", "none", ""]:
-        return "-"
-    return val
+# ---------------- SAFE TABLE VALUE ---------------- #
+def safe_table(val):
+    """
+    For header/table display:
+    - no 'nan'
+    - no long values
+    """
 
+    val = safe_text(val, default="")
+
+    return val[:200]  # prevent layout overflow
+
+# ---------------- SAFE PDF TEXT ---------------- #
+def safe_pdf_text(val):
+    """
+    Cleans text for ReportLab:
+    - removes nan
+    - escapes HTML chars
+    - splits long lines (prevents LayoutError)
+    """
+
+    val = safe_text(val, default="")
+
+    # Escape problematic characters
+    val = val.replace("&", "&amp;")
+    val = val.replace("<", "&lt;")
+    val = val.replace(">", "&gt;")
+
+    # Prevent long line crash
+    MAX_LEN = 800
+    safe_lines = []
+
+    for line in val.split("\n"):
+        if len(line) > MAX_LEN:
+            chunks = [line[i:i+MAX_LEN] for i in range(0, len(line), MAX_LEN)]
+            safe_lines.extend(chunks)
+        else:
+            safe_lines.append(line)
+
+    return "\n".join(safe_lines)
+
+
+# ---------------- SAFE TEXT ---------------- #
+def safe_text(val, default="-"):
+    """
+    Universal cleaner:
+    - Handles None / NaN
+    - Removes unsafe values
+    - Normalizes output
+    """
+
+    if val is None:
+        return default
+
+    val = str(val).strip()
+
+    if val.lower() in ["nan", "none", ""]:
+        return default
+
+    return val
 
 # ---------------- CLEAN DESCRIPTION ---------------- #
 def format_description(text: str) -> str:
