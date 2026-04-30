@@ -10,7 +10,13 @@ def build_rca(data):
         "description": format_description(data.get("description")),
         "work_notes": data.get("work_notes"),
         "resolution": data.get("resolution"),
-        "azure_bug": extract_azure_id(data.get("resolution"))
+        notes = " ".join([
+            str(data.get("resolution", "")),
+            str(data.get("work_notes", "")),
+            str(data.get("comments", ""))
+        ])
+        
+        "azure_bug": extract_azure_id(notes)
     }
 
     return generate_rca(cleaned)
