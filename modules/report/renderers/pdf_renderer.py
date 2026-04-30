@@ -12,7 +12,30 @@ from modules.common.utils.links import get_url, make_pdf_link
 from modules.common.utils.formatters import format_date
 from modules.common.utils.text_cleaner import add_images_pdf
 
+def sanitize_text(val):
+    if not val:
+        return ""
 
+    val = str(val)
+
+    # Escape problematic characters
+    val = val.replace("&", "&amp;")
+    val = val.replace("<", "&lt;")
+    val = val.replace(">", "&gt;")
+
+    # Prevent long line crash
+    MAX_LEN = 800
+    parts = []
+
+    for line in val.split("\n"):
+        if len(line) > MAX_LEN:
+            chunks = [line[i:i+MAX_LEN] for i in range(0, len(line), MAX_LEN)]
+            parts.extend(chunks)
+        else:
+            parts.append(line)
+
+    return "\n".join(parts)
+    
 def generate_pdf_doc(data, root, l2, res, images):
 
     styles, center_style, bullet_style = get_pdf_styles()
@@ -59,9 +82,9 @@ def generate_pdf_doc(data, root, l2, res, images):
         lines = [val[i:i+max_len] for i in range(0, len(val), max_len)]
         return "\n".join(lines)
     
-    root = safe_text(root)
-    l2 = safe_text(l2)
-    res = safe_text(res)
+    root = sanitize_text(root)
+    l2 = sanitize_text(l2)
+    res = sanitize_text(res)
 
     
     # ================= BODY ================= #
