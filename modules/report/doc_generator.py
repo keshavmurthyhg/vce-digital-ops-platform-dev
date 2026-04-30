@@ -33,8 +33,13 @@ def prepare_data(data):
     return safe_data
 
 
-def generate_pdf(data, root, l2, res, images=None):
+def generate_pdf(data, root=None, l2=None, res=None, images=None):
     data = prepare_data(data)
+
+    # Always use latest RCA from prepare_data
+    root = data.get("problem")
+    l2 = data.get("analysis")
+    res = data.get("resolution")
 
     return generate_pdf_doc(
         data=data,
@@ -45,8 +50,12 @@ def generate_pdf(data, root, l2, res, images=None):
     )
 
 
-def generate_word_doc_wrapper(data, root, l2, res, images=None, ppt_data=None):
+def generate_word_doc_wrapper(data, root=None, l2=None, res=None, images=None, ppt_data=None):
     data = prepare_data(data)
+
+    root = data.get("problem")
+    l2 = data.get("analysis")
+    res = data.get("resolution")
 
     return generate_word_doc(
         data=data,
