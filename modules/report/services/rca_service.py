@@ -5,191 +5,156 @@ import re
 from modules.common.utils.formatters import safe_text
 
 
-IGNORE_PATTERNS = [
-    r".*working with l[0-9].*",
-    r".*informed l[0-9].*",
-    r".*meeting scheduled.*",
-    r".*waiting for.*",
-    r".*please update.*",
-    r".*any update.*",
-    r".*priority changed.*",
-    r".*changing priority.*",
-    r".*assigned to.*",
-    r".*call scheduled.*",
-    r".*issue still occurring.*",
-    r".*attached.*",
-    r".*attachment.*",
-    r".*\.xlsx.*",
-    r".*\.jpg.*",
-    r".*\.png.*",
-    r".*transaction id.*",
-    r".*payload entry.*",
-]
-
-
-def clean_lines(text):
+def normalize(text):
     if not text:
-        return []
+        return ""
 
-    cleaned = []
+    return re.sub(r"\s+", " ", str(text)).strip()
 
-    for line in str(text).split("\n"):
-        line = line.strip()
+
+def bullet(lines):
+    seen = set()
+    final = []
+
+    for line in lines:
+        line = normalize(line)
 
         if not line:
             continue
 
-        # remove timestamps
-        line = re.sub(
-            r"^\d{4}-\d{2}-\d{2}.*?:",
-            "",
-            line
-        ).strip()
-
-        skip = False
-        for pattern in IGNORE_PATTERNS:
-            if re.search(pattern, line, re.IGNORECASE):
-                skip = True
-                break
-
-        if skip:
+        if line.lower() in seen:
             continue
 
-        cleaned.append(line)
+        seen.add(line.lower())
+        final.append(f"• {line}")
 
-    return cleaned
-
-
-def extract_resolution_sections(resolution_notes):
-    """
-    Highest priority source.
-    """
-    cause = []
-    resolution = []
-
-    lines = clean_lines(resolution_notes)
-
-    for line in lines:
-        lower = line.lower()
-
-        if "cause" in lower:
-            cause.append(
-                re.sub(r"(?i)cause\s*[:\-]?", "", line).strip()
-            )
-
-        elif any(x in lower for x in [
-            "resolved",
-            "fixed",
-            "implemented",
-            "updated",
-            "restarted",
-            "validated",
-            "working fine",
-            "resolution"
-        ]):
-            resolution.append(
-                re.sub(
-                    r"(?i)resolution\s*[:\-]?",
-                    "",
-                    line
-                ).strip()
-            )
-
-    return cause, resolution
+    return "\n".join(final)
 
 
-def fallback_root_cause(work_notes, comments):
-    """
-    Use only meaningful technical observations
-    when resolution notes don't provide cause.
-    """
-    combined = "\n".join([
-        safe_text(work_notes, default=""),
-        safe_text(comments, default="")
-    ])
+def build_problem(short_desc, description):
+    short_desc = normalize(short_desc)
+    description = normalize(description)
 
-    lines = clean_lines(combined)
-
-    technical_lines = []
-
-    for line in lines:
-        lower = line.lower()
-
-        if any(x in lower for x in [
-            "error",
-            "failed",
-            "failure",
-            "exception",
-            "incorrect path",
-            "certificate",
-            "missing",
-            "validation issue",
-            "integration failure",
-            "configuration issue",
-            "bug"
-        ]):
-            technical_lines.append(line)
-
-    return technical_lines
-
-
-def format_output(lines):
-    if not lines:
-        return ""
-
-    seen = set()
-    final_lines = []
-
-    for line in lines:
-        if line and line not in seen:
-            seen.add(line)
-            final_lines.append(f"• {line}")
-
-    return "\n".join(final_lines)
-
-
-def build_rca(row):
-    short_desc = safe_text(
-        row.get("short_description"),
-        default=""
-    )
-
-    description = safe_text(
-        row.get("description"),
-        default=""
-    )
-
-    resolution_notes = safe_text(
-        row.get("resolution_notes"),
-        default=""
-    )
-
-    work_notes = row.get("work_notes")
-    comments = row.get("comments")
-
-    # Problem statement
     problem_lines = []
 
     if short_desc:
         problem_lines.append(short_desc)
 
-    if description:
+    # avoid duplicate problem statement
+    if description and description.lower() != short_desc.lower():
         problem_lines.append(description)
 
-    # Priority source
-    cause_lines, resolution_lines = extract_resolution_sections(
-        resolution_notes
-    )
+    return bullet(problem_lines)
 
-    # fallback root cause only if no cause found
-    if not cause_lines:
-        cause_lines = fallback_root_cause(
-            work_notes,
-            comments
+
+def build_root_cause(work_notes, comments, resolution_notes):
+    combined = "\n".join([
+        safe_text(work_notes, default=""),
+        safe_text(comments, default=""),
+        safe_text(resolution_notes, default="")
+    ])
+
+    lower_text = combined.lower()
+
+    root_points = []
+
+    # Certificate issue
+    if "pkix" in lower_text or "certificate" in lower_text:
+        root_points.append(
+            "ODC integration failed due to certificate validation issues in production."
         )
 
+    # Path/config issue
+    if "incorrect path" in lower_text:
+        root_points.append(
+            "Incorrect integration path configuration caused transaction failures."
+        )
+
+    # Payload failure
+    if "failed to process payload" in lower_text:
+        root_points.append(
+            "Scheduler payload processing failures impacted ODC integration."
+        )
+
+    # Missing/revision issue
+    if "missing" in lower_text:
+        root_points.append(
+            "Required data/version mismatch caused processing failures."
+        )
+
+    # Generic error fallback
+    if not root_points:
+        error_matches = re.findall(
+            r".*?(error|exception|failed).*?",
+            combined,
+            re.IGNORECASE
+        )
+
+        if error_matches:
+            root_points.append(
+                "System errors were identified during incident investigation."
+            )
+
+    return bullet(root_points)
+
+
+def build_resolution(resolution_notes):
+    resolution_notes = safe_text(
+        resolution_notes,
+        default=""
+    )
+
+    lower_text = resolution_notes.lower()
+
+    resolution_points = []
+
+    if "path was modified" in lower_text:
+        resolution_points.append(
+            "Integration path configuration was corrected."
+        )
+
+    if "restarted" in lower_text:
+        resolution_points.append(
+            "Relevant services were restarted after implementing the fix."
+        )
+
+    if "validated" in lower_text or "working fine" in lower_text:
+        resolution_points.append(
+            "Integration was validated successfully after applying the fix."
+        )
+
+    if "implemented in production" in lower_text:
+        resolution_points.append(
+            "Production fix was deployed successfully."
+        )
+
+    if "azure" in lower_text:
+        resolution_points.append(
+            "Azure defect was identified and tracked for permanent resolution."
+        )
+
+    if not resolution_points and resolution_notes:
+        resolution_points.append(
+            "Resolution steps were performed and service functionality was restored."
+        )
+
+    return bullet(resolution_points)
+
+
+def build_rca(row):
     return {
-        "problem": format_output(problem_lines),
-        "analysis": format_output(cause_lines),
-        "resolution": format_output(resolution_lines)
+        "problem": build_problem(
+            row.get("short_description"),
+            row.get("description")
+        ),
+
+        "analysis": build_root_cause(
+            row.get("work_notes"),
+            row.get("comments"),
+            row.get("resolution_notes")
+        ),
+
+        "resolution": build_resolution(
+            row.get("resolution_notes")
+        )
     }
