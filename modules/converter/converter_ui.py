@@ -11,8 +11,20 @@ from modules.converter.ppt_extractor import extract_ppt_content
 from modules.report.doc_generator import generate_word_doc_wrapper
 from pptx import Presentation
 from modules.converter.ppt_to_doc import extract_slide1_content
+from modules.common.utils.links import get_url
 
+def build_html_link(field, value):
+    url = get_url(field, value)
 
+    if not url:
+        return "-"
+
+    return f'<a href="{url}" target="_blank">{value}</a>'
+
+    build_html_link("Incident", data["number"])
+    build_html_link("Azure Bug", data["azure_bug"])
+    build_html_link("PTC Case", data["ptc_case"])
+    
 # ---------------- AZURE BUG ---------------- #
 def extract_azure(text):
     if not text:
