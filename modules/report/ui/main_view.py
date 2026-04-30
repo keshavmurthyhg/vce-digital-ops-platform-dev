@@ -21,7 +21,21 @@ def render_main(df):
         )
 
     with col2:
-        st.write("")   # minimal spacer for label alignment
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stButton"] {
+                margin-top: 28px;
+            }
+            </style>
+            """,
+            unsafe_allow_html=True
+        )
+    
+        fetch_btn = st.button(
+            "Fetch",
+            use_container_width=True
+        )
         fetch_btn = st.button(
             "Fetch",
             use_container_width=True
