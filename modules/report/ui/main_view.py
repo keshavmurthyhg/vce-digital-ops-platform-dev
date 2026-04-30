@@ -21,12 +21,13 @@ def render_main(df):
         )
 
     with col2:
-        st.markdown("###")  # aligns button with selectbox field
+        st.write("")   # minimal spacer for label alignment
         fetch_btn = st.button(
             "Fetch",
             use_container_width=True
         )
 
+    
     # ---------------- BULK ---------------- #
     st.subheader("Bulk Incident Numbers")
     # Auto-fill from sidebar bulk selection
