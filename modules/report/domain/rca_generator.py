@@ -1,10 +1,13 @@
 import re
 
 
-def clean_noise(lines):
-    cleaned = []
+def summarize_notes(text):
+    if not text:
+        return ""
 
-    for line in lines:
+    lines = []
+
+    for line in str(text).split("\n"):
         line = line.strip()
 
         if not line:
@@ -22,27 +25,31 @@ def clean_noise(lines):
         if re.match(r"^\d{4}-\d{2}-\d{2}", line):
             continue
 
-        cleaned.append(line)
+        lines.append(line)
 
-    return cleaned
+    if not lines:
+        return ""
+
+    # Return concise summary instead of raw dump
+    summary = " ".join(lines[:3])
+
+    return summary[:1000]
 
 
 def generate_rca(data):
 
-    work_notes = str(data.get("work_notes", "") or "")
-    comments = str(data.get("comments", "") or "")
-    resolution_notes = str(data.get("resolution", "") or "")
-
-    all_notes = f"{work_notes}\n{comments}".strip()
-
-    lines = all_notes.split("\n")
-    cleaned_lines = clean_noise(lines)
-
     problem = data.get("short_description", "")
 
-    analysis = "\n".join(cleaned_lines[:5])
+    analysis_text = (
+        str(data.get("work_notes", "") or "") +
+        "\n" +
+        str(data.get("comments", "") or "")
+    )
 
-    resolution = resolution_notes.strip()
+    resolution_text = str(data.get("resolution", "") or "")
+
+    analysis = summarize_notes(analysis_text)
+    resolution = summarize_notes(resolution_text)
 
     return {
         "problem": problem,
