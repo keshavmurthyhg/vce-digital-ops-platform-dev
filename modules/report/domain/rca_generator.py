@@ -13,51 +13,42 @@ def summarize_notes(text):
         if not line:
             continue
 
-        if "attachment:" in line.lower():
+        lower = line.lower()
+
+        if "attachment:" in lower:
             continue
 
-        if "has been attached" in line.lower():
-            continue
-
-        if "hcl integration" in line.lower():
+        if "has been attached" in lower:
             continue
 
         if re.match(r"^\d{4}-\d{2}-\d{2}", line):
             continue
 
-        lines.append(line)
+        if line not in lines:
+            lines.append(line)
 
-    if not lines:
-        return ""
-
-    # Return concise summary instead of raw dump
-    summary = " ".join(lines[:3])
-
-    return summary[:1000]
+    return "\n".join(lines[:5])
 
 
 def generate_rca(data):
+    """
+    Kept for backward compatibility.
+    Main logic now handled in rca_service.py
+    """
 
     problem = data.get("short_description", "")
-
-    analysis_text = (
-        str(data.get("work_notes", "") or "") +
+    analysis = summarize_notes(
+        str(data.get("work_notes", "")) +
         "\n" +
-        str(data.get("comments", "") or "")
+        str(data.get("comments", ""))
     )
 
-    resolution_raw = data.get("resolution")
+    resolution_raw = data.get("resolution", "")
 
-    if resolution_raw is None:
-        resolution_text = ""
-    else:
-        resolution_text = str(resolution_raw).strip()
-    
-    if resolution_text.lower() in ["nan", "nat", "none"]:
-        resolution_text = ""
+    if str(resolution_raw).lower() in ["nan", "nat", "none"]:
+        resolution_raw = ""
 
-    analysis = summarize_notes(analysis_text)
-    resolution = summarize_notes(resolution_text)
+    resolution = summarize_notes(resolution_raw)
 
     return {
         "problem": problem,
