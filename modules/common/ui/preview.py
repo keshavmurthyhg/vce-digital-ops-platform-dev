@@ -1,7 +1,7 @@
 import streamlit as st
 from modules.common.ui.styles import get_table_style
 from modules.common.utils.formatters import format_description, format_date, safe_text
-
+import streamlit.components.v1 as components
 
 def _val(x):
     return safe_text(x)
