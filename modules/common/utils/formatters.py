@@ -5,15 +5,30 @@ from reportlab.lib import colors
 
 # ---------------- DATE ---------------- #
 def format_date(val):
-    if not val:
+    """
+    Handles:
+    - None
+    - pandas NaT
+    - empty strings
+    - valid datetime/date strings
+    """
+
+    if val is None:
         return "-"
+
+    val_str = str(val).strip()
+
+    if val_str.lower() in ["nat", "nan", "none", ""]:
+        return "-"
+
     try:
         if isinstance(val, str):
             val = datetime.fromisoformat(val)
-        return val.strftime("%d-%b-%Y")
-    except Exception:
-        return str(val)
 
+        return val.strftime("%d-%b-%Y")
+
+    except Exception:
+        return "-"
 
 # ---------------- WORD TABLE ---------------- #
 def set_cell_bg(cell):
