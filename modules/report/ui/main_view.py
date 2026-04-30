@@ -144,5 +144,12 @@ def render_main(df):
         st.text_area("ROOT CAUSE", key="root_cause", height=150)
         st.file_uploader("Root Images", accept_multiple_files=True, key="root_images")
 
-        st.text_area("RESOLUTION & RECOMMENDATION", key="resolution", height=150)
+        if str(st.session_state.get("resolution", "")).lower() == "nan":
+            st.session_state["resolution"] = ""
+        
+        st.text_area(
+            "RESOLUTION & RECOMMENDATION",
+            key="resolution",
+            height=150
+        )
         st.file_uploader("Resolution Images", accept_multiple_files=True, key="resolution_images")
