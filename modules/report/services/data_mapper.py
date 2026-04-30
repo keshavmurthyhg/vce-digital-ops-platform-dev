@@ -1,44 +1,40 @@
 from modules.common.utils.parsers import extract_azure_id
-from modules.common.utils.formatters import format_description
+from modules.common.utils.formatters import format_description, safe_text
 
-def get_display(val):
-    if isinstance(val, dict):
-        return val.get("display_value") or val.get("value")
-    return val
-
-import math
-
-def clean_val(x):
-    if x is None:
-        return "-"
-    if isinstance(x, float) and math.isnan(x):
-        return "-"
-    if str(x).strip().lower() in ["nan", "none", ""]:
-        return "-"
-    return x
 
 def map_incident(row):
 
+    work_notes = row.get("work notes") or ""
+    comments = row.get("additional comments") or ""
     resolution_notes = row.get("resolution notes") or ""
 
+    combined_notes = " ".join([
+        str(work_notes),
+        str(comments),
+        str(resolution_notes)
+    ])
+
     return {
-        "number": row.get("number"),
+        "number": safe_text(row.get("number")),
 
-        # ✅ Azure from resolution notes
-        "azure_bug": extract_azure_id(resolution_notes),
+        # Azure only from actual notes
+        "azure_bug": extract_azure_id(combined_notes),
 
-        # ✅ PTC = Vendor Ticket
-        "ptc_case": row.get("vendor ticket"),
+        "ptc_case": safe_text(row.get("vendor ticket")),
 
-        # ✅ FIXED KEYS (WITH SPACES)
-        "created_by": row.get("opened by"),
-        "assigned_to": row.get("assigned to"),
+        "created_by": safe_text(row.get("opened by")),
+        "assigned_to": safe_text(row.get("assigned to")),
 
         "created_date": row.get("created"),
         "resolved_date": row.get("resolved"),
 
-        "priority": row.get("priority"),
+        "priority": safe_text(row.get("priority")),
 
-        "short_description": row.get("short description"),
+        "short_description": safe_text(row.get("short description")),
         "description": format_description(row.get("description")),
+
+        # REQUIRED FOR RCA
+        "work_notes": work_notes,
+        "comments": comments,
+        "resolution": resolution_notes
     }
