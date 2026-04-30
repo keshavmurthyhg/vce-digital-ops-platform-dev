@@ -6,15 +6,13 @@ from modules.report.domain.rca_generator import generate_rca
 
 
 def enrich_data(data):
-    notes = " ".join([
-        str(data.get("resolution_notes", "")),
-        str(data.get("work_notes", "")),
-        str(data.get("comments", "")),
-        str(data.get("additional_comments", ""))
-    ])
+    """
+    Do not re-extract Azure from generic notes.
+    Azure should already be mapped once from valid Azure URL.
+    """
 
     if not data.get("azure_bug"):
-        data["azure_bug"] = extract_azure_id(notes)
+        data["azure_bug"] = "-"
 
     return data
 
