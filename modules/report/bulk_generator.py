@@ -39,11 +39,18 @@ def build_bulk_reports(df, incident_list, images_map=None):
 
         images = images_map.get(inc, {}) if images_map else {}
 
+        def safe_text(val):
+            if val is None:
+                return ""
+            if isinstance(val, list):
+                return "\n".join([str(v) for v in val])
+            return str(val)
+        
         results.append({
             "data": data,
-            "root": rca["problem"],
-            "l2": rca["analysis"],
-            "res": rca["resolution"],
+            "root": safe_text(rca.get("problem")),
+            "l2": safe_text(rca.get("analysis")),
+            "res": safe_text(rca.get("resolution")),
             "images": images
         })
 
