@@ -94,7 +94,7 @@ def render_preview(data):
         preview_height += 100
     
     if desc_len > 1500:
-        preview_height += 140
+        preview_height += 160
     
     components.html(
         html,
