@@ -47,6 +47,23 @@ def generate_pdf_doc(data, root, l2, res, images):
     elements.append(desc)
     elements.append(Spacer(1, 20))
 
+
+    #=============== Sanitize text before PDF ==================#
+    def safe_text(val):
+        if not val:
+            return ""
+        val = str(val)
+    
+        # Prevent very long lines (CRITICAL FIX)
+        max_len = 1000
+        lines = [val[i:i+max_len] for i in range(0, len(val), max_len)]
+        return "\n".join(lines)
+    
+    root = safe_text(root)
+    l2 = safe_text(l2)
+    res = safe_text(res)
+
+    
     # ================= BODY ================= #
     build_sections(
         elements,
