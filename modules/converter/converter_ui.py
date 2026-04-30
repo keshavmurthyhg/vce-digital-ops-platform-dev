@@ -69,7 +69,7 @@ def link(val, type_):
         return f'<a href="https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{val}" target="_blank">{val}</a>'
 
     if type_ == "ptc":
-        return f'<a href="https://support.ptc.com/appserver/cs/view/solution.jsp?n={val}" target="_blank">{val}</a>'
+        return f'<a href="https://support.ptc.com/appserver/cs/view/case.jsp?n={val}" target="_blank">{val}</a>'
 
     return val
 
