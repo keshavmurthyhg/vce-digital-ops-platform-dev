@@ -47,7 +47,11 @@ def render_main(df):
             st.session_state["data"] = row
 
             rca = build_rca(row)
-            st.session_state.update(rca)
+
+            # Explicit session mapping
+            st.session_state["problem"] = rca.get("problem", "")
+            st.session_state["root_cause"] = rca.get("analysis", "")
+            st.session_state["resolution"] = rca.get("resolution", "")
 
             st.success("Incident loaded successfully")
 
