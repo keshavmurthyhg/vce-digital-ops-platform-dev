@@ -36,10 +36,6 @@ def render_main(df):
             "Fetch",
             use_container_width=True
         )
-        fetch_btn = st.button(
-            "Fetch",
-            use_container_width=True
-        )
 
     
     # ---------------- BULK ---------------- #
