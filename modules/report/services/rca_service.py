@@ -5,32 +5,29 @@ import re
 from modules.common.utils.formatters import safe_text
 
 
-NOISE_PATTERNS = [
-    r"^\d{4}-\d{2}-\d{2}.*$",                 # timestamps
-    r".*\(Work notes\).*",
-    r".*\(Additional comments\).*",
-    r"^Hi\b.*",
-    r"^Hello\b.*",
-    r"^Thanks\b.*",
-    r"^Thank you\b.*",
-    r"^BR\b.*",
-    r"^Regards\b.*",
-    r"^Waiting for.*",
-    r"^Please update.*",
-    r"^Any update.*",
-    r"^Attachment:.*",
-    r".*\.xlsx$",
-    r".*\.jpg$",
-    r".*\.png$",
-    r".*\.pdf$",
+IGNORE_PATTERNS = [
+    r".*working with l[0-9].*",
+    r".*informed l[0-9].*",
+    r".*meeting scheduled.*",
+    r".*waiting for.*",
+    r".*please update.*",
+    r".*any update.*",
+    r".*priority changed.*",
+    r".*changing priority.*",
+    r".*assigned to.*",
+    r".*call scheduled.*",
+    r".*issue still occurring.*",
+    r".*attached.*",
+    r".*attachment.*",
+    r".*\.xlsx.*",
+    r".*\.jpg.*",
+    r".*\.png.*",
+    r".*transaction id.*",
+    r".*payload entry.*",
 ]
 
 
-def clean_note_lines(text):
-    """
-    Remove timestamps, greetings, attachments, signatures,
-    and useless operational chatter.
-    """
+def clean_lines(text):
     if not text:
         return []
 
@@ -42,9 +39,16 @@ def clean_note_lines(text):
         if not line:
             continue
 
+        # remove timestamps
+        line = re.sub(
+            r"^\d{4}-\d{2}-\d{2}.*?:",
+            "",
+            line
+        ).strip()
+
         skip = False
-        for pattern in NOISE_PATTERNS:
-            if re.match(pattern, line, re.IGNORECASE):
+        for pattern in IGNORE_PATTERNS:
+            if re.search(pattern, line, re.IGNORECASE):
                 skip = True
                 break
 
@@ -56,72 +60,102 @@ def clean_note_lines(text):
     return cleaned
 
 
-def extract_resolution_parts(lines):
+def extract_resolution_sections(resolution_notes):
     """
-    Split meaningful lines into:
-    - root cause
-    - resolution
+    Highest priority source.
     """
+    cause = []
+    resolution = []
 
-    root_lines = []
-    resolution_lines = []
+    lines = clean_lines(resolution_notes)
 
     for line in lines:
         lower = line.lower()
 
-        if any(word in lower for word in [
-            "fixed",
+        if "cause" in lower:
+            cause.append(
+                re.sub(r"(?i)cause\s*[:\-]?", "", line).strip()
+            )
+
+        elif any(x in lower for x in [
             "resolved",
-            "updated",
+            "fixed",
             "implemented",
-            "validated",
+            "updated",
             "restarted",
+            "validated",
             "working fine",
-            "closed"
+            "resolution"
         ]):
-            resolution_lines.append(line)
+            resolution.append(
+                re.sub(
+                    r"(?i)resolution\s*[:\-]?",
+                    "",
+                    line
+                ).strip()
+            )
 
-        elif "cause" in lower:
-            root_lines.append(line)
-
-        else:
-            root_lines.append(line)
-
-    return root_lines, resolution_lines
+    return cause, resolution
 
 
-def format_bullets(lines):
+def fallback_root_cause(work_notes, comments):
+    """
+    Use only meaningful technical observations
+    when resolution notes don't provide cause.
+    """
+    combined = "\n".join([
+        safe_text(work_notes, default=""),
+        safe_text(comments, default="")
+    ])
+
+    lines = clean_lines(combined)
+
+    technical_lines = []
+
+    for line in lines:
+        lower = line.lower()
+
+        if any(x in lower for x in [
+            "error",
+            "failed",
+            "failure",
+            "exception",
+            "incorrect path",
+            "certificate",
+            "missing",
+            "validation issue",
+            "integration failure",
+            "configuration issue",
+            "bug"
+        ]):
+            technical_lines.append(line)
+
+    return technical_lines
+
+
+def format_output(lines):
     if not lines:
         return ""
 
-    unique_lines = []
     seen = set()
+    final_lines = []
 
     for line in lines:
-        if line not in seen:
+        if line and line not in seen:
             seen.add(line)
-            unique_lines.append(line)
+            final_lines.append(f"• {line}")
 
-    return "\n".join([f"• {x}" for x in unique_lines])
+    return "\n".join(final_lines)
 
 
 def build_rca(row):
-    """
-    Intelligent RCA builder using SNOW fields
-    """
-
-    problem = safe_text(
+    short_desc = safe_text(
         row.get("short_description"),
         default=""
     )
 
-    work_notes = safe_text(
-        row.get("work_notes"),
-        default=""
-    )
-
-    additional_comments = safe_text(
-        row.get("comments"),
+    description = safe_text(
+        row.get("description"),
         default=""
     )
 
@@ -130,20 +164,32 @@ def build_rca(row):
         default=""
     )
 
-    combined_notes = "\n".join([
-        work_notes,
-        additional_comments,
+    work_notes = row.get("work_notes")
+    comments = row.get("comments")
+
+    # Problem statement
+    problem_lines = []
+
+    if short_desc:
+        problem_lines.append(short_desc)
+
+    if description:
+        problem_lines.append(description)
+
+    # Priority source
+    cause_lines, resolution_lines = extract_resolution_sections(
         resolution_notes
-    ])
-
-    cleaned_lines = clean_note_lines(combined_notes)
-
-    root_lines, resolution_lines = extract_resolution_parts(
-        cleaned_lines
     )
 
+    # fallback root cause only if no cause found
+    if not cause_lines:
+        cause_lines = fallback_root_cause(
+            work_notes,
+            comments
+        )
+
     return {
-        "problem": format_bullets([problem]),
-        "analysis": format_bullets(root_lines),
-        "resolution": format_bullets(resolution_lines)
+        "problem": format_output(problem_lines),
+        "analysis": format_output(cause_lines),
+        "resolution": format_output(resolution_lines)
     }
