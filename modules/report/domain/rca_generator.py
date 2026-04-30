@@ -46,7 +46,15 @@ def generate_rca(data):
         str(data.get("comments", "") or "")
     )
 
-    resolution_text = str(data.get("resolution", "") or "")
+    resolution_raw = data.get("resolution")
+
+    if resolution_raw is None:
+        resolution_text = ""
+    else:
+        resolution_text = str(resolution_raw).strip()
+    
+    if resolution_text.lower() in ["nan", "nat", "none"]:
+        resolution_text = ""
 
     analysis = summarize_notes(analysis_text)
     resolution = summarize_notes(resolution_text)
