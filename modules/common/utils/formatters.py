@@ -101,12 +101,20 @@ def format_description(text: str) -> str:
 
     text = str(text)
 
-    # 🔴 Remove full contact block
+    # 🔴 Remove entire contact preference block
     text = re.sub(
-        r"How does the user want to be contacted.*?(MS Teams|phone number).*?\d+",
+        r"How does the user want to be contacted in case of queries\?.*?(?:phone number:?.*?|MS Teams.*?|$)",
         "",
         text,
         flags=re.IGNORECASE | re.DOTALL
+    )
+    
+    # Remove standalone business phone lines
+    text = re.sub(
+        r"Business phone number:?.*",
+        "",
+        text,
+        flags=re.IGNORECASE
     )
 
     # 🔴 Remove MS Teams lines
