@@ -17,11 +17,19 @@ from modules.converter.ppt_to_doc import extract_slide1_content
 def extract_azure(text):
     if not text:
         return None
-    match = re.search(r'/edit/(\d+)', text)
+
+    text = str(text)
+
+    match = re.search(
+        r"dev\.azure\.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/(\d{6})",
+        text,
+        re.IGNORECASE
+    )
+
     if match:
         return match.group(1)
-    match = re.search(r'\b\d{6,}\b', text)
-    return match.group(0) if match else None
+
+    return None
 
 
 # ---------------- NORMALIZER ---------------- #
