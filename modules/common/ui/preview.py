@@ -80,8 +80,18 @@ def render_preview(data):
 
     html = style + table1 + table2
 
-    st.components.v1.html(
+    # Dynamic height based on content length
+    desc_len = len(str(data.get("description", "") or ""))
+    
+    if desc_len < 300:
+        preview_height = 180
+    elif desc_len < 800:
+        preview_height = 250
+    else:
+        preview_height = 350
+    
+    components.html(
         html,
-        height=450,
-        scrolling=True
+        height=preview_height,
+        scrolling=False
     )
