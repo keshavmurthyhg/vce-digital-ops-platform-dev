@@ -1,41 +1,48 @@
+import re
+
+
+def clean_noise(lines):
+    cleaned = []
+
+    for line in lines:
+        line = line.strip()
+
+        if not line:
+            continue
+
+        if "attachment:" in line.lower():
+            continue
+
+        if "has been attached" in line.lower():
+            continue
+
+        if "hcl integration" in line.lower():
+            continue
+
+        if re.match(r"^\d{4}-\d{2}-\d{2}", line):
+            continue
+
+        cleaned.append(line)
+
+    return cleaned
+
+
 def generate_rca(data):
-    """
-    Generate structured RCA summary (NOT raw dump)
-    """
 
     work_notes = str(data.get("work_notes", "") or "")
     comments = str(data.get("comments", "") or "")
     resolution_notes = str(data.get("resolution", "") or "")
 
-    combined = f"{work_notes}\n{comments}\n{resolution_notes}".strip()
+    all_notes = f"{work_notes}\n{comments}".strip()
 
-    if not combined:
-        return {
-            "problem": data.get("short_description", ""),
-            "analysis": "",
-            "resolution": ""
-        }
+    lines = all_notes.split("\n")
+    cleaned_lines = clean_noise(lines)
 
-    # ---------------- SIMPLE SUMMARIZER ---------------- #
-    # (You can replace with LLM later if needed)
-
-    lines = [l.strip() for l in combined.split("\n") if l.strip()]
-
-    # Remove noise lines
-    filtered = []
-    for l in lines:
-        if "Attachment:" in l:
-            continue
-        if "has been attached" in l:
-            continue
-        filtered.append(l)
-
-    # Build structured RCA
     problem = data.get("short_description", "")
 
-    analysis = "\n".join(filtered[:5])  # first few meaningful lines
+    analysis = "\n".join(cleaned_lines[:5])
 
-    resolution = resolution_notes if resolution_notes else filtered[-1] if filtered else ""
+    resolution = resolution_notes.strip()
 
     return {
         "problem": problem,
