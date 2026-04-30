@@ -9,7 +9,7 @@ from modules.report.layout.styles import get_pdf_styles
 from modules.report.layout.footer import pdf_footer
 
 from modules.common.utils.links import get_url, make_pdf_link
-from modules.common.utils.formatters import format_date
+from modules.common.utils.formatters import format_date, safe_pdf_text, safe_table
 from modules.common.utils.text_cleaner import add_images_pdf
 
 
@@ -27,32 +27,6 @@ def clean_header_value(val):
 
     # Prevent very long values
     return val[:200]
-
-
-# ================= SAFE BODY TEXT ================= #
-def sanitize_text(val):
-    if not val:
-        return ""
-
-    val = str(val)
-
-    # Escape HTML-breaking chars
-    val = val.replace("&", "&amp;")
-    val = val.replace("<", "&lt;")
-    val = val.replace(">", "&gt;")
-
-    # Break very long lines (prevents LayoutError)
-    MAX_LEN = 800
-    safe_lines = []
-
-    for line in val.split("\n"):
-        if len(line) > MAX_LEN:
-            chunks = [line[i:i+MAX_LEN] for i in range(0, len(line), MAX_LEN)]
-            safe_lines.extend(chunks)
-        else:
-            safe_lines.append(line)
-
-    return "\n".join(safe_lines)
 
 
 # ================= MAIN PDF GENERATOR ================= #
@@ -80,10 +54,11 @@ def generate_pdf_doc(data, root, l2, res, images):
         header = build_pdf_header(
             data,
             lambda field, value: make_pdf_link(
-                clean_header_value(value),   # ✅ FIXED
+                safe_table(value),
                 get_url(field, value),
                 styles
             ),
+                        
             format_date
         )
 
@@ -107,9 +82,9 @@ def generate_pdf_doc(data, root, l2, res, images):
     elements.append(Spacer(1, 20))
 
     # ================= SANITIZE BODY ================= #
-    root = sanitize_text(root)
-    l2 = sanitize_text(l2)
-    res = sanitize_text(res)
+    root = safe_pdf_text(root)
+    l2 = safe_pdf_text(l2)
+    res = safe_pdf_text(res)
 
     # ================= BODY ================= #
     try:
