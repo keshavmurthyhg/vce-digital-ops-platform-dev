@@ -21,10 +21,7 @@ def build_html_link(field, value):
 
     return f'<a href="{url}" target="_blank">{value}</a>'
 
-    build_html_link("Incident", data["number"])
-    build_html_link("Azure Bug", data["azure_bug"])
-    build_html_link("PTC Case", data["ptc_case"])
-    
+        
 # ---------------- AZURE BUG ---------------- #
 def extract_azure(text):
     if not text:
@@ -151,19 +148,46 @@ def render_preview_table(data):
 def render_description_table(data):
 
     html = f"""
+    <style>
+    .tbl {{
+        width: 100%;
+        border-collapse: collapse;
+        font-family: Arial;
+        font-size: 14px;
+        margin-bottom: 20px;
+    }}
+
+    .tbl td {{
+        border: 1px solid black;
+        padding: 6px;
+        vertical-align: top;
+        word-wrap: break-word;
+    }}
+
+    .hdr {{
+        font-weight: bold;
+        background: #f2f2f2;
+    }}
+    </style>
+
     <table class="tbl">
         <tr>
             <td class="hdr">SHORT DESCRIPTION</td>
             <td class="hdr">DESCRIPTION</td>
         </tr>
         <tr>
-            <td>{data["short_description"] or "-"}</td>
-            <td>{data["description"] or "-"}</td>
+            <td>{data.get("short_description") or "-"}</td>
+            <td>{data.get("description") or "-"}</td>
         </tr>
     </table>
     """
 
-    st.markdown(html, unsafe_allow_html=True)
+    # Use same renderer as header table
+    st.components.v1.html(
+        html,
+        height=300,
+        scrolling=True
+    )
 
 
 # ---------------- UI ---------------- #
