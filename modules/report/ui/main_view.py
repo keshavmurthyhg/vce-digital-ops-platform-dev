@@ -11,7 +11,7 @@ def render_main(df):
     st.title("Incident Report Generator")
 
     # ---------------- INCIDENT + FETCH ---------------- #
-    col1, col2 = st.columns([4, 1])
+    col1, col2 = st.columns([1, 1])
 
     with col1:
         incident = st.selectbox(
