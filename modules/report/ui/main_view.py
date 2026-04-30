@@ -31,18 +31,20 @@ def render_main(df):
             """,
             unsafe_allow_html=True
         )
-    
+
         fetch_btn = st.button(
             "Fetch",
             use_container_width=True
         )
 
-    
     # ---------------- BULK ---------------- #
     st.subheader("Bulk Incident Numbers")
-    # Auto-fill from sidebar bulk selection
-    bulk_default = st.session_state.get("bulk_incidents_list", [])
-    
+
+    bulk_default = st.session_state.get(
+        "bulk_incidents_list",
+        []
+    )
+
     bulk_text = st.text_area(
         "Enter comma-separated incident numbers",
         value=",".join(bulk_default),
@@ -58,15 +60,29 @@ def render_main(df):
         try:
             row_raw = df[df["number"] == incident].iloc[0].to_dict()
 
+            # existing mapper flow retained
             row = map_incident(row_raw)
+
             st.session_state["data"] = row
 
+            # RCA generation
             rca = build_rca(row)
 
-            # Explicit session mapping
-            st.session_state["problem"] = rca.get("problem", "")
-            st.session_state["root_cause"] = rca.get("analysis", "")
-            st.session_state["resolution"] = rca.get("resolution", "")
+            # FIX: use correct keys from new rca_service
+            st.session_state["problem"] = rca.get(
+                "problem_statement",
+                ""
+            )
+
+            st.session_state["root_cause"] = rca.get(
+                "root_cause",
+                ""
+            )
+
+            st.session_state["resolution"] = rca.get(
+                "resolution",
+                ""
+            )
 
             st.success("Incident loaded successfully")
 
@@ -78,7 +94,9 @@ def render_main(df):
         if "data" not in st.session_state:
             st.warning("Please fetch an incident first")
         else:
-            render_preview(st.session_state["data"])
+            render_preview(
+                st.session_state["data"]
+            )
 
     # ---------------- GENERATE PDF ---------------- #
     if actions.get("pdf"):
@@ -129,27 +147,51 @@ def render_main(df):
         if not bulk_text:
             st.warning("Please enter incident numbers")
         else:
-            from modules.report.bulk_generator import build_bulk_reports, generate_bulk_zip
-    
-            incident_list = [i.strip() for i in bulk_text.split(",") if i.strip()]
-    
-            reports = build_bulk_reports(df, incident_list, images_map={})
-    
+            from modules.report.bulk_generator import (
+                build_bulk_reports,
+                generate_bulk_zip
+            )
+
+            incident_list = [
+                i.strip()
+                for i in bulk_text.split(",")
+                if i.strip()
+            ]
+
+            reports = build_bulk_reports(
+                df,
+                incident_list,
+                images_map={}
+            )
+
             if not reports:
                 st.warning("No reports generated")
             else:
                 zip_buffer = generate_bulk_zip(reports)
-    
+
                 st.download_button(
                     "Download Bulk Reports (ZIP)",
                     data=zip_buffer,
                     file_name="bulk_reports.zip",
                     mime="application/zip"
                 )
-    
+
     # ---------------- CLEAR ---------------- #
     if actions.get("clear"):
-        st.session_state.clear()
+        keys_to_remove = [
+            "data",
+            "problem",
+            "root_cause",
+            "resolution",
+            "problem_images",
+            "root_images",
+            "resolution_images"
+        ]
+
+        for key in keys_to_remove:
+            if key in st.session_state:
+                del st.session_state[key]
+
         st.rerun()
 
     # ---------------- RCA SECTION ---------------- #
@@ -157,18 +199,44 @@ def render_main(df):
 
         st.subheader("Edit Report Details")
 
-        st.text_area("PROBLEM STATEMENT", key="problem", height=120)
-        st.file_uploader("Problem Images", accept_multiple_files=True, key="problem_images")
+        st.text_area(
+            "PROBLEM STATEMENT",
+            key="problem",
+            height=120
+        )
 
-        st.text_area("ROOT CAUSE", key="root_cause", height=150)
-        st.file_uploader("Root Images", accept_multiple_files=True, key="root_images")
+        st.file_uploader(
+            "Problem Images",
+            accept_multiple_files=True,
+            key="problem_images"
+        )
 
-        if str(st.session_state.get("resolution", "")).lower() == "nan":
+        st.text_area(
+            "ROOT CAUSE",
+            key="root_cause",
+            height=150
+        )
+
+        st.file_uploader(
+            "Root Images",
+            accept_multiple_files=True,
+            key="root_images"
+        )
+
+        # Prevent nan showing in UI
+        if str(
+            st.session_state.get("resolution", "")
+        ).lower() in ["nan", "nat", "none"]:
             st.session_state["resolution"] = ""
-        
+
         st.text_area(
             "RESOLUTION & RECOMMENDATION",
             key="resolution",
             height=150
         )
-        st.file_uploader("Resolution Images", accept_multiple_files=True, key="resolution_images")
+
+        st.file_uploader(
+            "Resolution Images",
+            accept_multiple_files=True,
+            key="resolution_images"
+        )
