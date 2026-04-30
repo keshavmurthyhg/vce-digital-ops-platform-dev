@@ -43,9 +43,9 @@ def generate_pdf(data, root=None, l2=None, res=None, images=None):
 
     return generate_pdf_doc(
         data=data,
-        root=root,
-        l2=l2,
-        res=res,
+        root=data.get("problem"),
+        l2=data.get("analysis"),
+        res=data.get("resolution")
         images=images or {}
     )
 
@@ -59,9 +59,9 @@ def generate_word_doc_wrapper(data, root=None, l2=None, res=None, images=None, p
 
     return generate_word_doc(
         data=data,
-        root=root,
-        l2=l2,
-        res=res,
+        root=data.get("problem"),
+        l2=data.get("analysis"),
+        res=data.get("resolution")
         images=images or {},
         ppt_data=ppt_data
     )
