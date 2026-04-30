@@ -25,7 +25,7 @@ def render_main(df):
             """
             <style>
             div[data-testid="stButton"] {
-                margin-top: 28px;
+                margin-top: 26px;
             }
             </style>
             """,
