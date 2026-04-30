@@ -23,7 +23,7 @@ def get_url(type_, value):
         return f"https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{value}"
 
     if type_ == "ptc":
-        return f"https://support.ptc.com/appserver/cs/view/solution.jsp?n={value}"
+        return f"https://support.ptc.com/app/caseviewer/?case={value}"
 
     return None
 
