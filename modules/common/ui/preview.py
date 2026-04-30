@@ -84,7 +84,7 @@ def render_preview(data):
     desc_len = len(str(data.get("description", "") or ""))
     
     # Base height for table 1 + table 2 headers
-    preview_height = 300
+    preview_height = 270
     
     # Add extra height for longer descriptions
     if desc_len > 300:
