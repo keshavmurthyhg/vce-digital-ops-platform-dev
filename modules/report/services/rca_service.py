@@ -5,38 +5,109 @@ import re
 from modules.common.utils.formatters import safe_text
 
 
-def extract_section(text, keyword):
+NOISE_PATTERNS = [
+    r"^\d{4}-\d{2}-\d{2}.*$",                 # timestamps
+    r".*\(Work notes\).*",
+    r".*\(Additional comments\).*",
+    r"^Hi\b.*",
+    r"^Hello\b.*",
+    r"^Thanks\b.*",
+    r"^Thank you\b.*",
+    r"^BR\b.*",
+    r"^Regards\b.*",
+    r"^Waiting for.*",
+    r"^Please update.*",
+    r"^Any update.*",
+    r"^Attachment:.*",
+    r".*\.xlsx$",
+    r".*\.jpg$",
+    r".*\.png$",
+    r".*\.pdf$",
+]
+
+
+def clean_note_lines(text):
     """
-    Extract text after keyword until next keyword
+    Remove timestamps, greetings, attachments, signatures,
+    and useless operational chatter.
     """
     if not text:
+        return []
+
+    cleaned = []
+
+    for line in str(text).split("\n"):
+        line = line.strip()
+
+        if not line:
+            continue
+
+        skip = False
+        for pattern in NOISE_PATTERNS:
+            if re.match(pattern, line, re.IGNORECASE):
+                skip = True
+                break
+
+        if skip:
+            continue
+
+        cleaned.append(line)
+
+    return cleaned
+
+
+def extract_resolution_parts(lines):
+    """
+    Split meaningful lines into:
+    - root cause
+    - resolution
+    """
+
+    root_lines = []
+    resolution_lines = []
+
+    for line in lines:
+        lower = line.lower()
+
+        if any(word in lower for word in [
+            "fixed",
+            "resolved",
+            "updated",
+            "implemented",
+            "validated",
+            "restarted",
+            "working fine",
+            "closed"
+        ]):
+            resolution_lines.append(line)
+
+        elif "cause" in lower:
+            root_lines.append(line)
+
+        else:
+            root_lines.append(line)
+
+    return root_lines, resolution_lines
+
+
+def format_bullets(lines):
+    if not lines:
         return ""
 
-    pattern = rf"{keyword}\s*:(.*?)(?=Issue:|Cause:|Resolution:|Validation:|$)"
-    match = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
+    unique_lines = []
+    seen = set()
 
-    if match:
-        return match.group(1).strip()
+    for line in lines:
+        if line not in seen:
+            seen.add(line)
+            unique_lines.append(line)
 
-    return ""
-
-
-def clean_bullets(text):
-    if not text:
-        return ""
-
-    lines = [
-        line.strip()
-        for line in str(text).splitlines()
-        if line.strip()
-    ]
-
-    return "\n".join([f"• {line}" for line in lines])
+    return "\n".join([f"• {x}" for x in unique_lines])
 
 
 def build_rca(row):
     """
-    Build structured RCA from SNOW fields
+    Intelligent RCA builder using SNOW fields
     """
 
     problem = safe_text(
@@ -49,55 +120,30 @@ def build_rca(row):
         default=""
     )
 
+    additional_comments = safe_text(
+        row.get("comments"),
+        default=""
+    )
+
     resolution_notes = safe_text(
         row.get("resolution_notes"),
         default=""
     )
 
-    # Extract cause from resolution notes
-    cause_from_resolution = extract_section(
-        resolution_notes,
-        "Cause"
+    combined_notes = "\n".join([
+        work_notes,
+        additional_comments,
+        resolution_notes
+    ])
+
+    cleaned_lines = clean_note_lines(combined_notes)
+
+    root_lines, resolution_lines = extract_resolution_parts(
+        cleaned_lines
     )
-
-    # Extract resolution section
-    resolution_fix = extract_section(
-        resolution_notes,
-        "Resolution"
-    )
-
-    # Extract validation section
-    validation = extract_section(
-        resolution_notes,
-        "Validation"
-    )
-
-    # Root cause combines:
-    # work notes summary + explicit cause
-    root_parts = []
-
-    if work_notes:
-        root_parts.append(work_notes)
-
-    if cause_from_resolution:
-        root_parts.append(cause_from_resolution)
-
-    root_cause = "\n".join(root_parts)
-
-    # Resolution section combines:
-    # resolution + validation
-    resolution_parts = []
-
-    if resolution_fix:
-        resolution_parts.append(resolution_fix)
-
-    if validation:
-        resolution_parts.append(validation)
-
-    resolution = "\n".join(resolution_parts)
 
     return {
-        "problem": clean_bullets(problem),
-        "analysis": clean_bullets(root_cause),
-        "resolution": clean_bullets(resolution)
+        "problem": format_bullets([problem]),
+        "analysis": format_bullets(root_lines),
+        "resolution": format_bullets(resolution_lines)
     }
