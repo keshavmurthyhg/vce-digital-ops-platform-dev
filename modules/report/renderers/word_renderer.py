@@ -85,10 +85,10 @@ def generate_word_doc(
     table.autofit = False
 
     column_widths = [
-        Inches(1.25),   # label
-        Inches(2.0),    # value
-        Inches(1.25),   # label
-        Inches(2.0)     # value
+        Inches(1.5),   # label
+        Inches(1.75),    # value
+        Inches(1.5),   # label
+        Inches(1.75)     # value
     ]
 
     for row in table.rows:
@@ -162,8 +162,8 @@ def generate_word_doc(
     t2.style = "Table Grid"
     t2.autofit = False
 
-    t2.columns[0].width = Inches(3.0)
-    t2.columns[1].width = Inches(3.5)
+    t2.columns[0].width = Inches(3.25)
+    t2.columns[1].width = Inches(3.25)
 
     headers = [
         "SHORT DESCRIPTION",
