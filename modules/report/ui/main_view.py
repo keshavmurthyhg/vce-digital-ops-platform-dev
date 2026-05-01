@@ -1,5 +1,6 @@
 import streamlit as st
 
+from datetime import datetime
 from modules.common.ui.preview import render_preview
 from modules.common.ui.buttons import render_action_buttons
 from modules.report.services.rca_service import build_rca
@@ -182,7 +183,7 @@ def render_main(df):
                 st.download_button(
                     "Download Bulk Reports (ZIP)",
                     data=zip_buffer,
-                    file_name="bulk_reports.zip",
+                    file_name=f"Bulk-report_{datetime.now().strftime('%d%b%Y')}.zip",
                     mime="application/zip"
                 )
 
