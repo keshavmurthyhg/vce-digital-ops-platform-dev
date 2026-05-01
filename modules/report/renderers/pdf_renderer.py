@@ -54,14 +54,14 @@ def generate_pdf_doc(data, root, l2, res, images):
         header = build_pdf_header(
             data,
             lambda field, value: make_pdf_link(
-                safe_table(value),
+                safe_table(
+                    "-" if str(value).lower() in ["nan", "none", "nat"] else value
+                ),
                 get_url(field, value),
                 styles
             ),
-                        
             format_date
         )
-
         elements.append(header)
 
     except Exception as e:
