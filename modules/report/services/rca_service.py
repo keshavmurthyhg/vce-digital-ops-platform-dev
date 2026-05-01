@@ -111,37 +111,47 @@ def build_root_cause(data):
     for line in lines:
         lower = line.lower()
 
-        # Highest priority = explicit cause
+        # explicit cause
         if "cause:" in lower:
             root_lines.append(line)
+            continue
 
-        elif "root cause" in lower:
+        # certificate/path/system failures
+        if any(x in lower for x in [
+            "certificate",
+            "incorrect path",
+            "path issue",
+            "validation issue",
+            "failed due to",
+            "payload failed",
+            "scheduler failed",
+            "integration failed",
+            "error",
+            "exception",
+            "unable to"
+        ]):
             root_lines.append(line)
 
-        elif "failed due to" in lower:
-            root_lines.append(line)
+    # fallback → use first meaningful work note
+    if not root_lines:
+        for line in lines:
+            lower = line.lower()
 
-        elif "error" in lower:
-            root_lines.append(line)
-
-        elif "certificate" in lower:
-            root_lines.append(line)
-
-        elif "path issue" in lower:
-            root_lines.append(line)
-
-        elif "incorrect path" in lower:
-            root_lines.append(line)
-
-        elif "validation issue" in lower:
-            root_lines.append(line)
+            if not any(x in lower for x in [
+                "hello",
+                "thanks",
+                "please validate",
+                "closing incident",
+                "working fine"
+            ]):
+                root_lines.append(line)
+                break
 
     root_lines = list(dict.fromkeys(root_lines))
 
     return "\n".join(
-        [f"• {x}" for x in root_lines[:5]]
+        [f"• {x}" for x in root_lines[:4]]
     )
-
 
 # ---------------- RESOLUTION ---------------- #
 def build_resolution(data):
@@ -154,33 +164,31 @@ def build_resolution(data):
     for line in lines:
         lower = line.lower()
 
-        if "resolution:" in lower:
+        if any(x in lower for x in [
+            "resolution:",
+            "resolved",
+            "fixed",
+            "implemented",
+            "modified",
+            "restarted",
+            "validated",
+            "working fine",
+            "working now",
+            "success",
+            "successful",
+            "closed"
+        ]):
             resolution_lines.append(line)
 
-        elif "fixed" in lower:
-            resolution_lines.append(line)
-
-        elif "implemented" in lower:
-            resolution_lines.append(line)
-
-        elif "restarted" in lower:
-            resolution_lines.append(line)
-
-        elif "validated" in lower:
-            resolution_lines.append(line)
-
-        elif "working fine" in lower:
-            resolution_lines.append(line)
-
-        elif "success" in lower:
-            resolution_lines.append(line)
+    # fallback → if nothing matched, use full resolution notes
+    if not resolution_lines and lines:
+        resolution_lines = lines[:3]
 
     resolution_lines = list(dict.fromkeys(resolution_lines))
 
     return "\n".join(
         [f"• {x}" for x in resolution_lines[:5]]
     )
-
 
 # ---------------- MAIN ---------------- #
 def build_rca(data):
