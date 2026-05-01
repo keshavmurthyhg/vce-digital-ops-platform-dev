@@ -14,12 +14,23 @@ def safe_text(val):
     return val
 
 
+# ---------------- GET COLUMN SAFELY ---------------- #
+def get_value(data, *possible_keys):
+    """
+    Supports both:
+    'resolution notes'
+    'resolution_notes'
+    """
+    for key in possible_keys:
+        if key in data:
+            return safe_text(data.get(key))
+    return ""
+
+
 # ---------------- CLEAN NOISE ---------------- #
 def clean_lines(text):
     if not text:
         return []
-
-    lines = []
 
     noise_words = [
         "hello",
@@ -27,7 +38,7 @@ def clean_lines(text):
         "thanks",
         "thank you",
         "regards",
-        "br,",
+        "br",
         "please close",
         "closing incident",
         "call scheduled",
@@ -35,7 +46,11 @@ def clean_lines(text):
         "waiting for update",
         "attached",
         "attachment:",
+        "assigned to",
+        "priority changed"
     ]
+
+    cleaned = []
 
     for raw in text.split("\n"):
         line = raw.strip()
@@ -49,23 +64,31 @@ def clean_lines(text):
         if re.match(r"^\d{4}-\d{2}-\d{2}", line):
             continue
 
-        # remove names-only lines
+        # remove pure names
         if len(line.split()) <= 2 and line.istitle():
             continue
 
-        # remove noise
+        # remove noise lines
         if any(x in lower for x in noise_words):
             continue
 
-        lines.append(line)
+        cleaned.append(line)
 
-    return lines
+    return cleaned
 
 
-# ---------------- PROBLEM ---------------- #
+# ---------------- PROBLEM STATEMENT ---------------- #
 def build_problem(data):
-    short_desc = safe_text(data.get("short_description"))
-    desc = safe_text(data.get("description"))
+    short_desc = get_value(
+        data,
+        "short description",
+        "short_description"
+    )
+
+    desc = get_value(
+        data,
+        "description"
+    )
 
     problem_lines = []
 
@@ -76,7 +99,6 @@ def build_problem(data):
         short_clean = short_desc.lower().strip()
         desc_clean = desc.lower().strip()
 
-        # Avoid duplicate/near duplicate statements
         if (
             desc_clean != short_clean
             and short_clean not in desc_clean
@@ -84,7 +106,6 @@ def build_problem(data):
         ):
             problem_lines.append(desc)
 
-    # remove duplicates while preserving order
     problem_lines = list(dict.fromkeys(problem_lines))
 
     return "\n".join(
@@ -94,9 +115,23 @@ def build_problem(data):
 
 # ---------------- ROOT CAUSE ---------------- #
 def build_root_cause(data):
-    resolution_notes = safe_text(data.get("resolution notes"))
-    work_notes = safe_text(data.get("work notes"))
-    comments = safe_text(data.get("additional comments"))
+    resolution_notes = get_value(
+        data,
+        "resolution notes",
+        "resolution_notes"
+    )
+
+    work_notes = get_value(
+        data,
+        "work notes",
+        "work_notes"
+    )
+
+    comments = get_value(
+        data,
+        "additional comments",
+        "additional_comments"
+    )
 
     combined = "\n".join([
         resolution_notes,
@@ -111,38 +146,30 @@ def build_root_cause(data):
     for line in lines:
         lower = line.lower()
 
-        # explicit cause
-        if "cause:" in lower:
-            root_lines.append(line)
-            continue
-
-        # certificate/path/system failures
-        if any(x in lower for x in [
-            "certificate",
-            "incorrect path",
-            "path issue",
-            "validation issue",
-            "failed due to",
-            "payload failed",
-            "scheduler failed",
-            "integration failed",
-            "error",
-            "exception",
-            "unable to"
-        ]):
+        if (
+            "cause:" in lower
+            or "root cause" in lower
+            or "incorrect path" in lower
+            or "certificate" in lower
+            or "validation issue" in lower
+            or "failed due to" in lower
+            or "exception" in lower
+            or "error" in lower
+            or "unable to" in lower
+        ):
             root_lines.append(line)
 
-    # fallback → use first meaningful work note
+    # fallback if no explicit cause found
     if not root_lines:
         for line in lines:
             lower = line.lower()
 
             if not any(x in lower for x in [
-                "hello",
-                "thanks",
-                "please validate",
-                "closing incident",
-                "working fine"
+                "validated",
+                "working fine",
+                "working now",
+                "closed",
+                "resolved"
             ]):
                 root_lines.append(line)
                 break
@@ -153,9 +180,14 @@ def build_root_cause(data):
         [f"• {x}" for x in root_lines[:4]]
     )
 
+
 # ---------------- RESOLUTION ---------------- #
 def build_resolution(data):
-    resolution_notes = safe_text(data.get("resolution notes"))
+    resolution_notes = get_value(
+        data,
+        "resolution notes",
+        "resolution_notes"
+    )
 
     lines = clean_lines(resolution_notes)
 
@@ -174,13 +206,13 @@ def build_resolution(data):
             "validated",
             "working fine",
             "working now",
-            "success",
             "successful",
+            "success",
             "closed"
         ]):
             resolution_lines.append(line)
 
-    # fallback → if nothing matched, use full resolution notes
+    # fallback → use resolution notes directly
     if not resolution_lines and lines:
         resolution_lines = lines[:3]
 
@@ -189,6 +221,7 @@ def build_resolution(data):
     return "\n".join(
         [f"• {x}" for x in resolution_lines[:5]]
     )
+
 
 # ---------------- MAIN ---------------- #
 def build_rca(data):
