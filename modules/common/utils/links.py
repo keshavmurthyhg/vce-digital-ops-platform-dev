@@ -50,13 +50,54 @@ def make_pdf_link(value, url, styles):
 
 
 def apply_word_link(paragraph, key, value):
-    from docx.shared import RGBColor
+    from docx.oxml import OxmlElement
+    from docx.oxml.ns import qn
+
+    value = str(value or "-").strip()
+
+    if value in ["-", "", "nan", "None", "NaT"]:
+        paragraph.add_run("-")
+        return
 
     url = get_url(key.lower(), value)
-    run = paragraph.add_run(str(value or "-"))
 
-    if url:
-        run.font.color.rgb = RGBColor(0, 0, 255)
+    # No valid URL → plain text
+    if not url:
+        paragraph.add_run(value)
+        return
+
+    part = paragraph.part
+
+    r_id = part.relate_to(
+        url,
+        "http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink",
+        is_external=True
+    )
+
+    hyperlink = OxmlElement("w:hyperlink")
+    hyperlink.set(qn("r:id"), r_id)
+
+    new_run = OxmlElement("w:r")
+    rPr = OxmlElement("w:rPr")
+
+    # Blue color
+    color = OxmlElement("w:color")
+    color.set(qn("w:val"), "0000FF")
+    rPr.append(color)
+
+    # Underline
+    underline = OxmlElement("w:u")
+    underline.set(qn("w:val"), "single")
+    rPr.append(underline)
+
+    new_run.append(rPr)
+
+    text_elem = OxmlElement("w:t")
+    text_elem.text = value
+    new_run.append(text_elem)
+
+    hyperlink.append(new_run)
+    paragraph._p.append(hyperlink)
 
 def make_ui_link(type_, value):
     url = get_url(type_, value)
