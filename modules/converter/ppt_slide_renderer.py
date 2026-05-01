@@ -1,39 +1,47 @@
 import os
-import subprocess
 import tempfile
+import uuid
+from pptx import Presentation
 
 
 def render_ppt_slides_to_images(ppt_path):
     """
-    Converts entire PPT slides to PNG.
-    Preserves:
-    - arrows
-    - text boxes
-    - lines
-    - screenshots
-    - annotations
-    - shapes
+    Extract full images from each slide.
+    Avoids dependency on LibreOffice.
     """
 
+    prs = Presentation(ppt_path)
     output_dir = tempfile.mkdtemp()
 
-    subprocess.run([
-        "soffice",
-        "--headless",
-        "--convert-to",
-        "pdf",
-        "--outdir",
-        output_dir,
-        ppt_path
-    ], check=True)
+    slide_images = []
 
-    pdf_file = None
-    for f in os.listdir(output_dir):
-        if f.endswith(".pdf"):
-            pdf_file = os.path.join(output_dir, f)
-            break
+    for slide_index, slide in enumerate(prs.slides):
 
-    if not pdf_file:
-        raise Exception("PDF conversion failed")
+        largest_image = None
+        largest_size = 0
 
-    return pdf_file
+        for shape in slide.shapes:
+            try:
+                if shape.shape_type == 13:  # Picture
+                    image_bytes = shape.image.blob
+                    image_size = len(image_bytes)
+
+                    if image_size > largest_size:
+                        largest_size = image_size
+                        largest_image = image_bytes
+
+            except Exception:
+                continue
+
+        if largest_image:
+            img_path = os.path.join(
+                output_dir,
+                f"slide_{slide_index+1}_{uuid.uuid4().hex}.png"
+            )
+
+            with open(img_path, "wb") as f:
+                f.write(largest_image)
+
+            slide_images.append(img_path)
+
+    return slide_images
