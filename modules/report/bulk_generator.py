@@ -1,6 +1,7 @@
 from io import BytesIO
 import zipfile
 
+from datetime import datetime
 from modules.common.utils.links import extract_azure_id
 from modules.report.doc_generator import (
     generate_pdf,
@@ -167,15 +168,15 @@ def generate_bulk_zip(reports):
                     images=report["images"]
                 )
 
-                z.writestr(
-                    f"{number}.pdf",
-                    pdf_bytes
-                )
+                current_date = datetime.now().strftime("%d%b%Y")
 
-                z.writestr(
-                    f"{number}.docx",
-                    word_bytes
-                )
+                incident_number = report.get("number") or report["data"].get("number", "Incident")
+                
+                pdf_filename = f"{incident_number}_{current_date}.pdf"
+                word_filename = f"{incident_number}_{current_date}.docx"
+                
+                zip_file.writestr(pdf_filename, pdf_buffer.getvalue())
+                zip_file.writestr(word_filename, word_buffer.getvalue())
 
                 print(f"Generated bulk report for {number}")
 
