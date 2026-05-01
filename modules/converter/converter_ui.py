@@ -60,12 +60,10 @@ def normalize_snow_data(data):
             "created by"
         ),
 
-        "created_date": format_date(
-            get(
+        "created_date": get(
                 "created",
                 "created date",
                 "opened at"
-            )
         ),
 
         "assigned_to": get(
@@ -75,13 +73,12 @@ def normalize_snow_data(data):
 
         "priority": get("priority"),
 
-        "resolved_date": format_date(
-            get(
+        "resolved_date":get(
                 "closed",
                 "resolved date",
                 "closed at",
                 "vendor closed"
-            )
+        
         ),
 
         "short_description": get(
