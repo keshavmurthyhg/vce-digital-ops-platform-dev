@@ -46,22 +46,64 @@ def normalize_snow_data(data):
 
     return {
         "number": get("number"),
-        "created_by": get("opened by"),
-        "created_date": format_date(get("created")),
-        "assigned_to": get("assigned to"),
-        "priority": get("priority"),
-        "resolved_date": format_date(
-            get("closed", "vendor closed")
+
+        "created_by": get(
+            "opened by",
+            "created by"
         ),
-        "short_description": get("short description"),
-        "description": get("description"),
-        "work_notes": get("work notes"),
-        "comments": get("additional comments"),
-        "resolution": get("resolution notes"),
+
+        "created_date": format_date(
+            get(
+                "created",
+                "created date",
+                "opened at"
+            )
+        ),
+
+        "assigned_to": get(
+            "assigned to",
+            "assigned_to"
+        ),
+
+        "priority": get("priority"),
+
+        "resolved_date": format_date(
+            get(
+                "closed",
+                "resolved date",
+                "closed at",
+                "vendor closed"
+            )
+        ),
+
+        "short_description": get(
+            "short description"
+        ),
+
+        "description": get(
+            "description"
+        ),
+
+        "work_notes": get(
+            "work notes"
+        ),
+
+        "comments": get(
+            "additional comments"
+        ),
+
+        "resolution": get(
+            "resolution notes"
+        ),
+
         "azure_bug": extract_azure(
             get("resolution notes")
         ),
-        "ptc_case": get("vendor ticket")
+
+        "ptc_case": get(
+            "vendor ticket",
+            "ptc case"
+        )
     }
 
 
