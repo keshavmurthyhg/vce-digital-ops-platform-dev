@@ -6,6 +6,7 @@ from docx import Document
 from docx.shared import Inches
 
 from modules.converter.ppt_metadata import extract_slide1_metadata
+from modules.converter.ppt_slide_renderer import render_ppt_slides_to_images
 
 
 def render_ppt_to_images(ppt_path):
@@ -79,7 +80,7 @@ def ppt_to_word(ppt_path, output_docx):
         ppt_path
     )
 
-    slide_images = render_ppt_to_images(
+    slide_images = render_ppt_slides_to_images(
         ppt_path
     )
 
