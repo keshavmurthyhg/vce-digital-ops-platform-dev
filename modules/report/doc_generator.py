@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from modules.report.renderers.pdf_renderer import generate_pdf_doc
 from modules.report.renderers.word_renderer import generate_word_doc
 from modules.common.utils.text_cleaner import format_description
@@ -33,9 +35,7 @@ def enrich_data(data):
         )
     )
 
-    safe_data["azure_bug"] = (
-        azure_value if azure_value else "-"
-    )
+    safe_data["azure_bug"] = azure_value if azure_value else "-"
 
     # -----------------------------------
     # PTC CASE FIX
@@ -46,9 +46,7 @@ def enrich_data(data):
         or safe_data.get("ptc case")
     )
 
-    safe_data["ptc_case"] = (
-        ptc_value if ptc_value else "-"
-    )
+    safe_data["ptc_case"] = ptc_value if ptc_value else "-"
 
     return safe_data
 
@@ -91,6 +89,22 @@ def prepare_data(data):
     return safe_data
 
 
+def get_download_filename(data, extension):
+    """
+    Generates filename format:
+    INC109720389_24Apr2026.pdf
+    INC109720389_24Apr2026.docx
+    """
+
+    incident_number = str(
+        data.get("number", "incident_report")
+    ).strip()
+
+    current_date = datetime.now().strftime("%d%b%y")
+
+    return f"{incident_number}_{current_date}.{extension}"
+
+
 # -----------------------------------
 # PDF
 # -----------------------------------
@@ -103,13 +117,15 @@ def generate_pdf(
 ):
     prepared = prepare_data(data)
 
-    return generate_pdf_doc(
+    pdf_buffer = generate_pdf_doc(
         data=prepared,
         root=prepared.get("problem"),
         l2=prepared.get("analysis"),
         res=prepared.get("resolution"),
         images=images or {}
     )
+
+    return pdf_buffer
 
 
 # -----------------------------------
@@ -125,7 +141,7 @@ def generate_word_doc_wrapper(
 ):
     prepared = prepare_data(data)
 
-    return generate_word_doc(
+    word_buffer = generate_word_doc(
         data=prepared,
         root=prepared.get("problem"),
         l2=prepared.get("analysis"),
@@ -133,3 +149,5 @@ def generate_word_doc_wrapper(
         images=images or {},
         ppt_data=ppt_data
     )
+
+    return word_buffer
