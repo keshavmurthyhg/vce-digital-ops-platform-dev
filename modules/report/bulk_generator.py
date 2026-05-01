@@ -139,6 +139,8 @@ def build_bulk_reports(
 def generate_bulk_zip(reports):
     zip_buffer = BytesIO()
 
+    current_date = datetime.now().strftime("%d%b%Y")
+
     with zipfile.ZipFile(
         zip_buffer,
         "w",
@@ -150,7 +152,7 @@ def generate_bulk_zip(reports):
                 data = report["data"]
                 number = data.get("number", "unknown_incident")
 
-                # PDF
+                # Generate PDF
                 pdf_bytes = generate_pdf(
                     data=data,
                     root=report["root"],
@@ -159,7 +161,7 @@ def generate_bulk_zip(reports):
                     images=report["images"]
                 )
 
-                # Word
+                # Generate Word
                 word_bytes = generate_word_doc_wrapper(
                     data=data,
                     root=report["root"],
@@ -168,15 +170,13 @@ def generate_bulk_zip(reports):
                     images=report["images"]
                 )
 
-                current_date = datetime.now().strftime("%d%b%Y")
+                # File names with date
+                pdf_filename = f"{number}_{current_date}.pdf"
+                word_filename = f"{number}_{current_date}.docx"
 
-                incident_number = report.get("number") or report["data"].get("number", "Incident")
-                
-                pdf_filename = f"{incident_number}_{current_date}.pdf"
-                word_filename = f"{incident_number}_{current_date}.docx"
-                
-                zip_file.writestr(pdf_filename, pdf_buffer.getvalue())
-                zip_file.writestr(word_filename, word_buffer.getvalue())
+                # Write into ZIP
+                z.writestr(pdf_filename, pdf_bytes)
+                z.writestr(word_filename, word_bytes)
 
                 print(f"Generated bulk report for {number}")
 
