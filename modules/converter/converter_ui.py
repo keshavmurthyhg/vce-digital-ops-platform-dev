@@ -2,46 +2,55 @@ import streamlit as st
 import tempfile
 import os
 import re
-
-from modules.report.domain.rca_generator import generate_rca
-from modules.converter.converter import convert_ppt
-from modules.common.utils.formatters import format_date
-from modules.data.snow_loader import load_snow_data
-from modules.converter.ppt_extractor import extract_ppt_content
-from modules.report.doc_generator import generate_word_doc_wrapper
 from pptx import Presentation
-from modules.converter.ppt_to_doc import extract_slide1_content
+
+from modules.converter.converter import convert_ppt
+from modules.converter.ppt_metadata import extract_slide1_metadata
+
+from modules.data.snow_loader import load_snow_data
+from modules.report.domain.rca_generator import generate_rca
+from modules.report.doc_generator import generate_word_doc_wrapper
+
+from modules.common.utils.formatters import format_date
 from modules.common.utils.links import get_url
 
-def build_html_link(field, value):
-    url = get_url(field, value)
 
-    if not url:
-        return "-"
+# -----------------------------
+# HELPERS
+# -----------------------------
+def clean_incident(value):
+    if not value:
+        return None
 
-    return f'<a href="{url}" target="_blank">{value}</a>'
+    match = re.search(r"INC\d{7,}", str(value))
+    return match.group(0) if match else None
 
-        
-# ---------------- AZURE BUG ---------------- #
+
 def extract_azure(text):
     if not text:
         return None
 
-    text = str(text)
-
     match = re.search(
-        r"dev\.azure\.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/(\d{6})",
-        text,
+        r"dev\.azure\.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/(\d+)",
+        str(text),
         re.IGNORECASE
     )
 
-    if match:
-        return match.group(1)
-
-    return None
+    return match.group(1) if match else None
 
 
-# ---------------- NORMALIZER ---------------- #
+def build_link(field, value):
+    if not value:
+        return "-"
+
+    url = get_url(field, value)
+
+    if not url:
+        return value
+
+    return f'<a href="{url}" target="_blank">{value}</a>'
+
+
 def normalize_snow_data(data):
     def get(*keys):
         for k in keys:
@@ -55,126 +64,87 @@ def normalize_snow_data(data):
         "created_date": format_date(get("created")),
         "assigned_to": get("assigned to"),
         "priority": get("priority"),
-        "resolved_date": format_date(get("closed", "vendor closed")),
+        "resolved_date": format_date(
+            get("closed", "vendor closed")
+        ),
         "short_description": get("short description"),
-        "description": get("description") or "",
+        "description": get("description"),
         "work_notes": get("work notes"),
         "comments": get("additional comments"),
         "resolution": get("resolution notes"),
-        "azure_bug": extract_azure(get("resolution notes")),
-        "ptc_case": get("vendor ticket"),
+        "azure_bug": extract_azure(
+            get("resolution notes")
+        ),
+        "ptc_case": get("vendor ticket")
     }
 
 
-# ---------------- CLEAN INCIDENT ---------------- #
-def clean_incident(val):
-    if not val:
-        return None
-    m = re.search(r'INC\d{7,}', str(val))
-    return m.group(0) if m else None
-
-
-# ---------------- LINK BUILDER ---------------- #
-def link(val, type_):
-    if not val:
-        return "-"
-
-    if type_ == "incident":
-        return f'<a href="https://volvoitsm.service-now.com/nav_to.do?uri=incident.do?sysparm_query=number={val}" target="_blank">{val}</a>'
-
-    if type_ == "azure":
-        return f'<a href="https://dev.azure.com/VolvoGroup-DVP/VCEWindchillPLM/_workitems/edit/{val}" target="_blank">{val}</a>'
-
-    if type_ == "ptc":
-        return f'<a href="https://support.ptc.com/appserver/cs/view/case.jsp?n={val}" target="_blank">{val}</a>'
-
-    return val
-
-
-# ---------------- TABLE PREVIEW ---------------- #
-def render_preview_table(data):
-
+# -----------------------------
+# PREVIEW TABLE
+# -----------------------------
+def render_preview(data):
     html = f"""
     <style>
     .tbl {{
-        width: 100%;
+        width:100%;
         border-collapse: collapse;
         font-family: Arial;
-        font-size: 14px;
-        margin-bottom: 20px;
+        font-size:14px;
+        margin-bottom:20px;
     }}
+
     .tbl td {{
-        border: 1px solid black;
-        padding: 6px;
+        border:1px solid black;
+        padding:6px;
+        vertical-align:top;
     }}
+
     .hdr {{
-        font-weight: bold;
-        background: #f2f2f2;
+        font-weight:bold;
+        background:#f2f2f2;
     }}
     </style>
 
     <table class="tbl">
         <tr>
             <td class="hdr">INCIDENT</td>
-            <td>{link(data["number"], "incident")}</td>
+            <td>{build_link("incident", data.get("number"))}</td>
+
             <td class="hdr">CREATED BY</td>
-            <td>{data["created_by"] or "-"}</td>
+            <td>{data.get("created_by") or "-"}</td>
         </tr>
+
         <tr>
             <td class="hdr">AZURE BUG</td>
-            <td>{link(data["azure_bug"], "azure")}</td>
+            <td>{build_link("azure", data.get("azure_bug"))}</td>
+
             <td class="hdr">CREATED DATE</td>
-            <td>{data["created_date"] or "-"}</td>
+            <td>{data.get("created_date") or "-"}</td>
         </tr>
+
         <tr>
             <td class="hdr">PTC CASE</td>
-            <td>{link(data["ptc_case"], "ptc")}</td>
+            <td>{build_link("ptc", data.get("ptc_case"))}</td>
+
             <td class="hdr">ASSIGNED TO</td>
-            <td>{data["assigned_to"] or "-"}</td>
+            <td>{data.get("assigned_to") or "-"}</td>
         </tr>
+
         <tr>
             <td class="hdr">PRIORITY</td>
-            <td>{data["priority"] or "-"}</td>
+            <td>{data.get("priority") or "-"}</td>
+
             <td class="hdr">RESOLVED DATE</td>
-            <td>{data["resolved_date"] or "-"}</td>
+            <td>{data.get("resolved_date") or "-"}</td>
         </tr>
     </table>
-    """
-
-    #st.markdown(html, unsafe_allow_html=True)#
-    st.components.v1.html(html, height=250, scrolling=True)
-
-
-def render_description_table(data):
-
-    html = f"""
-    <style>
-    .tbl {{
-        width: 100%;
-        border-collapse: collapse;
-        font-family: Arial;
-        font-size: 14px;
-        margin-bottom: 20px;
-    }}
-
-    .tbl td {{
-        border: 1px solid black;
-        padding: 6px;
-        vertical-align: top;
-        word-wrap: break-word;
-    }}
-
-    .hdr {{
-        font-weight: bold;
-        background: #f2f2f2;
-    }}
-    </style>
 
     <table class="tbl">
         <tr>
             <td class="hdr">SHORT DESCRIPTION</td>
             <td class="hdr">DESCRIPTION</td>
         </tr>
+
         <tr>
             <td>{data.get("short_description") or "-"}</td>
             <td>{data.get("description") or "-"}</td>
@@ -182,96 +152,167 @@ def render_description_table(data):
     </table>
     """
 
-    # Use same renderer as header table
     st.components.v1.html(
         html,
-        height=300,
+        height=500,
         scrolling=True
     )
 
 
-# ---------------- UI ---------------- #
+# -----------------------------
+# MAIN UI
+# -----------------------------
 def render():
     st.subheader("📊 PPT Converter")
 
-    uploaded_ppt = st.file_uploader("Upload PPT", type=["pptx"])
+    uploaded_ppt = st.file_uploader(
+        "Upload PPT",
+        type=["pptx"]
+    )
 
-    if uploaded_ppt:
+    if not uploaded_ppt:
+        return
 
-        with tempfile.TemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory() as tmpdir:
 
-            ppt_path = os.path.join(tmpdir, uploaded_ppt.name)
+        ppt_path = os.path.join(
+            tmpdir,
+            uploaded_ppt.name
+        )
 
-            with open(ppt_path, "wb") as f:
-                f.write(uploaded_ppt.read())
+        with open(ppt_path, "wb") as f:
+            f.write(uploaded_ppt.read())
 
-            # -------- CONVERT -------- #
-            if st.button("Convert PPT"):
-                docx_path, pdf_path = convert_ppt(ppt_path, tmpdir)
+        # -------------------------
+        # Extract metadata
+        # -------------------------
+        metadata = extract_slide1_metadata(ppt_path)
 
-                with open(docx_path, "rb") as f:
-                    st.download_button("📄 Download Word", f.read(), "converted.docx")
+        incident = clean_incident(
+            metadata.get("incident")
+        )
 
-                if pdf_path and os.path.exists(pdf_path):
-                    with open(pdf_path, "rb") as f:
-                        st.download_button("📕 Download PDF", f.read(), "converted.pdf")
+        if incident:
+            st.info(f"🔍 Detected Incident: {incident}")
+        else:
+            st.warning(
+                "Could not detect incident number from slide 1"
+            )
+
+        # -------------------------
+        # Load SNOW data
+        # -------------------------
+        snow_data = None
+
+        if incident:
+            try:
+                raw_data = load_snow_data(incident)
+
+                if raw_data:
+                    snow_data = normalize_snow_data(raw_data)
+                    st.success("✅ SNOW data loaded")
                 else:
-                    st.warning("⚠️ PDF not available")
+                    st.warning(
+                        "No SNOW data found. PPT conversion still works."
+                    )
 
-            # -------- COMBINED -------- #
-            if st.button("Generate Combined Report"):
-
-                prs = Presentation(ppt_path)
-                incident, desc, date, azure = extract_slide1_content(prs.slides[0])
-                incident = clean_incident(incident)
-
-                st.info(f"🔍 Detected Incident: {incident}")
-
-                df = load_snow_data()
-
-                if df is None or df.empty:
-                    st.error("❌ Failed to load SNOW data")
-                    return
-
-                row = df[df["number"] == incident]
-
-                if row.empty:
-                    st.error("❌ Incident not found in SNOW")
-                    return
-
-                st.success("✅ SNOW data loaded")
-
-                raw_data = row.iloc[0].to_dict()
-                snow_data = normalize_snow_data(raw_data)
-
-                # Build sections
-                rca = generate_rca(snow_data)
-
-                root = rca["problem"]
-                l2 = rca["analysis"]
-                res = rca["resolution"]
-
-                # PPT content (UNCHANGED)
-                ppt_data = extract_ppt_content(ppt_path, tmpdir)
-
-                # Generate Word
-                doc_bytes = generate_word_doc_wrapper(
-                    snow_data,
-                    root,
-                    l2,
-                    res,
-                    {},
-                    ppt_data=ppt_data
+            except Exception as e:
+                st.error(
+                    f"SNOW loading failed: {str(e)}"
                 )
 
-                # -------- PREVIEW -------- #
-                st.subheader("📄 Preview")
+        # -------------------------
+        # Preview
+        # -------------------------
+        st.markdown("### 📄 Preview")
 
-                render_preview_table(snow_data)
-                render_description_table(snow_data)
+        if snow_data:
+            render_preview(snow_data)
+        else:
+            st.info(
+                "Preview unavailable because SNOW data not found."
+            )
 
-                st.download_button(
-                    "📄 Download Combined Report",
-                    doc_bytes,
-                    "combined_report.docx"
+        # -------------------------
+        # Convert PPT ONLY
+        # -------------------------
+        if st.button("Convert PPT"):
+
+            with st.spinner(
+                "Converting PPT to Word/PDF..."
+            ):
+                docx_path, pdf_path = convert_ppt(
+                    ppt_path,
+                    tmpdir
                 )
+
+            st.success("PPT converted successfully")
+
+            if os.path.exists(docx_path):
+                with open(docx_path, "rb") as f:
+                    st.download_button(
+                        "📄 Download Word",
+                        f.read(),
+                        file_name=os.path.basename(
+                            docx_path
+                        )
+                    )
+
+            if pdf_path and os.path.exists(pdf_path):
+                with open(pdf_path, "rb") as f:
+                    st.download_button(
+                        "📕 Download PDF",
+                        f.read(),
+                        file_name=os.path.basename(
+                            pdf_path
+                        )
+                    )
+
+        # -------------------------
+        # Combined Report
+        # -------------------------
+        if st.button("Generate Combined Report"):
+
+            if not snow_data:
+                st.error(
+                    "SNOW data required for combined report generation."
+                )
+                return
+
+            with st.spinner(
+                "Generating combined report..."
+            ):
+                try:
+                    rca_data = generate_rca(
+                        snow_data
+                    )
+
+                    output_path = os.path.join(
+                        tmpdir,
+                        f"{incident}_combined_report.docx"
+                    )
+
+                    generate_word_doc_wrapper(
+                        snow_data=snow_data,
+                        rca_data=rca_data,
+                        ppt_path=ppt_path,
+                        output_path=output_path
+                    )
+
+                    st.success(
+                        "Combined report generated successfully"
+                    )
+
+                    with open(output_path, "rb") as f:
+                        st.download_button(
+                            "📥 Download Combined Report",
+                            f.read(),
+                            file_name=os.path.basename(
+                                output_path
+                            )
+                        )
+
+                except Exception as e:
+                    st.error(
+                        f"Combined report failed: {str(e)}"
+                    )
