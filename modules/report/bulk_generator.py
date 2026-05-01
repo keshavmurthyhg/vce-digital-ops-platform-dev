@@ -1,13 +1,17 @@
+from io import BytesIO
+import zipfile
+
 from modules.common.utils.links import extract_azure_id
 from modules.report.doc_generator import (
     generate_pdf,
     generate_word_doc_wrapper
 )
-
-# ✅ USE NEW RCA ENGINE
 from modules.report.services.rca_service import build_rca
 
 
+# -----------------------------------
+# SAFE TEXT
+# -----------------------------------
 def safe_text(val):
     if val is None:
         return ""
@@ -15,12 +19,20 @@ def safe_text(val):
     if isinstance(val, list):
         val = "\n".join([str(v) for v in val])
 
-    val = str(val)
+    val = str(val).strip()
+
+    if val.lower() in ["nan", "none", "nat"]:
+        return ""
 
     MAX_LEN = 800
     lines = []
 
     for raw in val.split("\n"):
+        raw = raw.strip()
+
+        if not raw:
+            continue
+
         if len(raw) > MAX_LEN:
             chunks = [
                 raw[i:i + MAX_LEN]
@@ -44,108 +56,116 @@ def build_bulk_reports(
     results = []
 
     for inc in incident_list:
+        try:
+            row = df[df["number"] == inc]
 
-        row = df[df["number"] == inc]
+            if row.empty:
+                print(f"Incident not found: {inc}")
+                continue
 
-        if row.empty:
+            r = row.iloc[0]
+
+            # Combine notes for Azure extraction
+            combined_notes = " ".join([
+                str(r.get("work notes", "")),
+                str(r.get("additional comments", "")),
+                str(r.get("resolution notes", ""))
+            ])
+
+            # FULL incident payload required by PDF/Word
+            data = {
+                "number": r.get("number"),
+
+                "short_description": r.get("short description"),
+                "description": r.get("description"),
+
+                "priority": r.get("priority"),
+
+                "created_by": r.get("opened by"),
+                "created_date": r.get("created"),
+
+                "assigned_to": r.get("assigned to"),
+                "resolved_date": r.get("resolved"),
+
+                "azure_bug": extract_azure_id(combined_notes),
+
+                "ptc_case": r.get("vendor ticket"),
+
+                # RCA fields
+                "work notes": r.get("work notes", ""),
+                "additional comments": r.get("additional comments", ""),
+                "resolution notes": r.get("resolution notes", ""),
+
+                # aliases
+                "work_notes": r.get("work notes", ""),
+                "additional_comments": r.get("additional comments", ""),
+                "resolution_notes": r.get("resolution notes", "")
+            }
+
+            # Build RCA
+            rca = build_rca(data)
+
+            images = (
+                images_map.get(inc, {})
+                if images_map
+                else {}
+            )
+
+            results.append({
+                "data": data,
+                "root": safe_text(
+                    rca.get("problem_statement", "")
+                ),
+                "l2": safe_text(
+                    rca.get("root_cause", "")
+                ),
+                "res": safe_text(
+                    rca.get("resolution", "")
+                ),
+                "images": images
+            })
+
+        except Exception as e:
+            print(f"Error building report for {inc}: {e}")
             continue
-
-        r = row.iloc[0]
-        
-        # Build notes FIRST
-        combined_notes = " ".join([
-            str(r.get("work notes", "")),
-            str(r.get("additional comments", "")),
-            str(r.get("resolution notes", ""))
-        ])
-        
-       data = {
-            "number": r.get("number"),
-        
-            "short_description": r.get("short description"),
-            "description": r.get("description"),
-        
-            "priority": r.get("priority"),
-        
-            "created_by": r.get("opened by"),
-            "created_date": r.get("created"),
-            "assigned_to": r.get("assigned to"),
-            "resolved_date": r.get("resolved"),
-        
-            "azure_bug": extract_azure_id(combined_notes),
-        
-            "ptc_case": r.get("vendor ticket"),
-        
-            # RCA fields
-            "work notes": r.get("work notes", ""),
-            "additional comments": r.get("additional comments", ""),
-            "resolution notes": r.get("resolution notes", ""),
-        
-            # underscore aliases
-            "work_notes": r.get("work notes", ""),
-            "additional_comments": r.get("additional comments", ""),
-            "resolution_notes": r.get("resolution notes", "")
-        }
-
-        # ✅ NEW RCA LOGIC
-        rca = build_rca(data)
-
-        images = (
-            images_map.get(inc, {})
-            if images_map
-            else {}
-        )
-
-        results.append({
-            "data": data,
-
-            "root": safe_text(
-                rca.get(
-                    "problem_statement",
-                    ""
-                )
-            ),
-
-            "l2": safe_text(
-                rca.get(
-                    "root_cause",
-                    ""
-                )
-            ),
-
-            "res": safe_text(
-                rca.get(
-                    "resolution",
-                    ""
-                )
-            ),
-
-            "images": images
-        })
 
     return results
 
 
 # -----------------------------------
-# GENERATE ZIP
+# GENERATE BULK ZIP
 # -----------------------------------
 def generate_bulk_zip(reports):
-    import zipfile
-    from io import BytesIO
-
     zip_buffer = BytesIO()
 
     with zipfile.ZipFile(
         zip_buffer,
-        "w"
+        "w",
+        zipfile.ZIP_DEFLATED
     ) as z:
 
-        for r in reports:
-            number = r["data"]["number"]
-
+        for report in reports:
             try:
-                pdf_bytes = generate_pdf(**r)
-                word_bytes = generate_word_doc_wrapper(**r)
+                data = report["data"]
+                number = data.get("number", "unknown_incident")
+
+                # PDF
+                pdf_bytes = generate_pdf(
+                    data=data,
+                    root=report["root"],
+                    l2=report["l2"],
+                    res=report["res"],
+                    images=report["images"]
+                )
+
+                # Word
+                word_bytes = generate_word_doc_wrapper(
+                    data=data,
+                    root=report["root"],
+                    l2=report["l2"],
+                    res=report["res"],
+                    images=report["images"]
+                )
 
                 z.writestr(
                     f"{number}.pdf",
@@ -157,10 +177,10 @@ def generate_bulk_zip(reports):
                     word_bytes
                 )
 
+                print(f"Generated bulk report for {number}")
+
             except Exception as e:
-                print(
-                    f"Failed bulk report for {number}: {e}"
-                )
+                print(f"Failed bulk report: {e}")
                 continue
 
     zip_buffer.seek(0)
