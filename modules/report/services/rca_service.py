@@ -72,8 +72,20 @@ def build_problem(data):
     if short_desc:
         problem_lines.append(short_desc)
 
-    if desc and desc.lower() != short_desc.lower():
-        problem_lines.append(desc)
+    if desc:
+        short_clean = short_desc.lower().strip()
+        desc_clean = desc.lower().strip()
+
+        # Avoid duplicate/near duplicate statements
+        if (
+            desc_clean != short_clean
+            and short_clean not in desc_clean
+            and desc_clean not in short_clean
+        ):
+            problem_lines.append(desc)
+
+    # remove duplicates while preserving order
+    problem_lines = list(dict.fromkeys(problem_lines))
 
     return "\n".join(
         [f"• {x}" for x in problem_lines[:2]]
