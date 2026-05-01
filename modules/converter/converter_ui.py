@@ -290,30 +290,26 @@ def render():
                     "SNOW data required for combined report generation."
                 )
                 return
-
+        
             with st.spinner(
                 "Generating combined report..."
             ):
                 try:
-                    rca_data = generate_rca(
-                        snow_data
-                    )
-
                     combined_doc = generate_word_doc_wrapper(
                         data=snow_data,
                         ppt_data=ppt_path
                     )
-                    
+        
                     st.success(
                         "Combined report generated successfully"
                     )
-                    
+        
                     st.download_button(
                         "📥 Download Combined Report",
                         combined_doc,
                         file_name=f"{incident}_combined_report.docx"
                     )
-
+        
                 except Exception as e:
                     st.error(
                         f"Combined report failed: {str(e)}"
