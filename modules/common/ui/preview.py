@@ -24,8 +24,13 @@ def _link(value, type_):
 
     return f'<a href="{url}" target="_blank">{value}</a>'
 
-
-def render_preview(data):
+def render_preview(
+    data,
+    root=None,
+    l2=None,
+    resolution=None,
+    show_rca=True
+):
 
     if not data:
         st.warning("No data available for preview")
@@ -79,6 +84,25 @@ def render_preview(data):
     """
 
     html = style + table1 + table2
+    
+    # RCA section only for Report module
+    if show_rca:
+        html += f"""
+        <table class="tbl">
+            <tr>
+                <td class="hdr">PROBLEM STATEMENT</td>
+                <td>{_val(root)}</td>
+            </tr>
+            <tr>
+                <td class="hdr">ROOT CAUSE</td>
+                <td>{_val(l2)}</td>
+            </tr>
+            <tr>
+                <td class="hdr">RESOLUTION</td>
+                <td>{_val(resolution)}</td>
+            </tr>
+        </table>
+        """
 
     # Dynamic height based on content length
     desc_len = len(str(data.get("description", "") or ""))
