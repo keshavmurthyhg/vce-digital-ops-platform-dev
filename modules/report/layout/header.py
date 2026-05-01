@@ -10,34 +10,32 @@ def build_pdf_header(data, wrap_link, format_date):
         return Paragraph(str(x or "-"), style=None)
 
     def safe_link(field, value):
-        """
-        Prevent blank Azure/PTC values in PDF.
-        If URL generation fails, show plain text.
-        """
-        if not value:
-            return wrap("-")
-
-        value = str(value).strip()
-
-        if value.lower() in ["nan", "none", "nat", "-"]:
-            return wrap("-")
-
-        try:
-            url = get_url(field, value)
-
-            if url:
-                return make_pdf_link(
-                    value,
-                    url,
-                    {}
-                )
-
-            return wrap(value)
-
-        except Exception as e:
-            print(f"{field} link error:", e)
-            return wrap(value)
-
+            """
+            Keep links clickable while preventing blank values.
+            """
+        
+            if not value:
+                return wrap("-")
+        
+            value = str(value).strip()
+        
+            if value.lower() in ["nan", "none", "nat", "-"]:
+                return wrap("-")
+        
+            try:
+                url = get_url(field, value)
+        
+                # If valid URL exists → clickable link
+                if url:
+                    return wrap_link(field, value)
+        
+                # fallback → plain text
+                return wrap(value)
+        
+            except Exception as e:
+                print(f"{field} link error:", e)
+                return wrap(value)
+                
     table = Table(
         [
             [
