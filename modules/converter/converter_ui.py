@@ -2,18 +2,16 @@ import streamlit as st
 import tempfile
 import os
 import re
-from pptx import Presentation
 
 from modules.converter.converter import convert_ppt
 from modules.converter.ppt_metadata import extract_slide1_metadata
 
 from modules.data.snow_loader import load_snow_data
-from modules.report.domain.rca_generator import generate_rca
 from modules.report.doc_generator import generate_word_doc_wrapper
 
 from modules.common.utils.formatters import format_date
-from modules.common.utils.links import get_url
 from modules.common.ui.preview import render_preview
+
 
 # -----------------------------
 # HELPERS
@@ -37,18 +35,6 @@ def extract_azure(text):
     )
 
     return match.group(1) if match else None
-
-
-def build_link(field, value):
-    if not value:
-        return "-"
-
-    url = get_url(field, value)
-
-    if not url:
-        return value
-
-    return f'<a href="{url}" target="_blank">{value}</a>'
 
 
 def normalize_snow_data(data):
@@ -78,21 +64,6 @@ def normalize_snow_data(data):
         "ptc_case": get("vendor ticket")
     }
 
-
-# -------------------------
-# Preview
-# -------------------------
-st.markdown("### 📄 Preview")
-
-if snow_data:
-    render_preview(
-        snow_data,
-        show_rca=False
-    )
-else:
-    st.info(
-        "Preview unavailable because SNOW data not found."
-    )
 
 # -----------------------------
 # MAIN UI
@@ -142,17 +113,17 @@ def render():
         if incident:
             try:
                 snow_df = load_snow_data()
-        
+
                 matched_row = None
-        
+
                 if snow_df is not None and not snow_df.empty:
                     filtered = snow_df[
                         snow_df["number"].astype(str).str.strip() == incident
                     ]
-        
+
                     if not filtered.empty:
                         matched_row = filtered.iloc[0].to_dict()
-        
+
                 if matched_row:
                     snow_data = normalize_snow_data(
                         matched_row
@@ -162,19 +133,20 @@ def render():
                     st.warning(
                         "No matching SNOW incident found. PPT conversion still works."
                     )
-        
+
             except Exception as e:
                 st.error(
                     f"SNOW loading failed: {str(e)}"
                 )
 
         # -------------------------
-        # Preview
+        # Shared Preview
         # -------------------------
-        st.markdown("### 📄 Preview")
-
         if snow_data:
-            render_preview(snow_data)
+            render_preview(
+                snow_data,
+                show_rca=False
+            )
         else:
             st.info(
                 "Preview unavailable because SNOW data not found."
@@ -184,27 +156,34 @@ def render():
         # Convert PPT ONLY
         # -------------------------
         if st.button("Convert PPT"):
-
             with st.spinner(
-                "Converting PPT to Word/PDF..."
+                "Converting PPT to Word..."
             ):
-                
-                docx_path = convert_ppt(
-                    ppt_path,
-                    tmpdir
-                )
-                
-                st.success("PPT converted successfully")
-                
-                if os.path.exists(docx_path):
-                    with open(docx_path, "rb") as f:
-                        st.download_button(
-                            "📄 Download Word",
-                            f.read(),
-                            file_name=os.path.basename(
-                                docx_path
+                try:
+                    docx_path = convert_ppt(
+                        ppt_path,
+                        tmpdir
+                    )
+
+                    st.success(
+                        "PPT converted successfully"
+                    )
+
+                    if os.path.exists(docx_path):
+                        with open(docx_path, "rb") as f:
+                            st.download_button(
+                                "📄 Download Word",
+                                f.read(),
+                                file_name=os.path.basename(
+                                    docx_path
+                                )
                             )
-                        )
+
+                except Exception as e:
+                    st.error(
+                        f"PPT conversion failed: {str(e)}"
+                    )
+
         # -------------------------
         # Combined Report
         # -------------------------
@@ -215,7 +194,7 @@ def render():
                     "SNOW data required for combined report generation."
                 )
                 return
-        
+
             with st.spinner(
                 "Generating combined report..."
             ):
@@ -224,17 +203,17 @@ def render():
                         data=snow_data,
                         ppt_data=ppt_path
                     )
-        
+
                     st.success(
                         "Combined report generated successfully"
                     )
-        
+
                     st.download_button(
                         "📥 Download Combined Report",
                         combined_doc,
                         file_name=f"{incident}_combined_report.docx"
                     )
-        
+
                 except Exception as e:
                     st.error(
                         f"Combined report failed: {str(e)}"
