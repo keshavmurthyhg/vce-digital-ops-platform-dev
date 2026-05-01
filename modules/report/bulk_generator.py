@@ -51,47 +51,16 @@ def build_bulk_reports(
             continue
 
         r = row.iloc[0]
-
-        # -----------------------------
-        # SAME DATA STRUCTURE AS SINGLE
-        # -----------------------------
+        
+        # Build notes FIRST
+        combined_notes = " ".join([
+            str(r.get("work notes", "")),
+            str(r.get("additional comments", "")),
+            str(r.get("resolution notes", ""))
+        ])
+        
         data = {
-            "number": r.get("number"),
-
-            "short_description": r.get(
-                "short description"
-            ),
-
-            "description": r.get(
-                "description"
-            ),
-
-            "priority": r.get(
-                "priority"
-            ),
-
-            "created_by": r.get(
-                "opened by"
-            ),
-
-            "created_date": r.get(
-                "created"
-            ),
-
-            "assigned_to": r.get(
-                "assigned to"
-            ),
-
-            "resolved_date": r.get(
-                "resolved"
-            ),
-
-            combined_notes = " ".join([
-                str(r.get("work notes", "")),
-                str(r.get("additional comments", "")),
-                str(r.get("resolution notes", ""))
-            ])
-            
+        
             "azure_bug": extract_azure_id(combined_notes),
             
             "ptc_case": r.get(
