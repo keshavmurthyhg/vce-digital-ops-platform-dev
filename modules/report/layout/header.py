@@ -46,13 +46,13 @@ def build_pdf_header(data, wrap_link, format_date):
             ],
             [
                 "AZURE BUG",
-                safe_link("azure", data.get("azure_bug")),
+                safe_link("azure bug", data.get("azure_bug")),
                 "CREATED DATE",
                 wrap(format_date(data.get("created_date")))
             ],
             [
                 "PTC CASE",
-                safe_link("ptc", data.get("ptc_case")),
+                safe_link("ptc case", data.get("ptc_case"))
                 "ASSIGNED TO",
                 wrap(data.get("assigned_to"))
             ],
