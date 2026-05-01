@@ -59,41 +59,32 @@ def build_bulk_reports(
             str(r.get("resolution notes", ""))
         ])
         
-        data = {
+       data = {
+            "number": r.get("number"),
+        
+            "short_description": r.get("short description"),
+            "description": r.get("description"),
+        
+            "priority": r.get("priority"),
+        
+            "created_by": r.get("opened by"),
+            "created_date": r.get("created"),
+            "assigned_to": r.get("assigned to"),
+            "resolved_date": r.get("resolved"),
         
             "azure_bug": extract_azure_id(combined_notes),
-            
-            "ptc_case": r.get(
-                "vendor ticket"
-            ),
-
-            # -----------------------------
-            # CRITICAL FIX
-            # -----------------------------
-            "work notes": r.get(
-                "work notes", ""
-            ),
-
-            "additional comments": r.get(
-                "additional comments", ""
-            ),
-
-            "resolution notes": r.get(
-                "resolution notes", ""
-            ),
-
-            # optional underscore versions
-            "work_notes": r.get(
-                "work notes", ""
-            ),
-
-            "additional_comments": r.get(
-                "additional comments", ""
-            ),
-
-            "resolution_notes": r.get(
-                "resolution notes", ""
-            )
+        
+            "ptc_case": r.get("vendor ticket"),
+        
+            # RCA fields
+            "work notes": r.get("work notes", ""),
+            "additional comments": r.get("additional comments", ""),
+            "resolution notes": r.get("resolution notes", ""),
+        
+            # underscore aliases
+            "work_notes": r.get("work notes", ""),
+            "additional_comments": r.get("additional comments", ""),
+            "resolution_notes": r.get("resolution notes", "")
         }
 
         # ✅ NEW RCA LOGIC
