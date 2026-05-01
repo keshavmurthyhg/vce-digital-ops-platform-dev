@@ -1,6 +1,4 @@
 import os
-import tempfile
-import subprocess
 
 from docx import Document
 from docx.shared import Inches
@@ -9,50 +7,10 @@ from modules.converter.ppt_metadata import extract_slide1_metadata
 from modules.converter.ppt_slide_renderer import render_ppt_slides_to_images
 
 
-def render_ppt_to_images(ppt_path):
-    """
-    Convert entire PPT slides into PNG images.
-    Preserves:
-    - arrows
-    - lines
-    - text boxes
-    - screenshots
-    - annotations
-    - shapes
-    """
-
-    temp_dir = tempfile.mkdtemp()
-
-    subprocess.run(
-        [
-            "soffice",
-            "--headless",
-            "--convert-to",
-            "png",
-            "--outdir",
-            temp_dir,
-            ppt_path
-        ],
-        check=True
-    )
-
-    images = []
-
-    for file in sorted(os.listdir(temp_dir)):
-        if file.endswith(".png"):
-            images.append(
-                os.path.join(temp_dir, file)
-            )
-
-    if not images:
-        raise Exception(
-            "No slide images generated from PPT"
-        )
-
-    return images
-
-
 def add_header_table(doc, metadata):
+    """
+    Add metadata table from slide 1
+    """
     doc.add_heading(
         "INCIDENT REPORT",
         level=0
@@ -66,39 +24,69 @@ def add_header_table(doc, metadata):
 
     table.cell(0, 0).text = "Incident"
     table.cell(0, 1).text = metadata.get(
-        "incident", ""
+        "incident", "-"
     )
 
     table.cell(1, 0).text = "Created Date"
     table.cell(1, 1).text = metadata.get(
-        "created_date", ""
+        "created_date", "-"
     )
 
 
+def add_slide_images(doc, slide_images):
+    """
+    Add rendered PPT slides into Word
+    """
+    if not slide_images:
+        doc.add_paragraph(
+            "No PPT slides found."
+        )
+        return
+
+    # Skip slide 1 because metadata already extracted
+    for img in slide_images[1:]:
+        if os.path.exists(img):
+            doc.add_page_break()
+            doc.add_picture(
+                img,
+                width=Inches(6.8)
+            )
+
+
 def ppt_to_word(ppt_path, output_docx):
+    """
+    Convert PPT to Word:
+    - Extract metadata from slide 1
+    - Render complete slides as images
+    - Add them into Word
+    """
+
+    # Extract incident metadata
     metadata = extract_slide1_metadata(
         ppt_path
     )
 
+    # Render full slides as images
     slide_images = render_ppt_slides_to_images(
         ppt_path
     )
 
+    # Create Word document
     doc = Document()
 
+    # Add metadata table
     add_header_table(
         doc,
         metadata
     )
 
-    # skip slide1 because metadata already used
-    for img in slide_images[1:]:
-        doc.add_page_break()
-        doc.add_picture(
-            img,
-            width=Inches(6.8)
-        )
+    # Add slide images
+    add_slide_images(
+        doc,
+        slide_images
+    )
 
+    # Save final document
     doc.save(output_docx)
 
     return output_docx
