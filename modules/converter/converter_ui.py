@@ -299,30 +299,20 @@ def render():
                         snow_data
                     )
 
-                    output_path = os.path.join(
-                        tmpdir,
-                        f"{incident}_combined_report.docx"
+                    combined_doc = generate_word_doc_wrapper(
+                        data=snow_data,
+                        ppt_data=ppt_path
                     )
-
-                    generate_word_doc_wrapper(
-                        incident_data=snow_data,
-                        rca_output=rca_data,
-                        ppt_path=ppt_path,
-                        output_path=output_path
-                    )
-
+                    
                     st.success(
                         "Combined report generated successfully"
                     )
-
-                    with open(output_path, "rb") as f:
-                        st.download_button(
-                            "📥 Download Combined Report",
-                            f.read(),
-                            file_name=os.path.basename(
-                                output_path
-                            )
-                        )
+                    
+                    st.download_button(
+                        "📥 Download Combined Report",
+                        combined_doc,
+                        file_name=f"{incident}_combined_report.docx"
+                    )
 
                 except Exception as e:
                     st.error(
