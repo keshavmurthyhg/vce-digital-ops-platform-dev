@@ -253,33 +253,23 @@ def render():
             with st.spinner(
                 "Converting PPT to Word/PDF..."
             ):
-                docx_path, pdf_path = convert_ppt(
+                
+                docx_path = convert_ppt(
                     ppt_path,
                     tmpdir
                 )
-
-            st.success("PPT converted successfully")
-
-            if os.path.exists(docx_path):
-                with open(docx_path, "rb") as f:
-                    st.download_button(
-                        "📄 Download Word",
-                        f.read(),
-                        file_name=os.path.basename(
-                            docx_path
+                
+                st.success("PPT converted successfully")
+                
+                if os.path.exists(docx_path):
+                    with open(docx_path, "rb") as f:
+                        st.download_button(
+                            "📄 Download Word",
+                            f.read(),
+                            file_name=os.path.basename(
+                                docx_path
+                            )
                         )
-                    )
-
-            if pdf_path and os.path.exists(pdf_path):
-                with open(pdf_path, "rb") as f:
-                    st.download_button(
-                        "📕 Download PDF",
-                        f.read(),
-                        file_name=os.path.basename(
-                            pdf_path
-                        )
-                    )
-
         # -------------------------
         # Combined Report
         # -------------------------
