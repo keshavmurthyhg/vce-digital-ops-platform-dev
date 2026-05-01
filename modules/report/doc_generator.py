@@ -2,7 +2,7 @@ from modules.report.renderers.pdf_renderer import generate_pdf_doc
 from modules.report.renderers.word_renderer import generate_word_doc
 from modules.common.utils.text_cleaner import format_description
 from modules.common.utils.links import extract_azure_id
-from modules.common.formatters import safe_text
+#from modules.common.formatters import safe_text
 
 # ✅ USE NEW RCA SERVICE
 from modules.report.services.rca_service import build_rca
