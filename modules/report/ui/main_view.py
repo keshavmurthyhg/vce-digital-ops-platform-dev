@@ -4,7 +4,11 @@ from modules.common.ui.preview import render_preview
 from modules.common.ui.buttons import render_action_buttons
 from modules.report.services.rca_service import build_rca
 from modules.report.services.data_mapper import map_incident
-
+from modules.report.doc_generator import (
+    generate_pdf,
+    generate_word_doc_wrapper,
+    get_download_filename
+)
 
 def render_main(df):
 
@@ -116,7 +120,7 @@ def render_main(df):
             st.download_button(
                 "Download PDF",
                 pdf_bytes,
-                "incident_report.pdf",
+                file_name=get_download_filename(selected_data, "pdf"),
                 mime="application/pdf"
             )
 
@@ -138,7 +142,7 @@ def render_main(df):
             st.download_button(
                 "Download Word",
                 word_bytes,
-                "incident_report.docx",
+                file_name=get_download_filename(selected_data, "docx"),
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
 
