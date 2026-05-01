@@ -10,14 +10,17 @@ from modules.report.services.rca_service import build_rca
 
 def enrich_data(data):
     """
-    Keep existing Azure handling intact
+    Keep existing Azure/PTC handling intact
     """
+
+    # Azure fallback
     if not data.get("azure_bug"):
         data["azure_bug"] = "-"
-    
+
+    # PTC fallback
     if not data.get("ptc_case"):
-    data["ptc_case"] = "-"
-    
+        data["ptc_case"] = "-"
+
     return data
 
 
