@@ -206,10 +206,11 @@ def generate_word_doc(
     )
 
     # ---------------- PPT CONTENT ---------------- #
-    from modules.converter.ppt_to_doc import render_ppt_to_images
-    from docx.shared import Inches
-
-
+    from modules.converter.ppt_slide_renderer import (
+        render_ppt_slides_to_images
+    )
+    
+    
     # -----------------------------
     # PPT SLIDES SECTION
     # -----------------------------
@@ -221,16 +222,21 @@ def generate_word_doc(
                 level=1
             )
     
-            slide_images = render_ppt_to_images(
+            slide_images = render_ppt_slides_to_images(
                 ppt_data
             )
     
-            for img in slide_images[1:]:   # skip slide 1
-                doc.add_page_break()
-                doc.add_picture(
-                    img,
-                    width=Inches(6.5)
+            if not slide_images:
+                doc.add_paragraph(
+                    "No slide images found in PPT."
                 )
+            else:
+                for img in slide_images[1:]:   # skip slide 1
+                    doc.add_page_break()
+                    doc.add_picture(
+                        img,
+                        width=Inches(6.5)
+                    )
     
         except Exception as e:
             doc.add_paragraph(
