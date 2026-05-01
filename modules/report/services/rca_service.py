@@ -108,8 +108,7 @@ def build_problem(data):
 
     problem_lines = list(dict.fromkeys(problem_lines))
 
-    return "\n".join(
-        [f"• {x}" for x in problem_lines[:2]]
+    return "\n".join(problem_lines[:2])
     )
 
 
@@ -176,8 +175,7 @@ def build_root_cause(data):
 
     root_lines = list(dict.fromkeys(root_lines))
 
-    return "\n".join(
-        [f"• {x}" for x in root_lines[:4]]
+    return "\n".join(root_lines[:4])
     )
 
 
@@ -218,8 +216,7 @@ def build_resolution(data):
 
     resolution_lines = list(dict.fromkeys(resolution_lines))
 
-    return "\n".join(
-        [f"• {x}" for x in resolution_lines[:5]]
+    return "\n".join(resolution_lines[:5])
     )
 
 
