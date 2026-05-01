@@ -3,6 +3,7 @@ import tempfile
 import os
 import re
 
+from modules.common.utils.links import extract_azure_id
 from modules.report.domain.rca_generator import generate_rca
 from modules.converter.converter import convert_ppt
 from modules.common.utils.formatters import format_date
