@@ -1,5 +1,6 @@
 import re
 
+
 def extract_azure_id(text):
     if not text:
         return None
@@ -17,7 +18,6 @@ def get_url(field, value):
         return None
 
     value = str(value).strip()
-
     field = field.lower()
 
     if field == "incident":
@@ -41,15 +41,27 @@ def get_url(field, value):
     return None
 
 
+# ---------------- PDF LINKS ---------------- #
 def make_pdf_link(value, url, styles):
     from reportlab.platypus import Paragraph
+
     if not value or not url:
         return Paragraph("-", styles["Normal"])
 
-    return Paragraph(f'<link href="{url}">{value}</link>', styles["Normal"])
+    return Paragraph(
+        f'<link href="{url}">{value}</link>',
+        styles["Normal"]
+    )
 
 
+# ---------------- WORD LINKS ---------------- #
 def apply_word_link(paragraph, key, value):
+    """
+    Creates clickable hyperlinks in Word
+    WITHOUT blue color
+    WITHOUT underline
+    """
+
     from docx.oxml import OxmlElement
     from docx.oxml.ns import qn
 
@@ -80,14 +92,18 @@ def apply_word_link(paragraph, key, value):
     new_run = OxmlElement("w:r")
     rPr = OxmlElement("w:rPr")
 
-    # Blue color
+    # -----------------------------
+    # BLACK FONT
+    # -----------------------------
     color = OxmlElement("w:color")
-    color.set(qn("w:val"), "0000FF")
+    color.set(qn("w:val"), "000000")
     rPr.append(color)
 
-    # Underline
+    # -----------------------------
+    # REMOVE UNDERLINE
+    # -----------------------------
     underline = OxmlElement("w:u")
-    underline.set(qn("w:val"), "single")
+    underline.set(qn("w:val"), "none")
     rPr.append(underline)
 
     new_run.append(rPr)
@@ -99,10 +115,15 @@ def apply_word_link(paragraph, key, value):
     hyperlink.append(new_run)
     paragraph._p.append(hyperlink)
 
+
+# ---------------- UI LINKS ---------------- #
 def make_ui_link(type_, value):
     url = get_url(type_, value)
+
     if not value:
         return "-"
+
     if not url:
         return str(value)
+
     return f'<a href="{url}" target="_blank">{value}</a>'
