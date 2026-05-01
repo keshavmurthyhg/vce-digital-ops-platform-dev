@@ -14,7 +14,10 @@ def enrich_data(data):
     """
     if not data.get("azure_bug"):
         data["azure_bug"] = "-"
-
+    
+    if not data.get("ptc_case"):
+    data["ptc_case"] = "-"
+    
     return data
 
 
