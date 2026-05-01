@@ -13,7 +13,7 @@ from modules.report.doc_generator import generate_word_doc_wrapper
 
 from modules.common.utils.formatters import format_date
 from modules.common.utils.links import get_url
-
+from modules.common.ui.preview import render_preview
 
 # -----------------------------
 # HELPERS
@@ -82,82 +82,16 @@ def normalize_snow_data(data):
 # -----------------------------
 # PREVIEW TABLE
 # -----------------------------
-def render_preview(data):
-    html = f"""
-    <style>
-    .tbl {{
-        width:100%;
-        border-collapse: collapse;
-        font-family: Arial;
-        font-size:14px;
-        margin-bottom:20px;
-    }}
 
-    .tbl td {{
-        border:1px solid black;
-        padding:6px;
-        vertical-align:top;
-    }}
-
-    .hdr {{
-        font-weight:bold;
-        background:#f2f2f2;
-    }}
-    </style>
-
-    <table class="tbl">
-        <tr>
-            <td class="hdr">INCIDENT</td>
-            <td>{build_link("incident", data.get("number"))}</td>
-
-            <td class="hdr">CREATED BY</td>
-            <td>{data.get("created_by") or "-"}</td>
-        </tr>
-
-        <tr>
-            <td class="hdr">AZURE BUG</td>
-            <td>{build_link("azure", data.get("azure_bug"))}</td>
-
-            <td class="hdr">CREATED DATE</td>
-            <td>{data.get("created_date") or "-"}</td>
-        </tr>
-
-        <tr>
-            <td class="hdr">PTC CASE</td>
-            <td>{build_link("ptc", data.get("ptc_case"))}</td>
-
-            <td class="hdr">ASSIGNED TO</td>
-            <td>{data.get("assigned_to") or "-"}</td>
-        </tr>
-
-        <tr>
-            <td class="hdr">PRIORITY</td>
-            <td>{data.get("priority") or "-"}</td>
-
-            <td class="hdr">RESOLVED DATE</td>
-            <td>{data.get("resolved_date") or "-"}</td>
-        </tr>
-    </table>
-
-    <table class="tbl">
-        <tr>
-            <td class="hdr">SHORT DESCRIPTION</td>
-            <td class="hdr">DESCRIPTION</td>
-        </tr>
-
-        <tr>
-            <td>{data.get("short_description") or "-"}</td>
-            <td>{data.get("description") or "-"}</td>
-        </tr>
-    </table>
-    """
-
-    st.components.v1.html(
-        html,
-        height=500,
-        scrolling=True
+if snow_data:
+    render_preview(
+        snow_data,
+        show_rca=False
     )
-
+else:
+    st.info(
+        "Preview unavailable because SNOW data not found."
+    )
 
 # -----------------------------
 # MAIN UI
