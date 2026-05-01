@@ -40,10 +40,18 @@ def extract_azure(text):
 def normalize_snow_data(data):
     def get(*keys):
         for k in keys:
-            if k in data and data[k]:
-                return data[k]
+            if k in data:
+                value = data[k]
+    
+                if value is not None and str(value).strip() not in [
+                    "",
+                    "nan",
+                    "NaT",
+                    "None"
+                ]:
+                    return value
+    
         return None
-
     return {
         "number": get("number"),
 
