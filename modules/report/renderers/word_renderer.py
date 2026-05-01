@@ -1,7 +1,8 @@
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches
-import os
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 
 from modules.report.layout.footer import apply_word_footer
 from modules.common.utils.links import apply_word_link
@@ -16,6 +17,41 @@ from modules.common.utils.text_cleaner import (
 )
 
 
+# -----------------------------------
+# CELL PADDING
+# -----------------------------------
+def set_cell_padding(
+    cell,
+    top=120,
+    start=120,
+    bottom=120,
+    end=120
+):
+    tc = cell._tc
+    tcPr = tc.get_or_add_tcPr()
+
+    tcMar = OxmlElement("w:tcMar")
+
+    for margin_name, margin_value in [
+        ("top", top),
+        ("start", start),
+        ("bottom", bottom),
+        ("end", end),
+    ]:
+        node = OxmlElement(f"w:{margin_name}")
+        node.set(qn("w:w"), str(margin_value))
+        node.set(qn("w:type"), "dxa")
+        tcMar.append(node)
+
+    tcPr.append(tcMar)
+
+
+def apply_table_padding(table):
+    for row in table.rows:
+        for cell in row.cells:
+            set_cell_padding(cell)
+
+
 def generate_word_doc(
     data,
     root,
@@ -26,18 +62,38 @@ def generate_word_doc(
 ):
     doc = Document()
 
-    # ---------------- TITLE ---------------- #
-    doc.add_heading(
+    # -----------------------------------
+    # TITLE
+    # -----------------------------------
+    title = doc.add_heading(
         "INCIDENT REPORT",
         0
-    ).alignment = WD_ALIGN_PARAGRAPH.CENTER
+    )
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
-    # ---------------- HEADER TABLE ---------------- #
+    # -----------------------------------
+    # HEADER TABLE
+    # Match footer width boundaries
+    # -----------------------------------
     table = doc.add_table(
         rows=4,
         cols=4
     )
+
     table.style = "Table Grid"
+    table.autofit = False
+
+    # Total width ≈ footer width
+    column_widths = [
+        Inches(1.5),   # label
+        Inches(1.7),   # value
+        Inches(1.5),   # label
+        Inches(2.3)    # value (long names)
+    ]
+
+    for row in table.rows:
+        for i, width in enumerate(column_widths):
+            row.cells[i].width = width
 
     def fill(r, c, key, val):
         header_cell = table.rows[r].cells[c]
@@ -49,10 +105,8 @@ def generate_word_doc(
         run.bold = True
         set_cell_bg(header_cell)
 
-        # Clean value before rendering
         cleaned_val = safe_text(val)
 
-        # Avoid showing nan/None
         if str(cleaned_val).lower() in [
             "nan",
             "nat",
@@ -63,73 +117,52 @@ def generate_word_doc(
 
         value_para = value_cell.paragraphs[0]
 
-        # Reuse your existing hyperlink utility
         apply_word_link(
             value_para,
             key,
             cleaned_val
         )
 
-    fill(
-        0, 0,
-        "Incident",
-        data.get("number")
-    )
+    fill(0, 0, "Incident", data.get("number"))
+    fill(0, 2, "Created By", data.get("created_by"))
 
+    fill(1, 0, "Azure Bug", data.get("azure_bug"))
     fill(
-        0, 2,
-        "Created By",
-        data.get("created_by")
-    )
-
-    fill(
-        1, 0,
-        "Azure Bug",
-        data.get("azure_bug")
-    )
-
-    fill(
-        1, 2,
+        1,
+        2,
         "Created Date",
-        format_date(
-            data.get("created_date")
-        )
+        format_date(data.get("created_date"))
     )
 
-    fill(
-        2, 0,
-        "PTC Case",
-        data.get("ptc_case")
-    )
+    fill(2, 0, "PTC Case", data.get("ptc_case"))
+    fill(2, 2, "Assigned To", data.get("assigned_to"))
 
+    fill(3, 0, "Priority", data.get("priority"))
     fill(
-        2, 2,
-        "Assigned To",
-        data.get("assigned_to")
-    )
-
-    fill(
-        3, 0,
-        "Priority",
-        data.get("priority")
-    )
-
-    fill(
-        3, 2,
+        3,
+        2,
         "Resolved Date",
-        format_date(
-            data.get("resolved_date")
-        )
+        format_date(data.get("resolved_date"))
     )
+
+    apply_table_padding(table)
 
     doc.add_paragraph("")
 
-    # ---------------- DESCRIPTION TABLE ---------------- #
+    # -----------------------------------
+    # DESCRIPTION TABLE
+    # -----------------------------------
     t2 = doc.add_table(
         rows=2,
         cols=2
     )
+
     t2.style = "Table Grid"
+    t2.autofit = False
+
+    # Match same start/end alignment as header table
+    t2.columns[0].width = Inches(3.0)
+    t2.columns[1].width = Inches(4.0)
 
     headers = [
         "SHORT DESCRIPTION",
@@ -143,29 +176,30 @@ def generate_word_doc(
         run.bold = True
 
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
         set_cell_bg(
             t2.rows[0].cells[i]
         )
 
     t2.rows[1].cells[0].text = clean_text(
         safe_text(
-            data.get(
-                "short_description"
-            )
+            data.get("short_description")
         )
     )
 
     t2.rows[1].cells[1].text = clean_text(
         format_description(
             safe_text(
-                data.get(
-                    "description"
-                )
+                data.get("description")
             )
         )
     )
 
-    # ---------------- RCA BODY ---------------- #
+    apply_table_padding(t2)
+
+    # -----------------------------------
+    # RCA SECTIONS
+    # -----------------------------------
     sections = {
         "PROBLEM STATEMENT": root,
         "ROOT CAUSE": l2,
@@ -199,51 +233,53 @@ def generate_word_doc(
                     style="List Bullet"
                 )
 
-    # ---------------- FOOTER ---------------- #
+    # -----------------------------------
+    # FOOTER
+    # -----------------------------------
     apply_word_footer(
         doc,
         data
     )
 
-    # ---------------- PPT CONTENT ---------------- #
-    from modules.converter.ppt_slide_renderer import (
-        render_ppt_slides_to_images
-    )
-    
-    
-    # -----------------------------
-    # PPT SLIDES SECTION
-    # -----------------------------
+    # -----------------------------------
+    # PPT SLIDES
+    # -----------------------------------
     if ppt_data:
         try:
+            from modules.converter.ppt_slide_renderer import (
+                render_ppt_slides_to_images
+            )
+
             doc.add_page_break()
             doc.add_heading(
                 "PPT Slides",
                 level=1
             )
-    
+
             slide_images = render_ppt_slides_to_images(
                 ppt_data
             )
-    
+
             if not slide_images:
                 doc.add_paragraph(
                     "No slide images found in PPT."
                 )
             else:
-                for img in slide_images[1:]:   # skip slide 1
+                for img in slide_images[1:]:
                     doc.add_page_break()
                     doc.add_picture(
                         img,
                         width=Inches(6.5)
                     )
-    
+
         except Exception as e:
             doc.add_paragraph(
                 f"Unable to attach PPT slides: {str(e)}"
             )
 
-    # ---------------- SAVE ---------------- #
+    # -----------------------------------
+    # SAVE
+    # -----------------------------------
     from io import BytesIO
 
     buffer = BytesIO()
