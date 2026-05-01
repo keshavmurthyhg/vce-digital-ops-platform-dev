@@ -73,7 +73,8 @@ def generate_word_doc(
 
     # -----------------------------------
     # HEADER TABLE
-    # Match footer width boundaries
+    # Match PDF ratio: 100:160:100:160
+    # Total width ≈ 6.5 inches
     # -----------------------------------
     table = doc.add_table(
         rows=4,
@@ -83,12 +84,11 @@ def generate_word_doc(
     table.style = "Table Grid"
     table.autofit = False
 
-    # Total width ≈ footer width
     column_widths = [
-        Inches(1.5),   # label
-        Inches(1.7),   # value
-        Inches(1.5),   # label
-        Inches(2.3)    # value (long names)
+        Inches(1.25),   # label
+        Inches(2.0),    # value
+        Inches(1.25),   # label
+        Inches(2.0)     # value
     ]
 
     for row in table.rows:
@@ -151,6 +151,8 @@ def generate_word_doc(
 
     # -----------------------------------
     # DESCRIPTION TABLE
+    # Same total width as header table
+    # Total = 6.5 inches
     # -----------------------------------
     t2 = doc.add_table(
         rows=2,
@@ -160,9 +162,8 @@ def generate_word_doc(
     t2.style = "Table Grid"
     t2.autofit = False
 
-    # Match same start/end alignment as header table
     t2.columns[0].width = Inches(3.0)
-    t2.columns[1].width = Inches(4.0)
+    t2.columns[1].width = Inches(3.5)
 
     headers = [
         "SHORT DESCRIPTION",
@@ -176,7 +177,6 @@ def generate_word_doc(
         run.bold = True
 
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
         set_cell_bg(
             t2.rows[0].cells[i]
         )
