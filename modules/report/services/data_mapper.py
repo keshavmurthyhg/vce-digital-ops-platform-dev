@@ -3,38 +3,52 @@ from modules.common.utils.formatters import format_description, safe_text
 
 
 def map_incident(row):
+    """
+    Maps raw SNOW row → normalized report format
+    while preserving original RCA columns required
+    by rca_service.py
+    """
 
     work_notes = row.get("work notes") or ""
-    comments = row.get("additional comments") or ""
+    additional_comments = row.get("additional comments") or ""
     resolution_notes = row.get("resolution notes") or ""
 
     combined_notes = " ".join([
         str(work_notes),
-        str(comments),
+        str(additional_comments),
         str(resolution_notes)
     ])
 
     return {
         "number": safe_text(row.get("number")),
 
-        # Azure only from actual notes
+        # Header fields
         "azure_bug": extract_azure_id(combined_notes),
-
         "ptc_case": safe_text(row.get("vendor ticket")),
-
         "created_by": safe_text(row.get("opened by")),
         "assigned_to": safe_text(row.get("assigned to")),
-
         "created_date": row.get("created"),
         "resolved_date": row.get("resolved"),
-
         "priority": safe_text(row.get("priority")),
 
-        "short_description": safe_text(row.get("short description")),
-        "description": format_description(row.get("description")),
+        # Description fields
+        "short_description": safe_text(
+            row.get("short description")
+        ),
+        "description": format_description(
+            row.get("description")
+        ),
 
-        # REQUIRED FOR RCA
+        # -------------------------
+        # CRITICAL FIX
+        # Preserve ORIGINAL KEYS
+        # -------------------------
+        "work notes": work_notes,
+        "additional comments": additional_comments,
+        "resolution notes": resolution_notes,
+
+        # Optional underscore versions
         "work_notes": work_notes,
-        "comments": comments,
-        "resolution": resolution_notes
+        "additional_comments": additional_comments,
+        "resolution_notes": resolution_notes
     }
