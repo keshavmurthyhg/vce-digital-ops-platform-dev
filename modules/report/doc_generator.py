@@ -100,7 +100,8 @@ def get_download_filename(data, extension):
         data.get("number", "incident_report")
     ).strip()
 
-    current_date = datetime.now().strftime("%d%b%y")
+    # DDMMMYYYY format
+    current_date = datetime.now().strftime("%d%b%Y")
 
     return f"{incident_number}_{current_date}.{extension}"
 
