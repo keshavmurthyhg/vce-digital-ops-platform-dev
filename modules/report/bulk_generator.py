@@ -1,3 +1,4 @@
+from modules.common.utils.links import extract_azure_id
 from modules.report.doc_generator import (
     generate_pdf,
     generate_word_doc_wrapper
@@ -85,10 +86,14 @@ def build_bulk_reports(
                 "resolved"
             ),
 
-            "azure_bug": r.get(
-                "azure bug"
-            ),
-
+            combined_notes = " ".join([
+                str(r.get("work notes", "")),
+                str(r.get("additional comments", "")),
+                str(r.get("resolution notes", ""))
+            ])
+            
+            "azure_bug": extract_azure_id(combined_notes),
+            
             "ptc_case": r.get(
                 "vendor ticket"
             ),
