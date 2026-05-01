@@ -79,9 +79,10 @@ def normalize_snow_data(data):
     }
 
 
-# -----------------------------
-# PREVIEW TABLE
-# -----------------------------
+# -------------------------
+# Preview
+# -------------------------
+st.markdown("### 📄 Preview")
 
 if snow_data:
     render_preview(
