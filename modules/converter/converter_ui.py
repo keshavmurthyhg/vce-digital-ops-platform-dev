@@ -305,8 +305,8 @@ def render():
                     )
 
                     generate_word_doc_wrapper(
-                        snow_data=snow_data,
-                        rca_data=rca_data,
+                        incident_data=snow_data,
+                        rca_output=rca_data,
                         ppt_path=ppt_path,
                         output_path=output_path
                     )
