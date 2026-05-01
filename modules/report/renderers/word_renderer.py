@@ -206,31 +206,36 @@ def generate_word_doc(
     )
 
     # ---------------- PPT CONTENT ---------------- #
-    if ppt_data:
-        doc.add_page_break()
+    from modules.converter.ppt_to_doc import render_ppt_to_images
+    from docx.shared import Inches
 
-        for slide in ppt_data:
+
+    # -----------------------------
+    # PPT SLIDES SECTION
+    # -----------------------------
+    if ppt_data:
+        try:
+            doc.add_page_break()
             doc.add_heading(
-                slide["title"],
+                "PPT Slides",
                 level=1
             )
-
-            for txt in slide["texts"]:
-                doc.add_paragraph(
-                    clean_text(txt)
+    
+            slide_images = render_ppt_to_images(
+                ppt_data
+            )
+    
+            for img in slide_images[1:]:   # skip slide 1
+                doc.add_page_break()
+                doc.add_picture(
+                    img,
+                    width=Inches(6.5)
                 )
-
-            for img in slide["images"]:
-                if os.path.exists(img):
-                    try:
-                        doc.add_paragraph("")
-                        doc.add_picture(
-                            img,
-                            width=Inches(5)
-                        )
-                        doc.add_paragraph("")
-                    except Exception:
-                        continue
+    
+        except Exception as e:
+            doc.add_paragraph(
+                f"Unable to attach PPT slides: {str(e)}"
+            )
 
     # ---------------- SAVE ---------------- #
     from io import BytesIO
