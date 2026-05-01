@@ -52,7 +52,7 @@ def build_pdf_header(data, wrap_link, format_date):
             ],
             [
                 "PTC CASE",
-                safe_link("ptc case", data.get("ptc_case"))
+                safe_link("ptc case", data.get("ptc_case")),
                 "ASSIGNED TO",
                 wrap(data.get("assigned_to"))
             ],
