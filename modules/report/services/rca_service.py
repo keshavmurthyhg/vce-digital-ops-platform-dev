@@ -1,312 +1,179 @@
 import re
-import pandas as pd
 
 
-# -----------------------------
-# Safe field reader
-# -----------------------------
-def get_field_value(row, field_name):
-    value = row.get(field_name, "")
-
-    if value is None:
+# ---------------- SAFE VALUE ---------------- #
+def safe_text(val):
+    if val is None:
         return ""
 
-    try:
-        if pd.isna(value):
-            return ""
-    except:
-        pass
+    val = str(val).strip()
 
-    value = str(value).strip()
-
-    if value.lower() in ["nan", "nat", "none"]:
+    if val.lower() in ["nan", "nat", "none"]:
         return ""
 
-    return value
+    return val
 
 
-# -----------------------------
-# Generic cleanup
-# -----------------------------
-def normalize(text):
+# ---------------- CLEAN NOISE ---------------- #
+def clean_lines(text):
     if not text:
-        return ""
+        return []
 
-    text = str(text)
-    text = text.replace("\xa0", " ")
-    text = re.sub(r"\s+", " ", text)
+    lines = []
 
-    return text.strip()
-
-
-def clean_noise(text):
-    if not text:
-        return ""
-
-    lines = str(text).splitlines()
-    cleaned = []
-
-    skip_patterns = [
-        r'^\d{4}-\d{2}-\d{2}',   # timestamps
-        r'attachment',
-        r'has been attached',
-        r'thanks',
-        r'thank you',
-        r'hello',
-        r'hi team',
-        r'good morning',
-        r'good evening',
-        r'please update',
-        r'waiting for update',
-        r'call scheduled',
-        r'meeting scheduled',
-        r'assigning to',
-        r'priority changed',
-        r'working with l3',
-        r'working with aom',
-        r'please find attached'
+    noise_words = [
+        "hello",
+        "hi team",
+        "thanks",
+        "thank you",
+        "regards",
+        "br,",
+        "please close",
+        "closing incident",
+        "call scheduled",
+        "waiting for response",
+        "waiting for update",
+        "attached",
+        "attachment:",
     ]
 
-    for line in lines:
-        line = normalize(line)
+    for raw in text.split("\n"):
+        line = raw.strip()
 
         if not line:
             continue
 
-        skip = False
+        lower = line.lower()
 
-        for pattern in skip_patterns:
-            if re.search(pattern, line.lower()):
-                skip = True
-                break
+        # remove timestamps
+        if re.match(r"^\d{4}-\d{2}-\d{2}", line):
+            continue
 
-        if not skip:
-            cleaned.append(line)
+        # remove names-only lines
+        if len(line.split()) <= 2 and line.istitle():
+            continue
 
-    return "\n".join(cleaned)
+        # remove noise
+        if any(x in lower for x in noise_words):
+            continue
 
+        lines.append(line)
 
-def bulletize(lines):
-    if not lines:
-        return ""
-
-    unique_lines = []
-
-    for line in lines:
-        line = normalize(line)
-
-        if line and line not in unique_lines:
-            unique_lines.append(line)
-
-    return "\n".join([f"• {line}" for line in unique_lines])
+    return lines
 
 
-# -----------------------------
-# Problem Statement
-# -----------------------------
-def is_similar(a, b):
-    a = normalize(a).lower()
-    b = normalize(b).lower()
+# ---------------- PROBLEM ---------------- #
+def build_problem(data):
+    short_desc = safe_text(data.get("short_description"))
+    desc = safe_text(data.get("description"))
 
-    if not a or not b:
-        return False
-
-    if a in b or b in a:
-        return True
-
-    return False
-
-
-def build_problem(short_desc, description):
     problem_lines = []
-
-    short_desc = normalize(short_desc)
-    description = normalize(description)
 
     if short_desc:
         problem_lines.append(short_desc)
 
-    if description and not is_similar(short_desc, description):
-        problem_lines.append(description)
+    if desc and desc.lower() != short_desc.lower():
+        problem_lines.append(desc)
 
-    return bulletize(problem_lines)
-
-
-# -----------------------------
-# Root Cause
-# -----------------------------
-def extract_root_from_resolution(resolution_notes):
-    if not resolution_notes:
-        return []
-
-    causes = []
-
-    for line in resolution_notes.splitlines():
-        lower = line.lower()
-
-        if (
-            "cause:" in lower
-            or "root cause:" in lower
-            or "reason:" in lower
-        ):
-            cleaned = re.sub(
-                r'(?i)(cause:|root cause:|reason:)',
-                '',
-                line
-            ).strip()
-
-            if cleaned:
-                causes.append(cleaned)
-
-    return causes
+    return "\n".join(
+        [f"• {x}" for x in problem_lines[:2]]
+    )
 
 
-def build_root_cause(work_notes, additional_comments, resolution_notes):
-    # First preference → explicit cause from resolution notes
-    explicit_causes = extract_root_from_resolution(resolution_notes)
+# ---------------- ROOT CAUSE ---------------- #
+def build_root_cause(data):
+    resolution_notes = safe_text(data.get("resolution notes"))
+    work_notes = safe_text(data.get("work notes"))
+    comments = safe_text(data.get("additional comments"))
 
-    if explicit_causes:
-        return bulletize(explicit_causes)
+    combined = "\n".join([
+        resolution_notes,
+        work_notes,
+        comments
+    ])
 
-    combined = f"{work_notes}\n{additional_comments}"
-    cleaned_text = clean_noise(combined).lower()
+    lines = clean_lines(combined)
 
     root_lines = []
 
-    if "pkix" in cleaned_text or "certificate" in cleaned_text:
-        root_lines.append(
-            "Certificate validation failure caused integration failures in production."
-        )
+    for line in lines:
+        lower = line.lower()
 
-    if "scheduler" in cleaned_text and "payload" in cleaned_text:
-        root_lines.append(
-            "Scheduler payload processing failures impacted ODC integration."
-        )
+        # Highest priority = explicit cause
+        if "cause:" in lower:
+            root_lines.append(line)
 
-    if "permission" in cleaned_text:
-        root_lines.append(
-            "Missing permissions caused system functionality failure."
-        )
+        elif "root cause" in lower:
+            root_lines.append(line)
 
-    if "path" in cleaned_text:
-        root_lines.append(
-            "Incorrect path configuration caused transaction failures."
-        )
+        elif "failed due to" in lower:
+            root_lines.append(line)
 
-    if not root_lines:
-        useful_lines = []
+        elif "error" in lower:
+            root_lines.append(line)
 
-        for line in clean_noise(combined).splitlines():
-            line = normalize(line)
+        elif "certificate" in lower:
+            root_lines.append(line)
 
-            if line:
-                useful_lines.append(line)
+        elif "path issue" in lower:
+            root_lines.append(line)
 
-        root_lines = useful_lines[:3]
+        elif "incorrect path" in lower:
+            root_lines.append(line)
 
-    return bulletize(root_lines)
+        elif "validation issue" in lower:
+            root_lines.append(line)
+
+    root_lines = list(dict.fromkeys(root_lines))
+
+    return "\n".join(
+        [f"• {x}" for x in root_lines[:5]]
+    )
 
 
-# -----------------------------
-# Resolution
-# -----------------------------
-def build_resolution(resolution_notes):
-    if not resolution_notes:
-        return ""
+# ---------------- RESOLUTION ---------------- #
+def build_resolution(data):
+    resolution_notes = safe_text(data.get("resolution notes"))
+
+    lines = clean_lines(resolution_notes)
 
     resolution_lines = []
 
-    for line in resolution_notes.splitlines():
+    for line in lines:
         lower = line.lower()
 
-        # Skip cause lines → already used in root cause
-        if (
-            "cause:" in lower
-            or "root cause:" in lower
-            or "reason:" in lower
-        ):
-            continue
+        if "resolution:" in lower:
+            resolution_lines.append(line)
 
-        # Skip junk
-        if any(x in lower for x in [
-            "thanks",
-            "thank you",
-            "hello",
-            "waiting for update"
-        ]):
-            continue
+        elif "fixed" in lower:
+            resolution_lines.append(line)
 
-        cleaned = normalize(line)
+        elif "implemented" in lower:
+            resolution_lines.append(line)
 
-        if cleaned:
-            resolution_lines.append(cleaned)
+        elif "restarted" in lower:
+            resolution_lines.append(line)
 
-    return bulletize(resolution_lines)
+        elif "validated" in lower:
+            resolution_lines.append(line)
 
+        elif "working fine" in lower:
+            resolution_lines.append(line)
 
-# -----------------------------
-# Main RCA Builder
-# -----------------------------
-def build_rca(row):
-    if row is None:
-        return {
-            "problem_statement": "",
-            "root_cause": "",
-            "resolution": ""
-        }
+        elif "success" in lower:
+            resolution_lines.append(line)
 
-    # Convert pandas row safely
-    if hasattr(row, "to_dict"):
-        row_dict = row.to_dict()
-    else:
-        row_dict = dict(row)
+    resolution_lines = list(dict.fromkeys(resolution_lines))
 
-    # Normalize column names
-    normalized_row = {}
-
-    for key, value in row_dict.items():
-        clean_key = str(key).strip().lower()
-        normalized_row[clean_key] = value
-
-    # Debug once (remove later)
-    print("AVAILABLE RCA KEYS:", normalized_row.keys())
-
-    short_desc = get_field_value(
-        normalized_row,
-        "short description"
+    return "\n".join(
+        [f"• {x}" for x in resolution_lines[:5]]
     )
 
-    description = get_field_value(
-        normalized_row,
-        "description"
-    )
 
-    work_notes = get_field_value(
-        normalized_row,
-        "work notes"
-    )
-
-    additional_comments = get_field_value(
-        normalized_row,
-        "additional comments"
-    )
-
-    resolution_notes = get_field_value(
-        normalized_row,
-        "resolution notes"
-    )
-
+# ---------------- MAIN ---------------- #
+def build_rca(data):
     return {
-        "problem_statement": build_problem(
-            short_desc,
-            description
-        ),
-        "root_cause": build_root_cause(
-            work_notes,
-            additional_comments,
-            resolution_notes
-        ),
-        "resolution": build_resolution(
-            resolution_notes
-        )
+        "problem_statement": build_problem(data),
+        "root_cause": build_root_cause(data),
+        "resolution": build_resolution(data)
     }
