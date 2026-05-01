@@ -2,42 +2,76 @@ from modules.report.renderers.pdf_renderer import generate_pdf_doc
 from modules.report.renderers.word_renderer import generate_word_doc
 from modules.common.utils.text_cleaner import format_description
 from modules.common.utils.links import extract_azure_id
-#from modules.common.formatters import safe_text
 
-# ✅ USE NEW RCA SERVICE
+# RCA service
 from modules.report.services.rca_service import build_rca
 
 
 def enrich_data(data):
     """
-    Keep existing Azure/PTC handling intact
+    Common enrichment layer for:
+    - Single PDF
+    - Single Word
+    - Bulk PDF
+    - Bulk Word
     """
 
-    # Azure fallback
-    if not data.get("azure_bug"):
-        data["azure_bug"] = "-"
+    safe_data = data.copy()
 
-    # PTC fallback
-    if not data.get("ptc_case"):
-        data["ptc_case"] = "-"
+    # -----------------------------------
+    # AZURE BUG FIX
+    # -----------------------------------
+    azure_value = (
+        safe_data.get("azure_bug")
+        or safe_data.get("azure bug")
+        or extract_azure_id(
+            " ".join([
+                str(safe_data.get("work notes", "")),
+                str(safe_data.get("additional comments", "")),
+                str(safe_data.get("resolution notes", ""))
+            ])
+        )
+    )
 
-    return data
+    safe_data["azure_bug"] = (
+        azure_value if azure_value else "-"
+    )
+
+    # -----------------------------------
+    # PTC CASE FIX
+    # -----------------------------------
+    ptc_value = (
+        safe_data.get("ptc_case")
+        or safe_data.get("vendor ticket")
+        or safe_data.get("ptc case")
+    )
+
+    safe_data["ptc_case"] = (
+        ptc_value if ptc_value else "-"
+    )
+
+    return safe_data
 
 
 def prepare_data(data):
     """
-    Common preparation for UI/PDF/Word/Bulk
+    Single source of truth for:
+    UI preview
+    PDF
+    Word
+    Bulk PDF
+    Bulk Word
     """
-    data = enrich_data(data)
-    safe_data = data.copy()
 
-    # Keep description formatting intact
+    safe_data = enrich_data(data)
+
+    # Keep description formatting
     safe_data["description"] = format_description(
-        data.get("description")
+        safe_data.get("description")
     )
 
-    # ✅ SINGLE SOURCE OF TRUTH
-    rca = build_rca(data)
+    # RCA generation
+    rca = build_rca(safe_data)
 
     safe_data["problem"] = rca.get(
         "problem_statement",
@@ -57,7 +91,9 @@ def prepare_data(data):
     return safe_data
 
 
-# ---------------- PDF ---------------- #
+# -----------------------------------
+# PDF
+# -----------------------------------
 def generate_pdf(
     data,
     root=None,
@@ -65,18 +101,20 @@ def generate_pdf(
     res=None,
     images=None
 ):
-    data = prepare_data(data)
+    prepared = prepare_data(data)
 
     return generate_pdf_doc(
-        data=data,
-        root=data.get("problem"),
-        l2=data.get("analysis"),
-        res=data.get("resolution"),
+        data=prepared,
+        root=prepared.get("problem"),
+        l2=prepared.get("analysis"),
+        res=prepared.get("resolution"),
         images=images or {}
     )
 
 
-# ---------------- WORD ---------------- #
+# -----------------------------------
+# WORD
+# -----------------------------------
 def generate_word_doc_wrapper(
     data,
     root=None,
@@ -85,13 +123,13 @@ def generate_word_doc_wrapper(
     images=None,
     ppt_data=None
 ):
-    data = prepare_data(data)
+    prepared = prepare_data(data)
 
     return generate_word_doc(
-        data=data,
-        root=data.get("problem"),
-        l2=data.get("analysis"),
-        res=data.get("resolution"),
+        data=prepared,
+        root=prepared.get("problem"),
+        l2=prepared.get("analysis"),
+        res=prepared.get("resolution"),
         images=images or {},
         ppt_data=ppt_data
     )
