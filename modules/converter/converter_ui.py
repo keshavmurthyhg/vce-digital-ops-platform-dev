@@ -206,16 +206,28 @@ def render():
 
         if incident:
             try:
-                raw_data = load_snow_data(incident)
-
-                if raw_data:
-                    snow_data = normalize_snow_data(raw_data)
+                snow_df = load_snow_data()
+        
+                matched_row = None
+        
+                if snow_df is not None and not snow_df.empty:
+                    filtered = snow_df[
+                        snow_df["number"].astype(str).str.strip() == incident
+                    ]
+        
+                    if not filtered.empty:
+                        matched_row = filtered.iloc[0].to_dict()
+        
+                if matched_row:
+                    snow_data = normalize_snow_data(
+                        matched_row
+                    )
                     st.success("✅ SNOW data loaded")
                 else:
                     st.warning(
-                        "No SNOW data found. PPT conversion still works."
+                        "No matching SNOW incident found. PPT conversion still works."
                     )
-
+        
             except Exception as e:
                 st.error(
                     f"SNOW loading failed: {str(e)}"
