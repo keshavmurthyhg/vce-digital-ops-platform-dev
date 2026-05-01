@@ -120,7 +120,10 @@ def render_main(df):
             st.download_button(
                 "Download PDF",
                 pdf_bytes,
-                file_name=get_download_filename(selected_data, "pdf"),
+                file_name=get_download_filename(
+                    st.session_state["data"],
+                    "pdf"
+                ),
                 mime="application/pdf"
             )
 
@@ -142,7 +145,10 @@ def render_main(df):
             st.download_button(
                 "Download Word",
                 word_bytes,
-                file_name=get_download_filename(selected_data, "docx"),
+                file_name=get_download_filename(
+                    st.session_state["data"],
+                    "docx"
+                ),
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
             )
 
