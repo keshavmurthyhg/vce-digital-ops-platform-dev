@@ -241,19 +241,18 @@ def generate_word_doc(
             )
     
             if cleaned_line:
-                p = doc.add_paragraph(
-                    cleaned_line,
-                    style="List Bullet"
-                )
-    
-                # Align with table start/end points
-                p.paragraph_format.left_indent = Inches(0.15)
-                p.paragraph_format.right_indent = Inches(0.15)
-                
-                # Better bullet formatting
-                p.paragraph_format.first_line_indent = Inches(0)
-                
-                # spacing
+                p = doc.add_paragraph(style="List Bullet")
+            
+                run = p.add_run(cleaned_line)
+            
+                # Keep paragraph aligned with table width
+                p.paragraph_format.left_indent = Inches(0.25)
+            
+                # Hanging indent:
+                # bullet stays left
+                # wrapped text aligns with first line text
+                p.paragraph_format.first_line_indent = Inches(-0.18)
+            
                 p.paragraph_format.space_after = Pt(4)
     
         doc.add_paragraph("")
