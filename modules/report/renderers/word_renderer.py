@@ -247,8 +247,8 @@ def generate_word_doc(
                 )
     
                 # Align with table start/end points
-                p.paragraph_format.left_indent = Inches(0.2)
-                p.paragraph_format.right_indent = Inches(0.2)
+                p.paragraph_format.left_indent = Inches(0)
+                p.paragraph_format.right_indent = Inches(0)
                 
                 # Better bullet formatting
                 #p.paragraph_format.first_line_indent = Inches(0)
