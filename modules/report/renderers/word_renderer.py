@@ -251,7 +251,7 @@ def generate_word_doc(
                 p.paragraph_format.right_indent = Inches(0.1)
                 
                 # Better bullet formatting
-                #p.paragraph_format.first_line_indent = Inches(0)
+                p.paragraph_format.first_line_indent = Inches(0.1)
                 
                 # spacing
                 p.paragraph_format.space_after = Pt(4)
