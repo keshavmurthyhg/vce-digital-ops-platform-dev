@@ -154,45 +154,54 @@ def generate_word_doc(
     # -----------------------------------
     # DESCRIPTION TABLE
     # Same total width as header table
-    # Total = 6.5 inches
     # -----------------------------------
     t2 = doc.add_table(
         rows=2,
         cols=2
     )
-
+    
     t2.style = "Table Grid"
     t2.autofit = False
     t2.allow_autofit = False
     
+    # Proportional widths
     desc_widths = [
-        Inches(3.0),
-        Inches(3.5)
+        Inches(3.0),   # Short Description
+        Inches(3.5)    # Description
     ]
-
+    
+    # Apply widths to all rows
+    for row in t2.rows:
+        for i, width in enumerate(desc_widths):
+            row.cells[i].width = width
+    
+    # Header row
     headers = [
         "SHORT DESCRIPTION",
         "DESCRIPTION"
     ]
-
-    for row in t2.rows:
-        for i, width in enumerate(desc_widths):
-            row.cells[i].width = width
-
+    
+    for i, text in enumerate(headers):
+        cell = t2.rows[0].cells[i]
+        p = cell.paragraphs[0]
+    
+        # Clear default empty paragraph text
+        p.clear()
+    
         run = p.add_run(text)
         run.bold = True
-
+    
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        set_cell_bg(
-            t2.rows[0].cells[i]
-        )
-
+    
+        set_cell_bg(cell)
+    
+    # Data row
     t2.rows[1].cells[0].text = clean_text(
         safe_text(
             data.get("short_description")
         )
     )
-
+    
     t2.rows[1].cells[1].text = clean_text(
         format_description(
             safe_text(
@@ -200,8 +209,11 @@ def generate_word_doc(
             )
         )
     )
-
+    
+    # Apply padding
     apply_table_padding(t2)
+    
+    doc.add_paragraph("")
 
     # -----------------------------------
     # RCA SECTIONS
