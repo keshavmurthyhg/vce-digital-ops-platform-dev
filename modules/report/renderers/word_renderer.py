@@ -99,10 +99,10 @@ def generate_word_doc(
     
     # Better proportional sizing
     column_widths = [
-        Inches(1.1),   # label
-        Inches(2.0),   # value
-        Inches(1.4),   # label
-        Inches(2.0)    # value
+        Inches(1.0),   # label
+        Inches(1.9),   # value
+        Inches(1.2),   # label
+        Inches(2.4)    # value
     ]
 
     for row in table.rows:
