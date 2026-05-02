@@ -246,9 +246,14 @@ def generate_word_doc(
                     style="List Bullet"
                 )
     
-                # Match table width alignment
-                p.paragraph_format.left_indent = Inches(0.75)
-                p.paragraph_format.right_indent = Inches(0.75)
+                # Align with table start/end points
+                p.paragraph_format.left_indent = Inches(0.35)
+                p.paragraph_format.right_indent = Inches(0.35)
+                
+                # Better bullet formatting
+                p.paragraph_format.first_line_indent = Inches(0)
+                
+                # spacing
                 p.paragraph_format.space_after = Pt(4)
     
         doc.add_paragraph("")
