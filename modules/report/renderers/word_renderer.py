@@ -226,30 +226,14 @@ def generate_word_doc(
     
     for title, content in sections.items():
     
-        # Section title
+        # Section heading
         heading = doc.add_heading(title, level=1)
         heading.alignment = WD_ALIGN_PARAGRAPH.LEFT
     
         content = safe_text(content)
     
-        if str(content).lower() in [
-            "nan",
-            "nat",
-            "none",
-            ""
-        ]:
+        if str(content).lower() in ["nan", "nat", "none", ""]:
             content = "-"
-    
-        # Create fixed-width table for alignment
-        rca_table = doc.add_table(rows=1, cols=1)
-        rca_table.style = "Table Grid"
-        rca_table.autofit = False
-        rca_table.allow_autofit = False
-    
-        for row in rca_table.rows:
-            row.cells[0].width = Inches(6.5)
-    
-        cell = rca_table.rows[0].cells[0]
     
         for line in content.split("\n"):
             cleaned_line = clean_text(
@@ -257,12 +241,15 @@ def generate_word_doc(
             )
     
             if cleaned_line:
-                p = cell.add_paragraph(
+                p = doc.add_paragraph(
                     cleaned_line,
                     style="List Bullet"
                 )
     
-        apply_table_padding(rca_table)
+                # Match table width alignment
+                p.paragraph_format.left_indent = Inches(0.75)
+                p.paragraph_format.right_indent = Inches(0.75)
+                p.paragraph_format.space_after = Pt(4)
     
         doc.add_paragraph("")
     # -----------------------------------
