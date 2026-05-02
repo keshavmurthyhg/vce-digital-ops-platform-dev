@@ -12,12 +12,11 @@ def map_incident(row):
     work_notes = row.get("work notes") or ""
     additional_comments = row.get("additional comments") or ""
     resolution_notes = row.get("resolution notes") or ""
+    
+    # Azure bug should ONLY come from resolution notes
+    azure_bug = extract_azure_id(resolution_notes)
 
-    combined_notes = " ".join([
-        str(work_notes),
-        str(additional_comments),
-        str(resolution_notes)
-    ])
+    "azure_bug": azure_bug if azure_bug else "-",
 
     return {
         "number": safe_text(row.get("number")),
