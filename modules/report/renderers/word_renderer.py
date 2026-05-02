@@ -83,6 +83,7 @@ def generate_word_doc(
 
     table.style = "Table Grid"
     table.autofit = False
+    table.allow_autofit = False
 
     column_widths = [
         Inches(1.0),   # label
@@ -92,8 +93,8 @@ def generate_word_doc(
     ]
 
     for row in table.rows:
-        for i, width in enumerate(column_widths):
-            row.cells[i].width = width
+        for cell in row.cells:
+            cell.width = header_width
 
     def fill(r, c, key, val):
         header_cell = table.rows[r].cells[c]
@@ -161,6 +162,7 @@ def generate_word_doc(
 
     t2.style = "Table Grid"
     t2.autofit = False
+    t2.allow_autofit = False
 
     t2.columns[0].width = Inches(3.25)
     t2.columns[1].width = Inches(3.75)
@@ -170,8 +172,9 @@ def generate_word_doc(
         "DESCRIPTION"
     ]
 
-    for i, text in enumerate(headers):
-        p = t2.rows[0].cells[i].paragraphs[0]
+    for row in t2.rows:
+        for cell in row.cells:
+            cell.width = desc_width
 
         run = p.add_run(text)
         run.bold = True
