@@ -4,7 +4,9 @@ import uuid
 import subprocess
 
 from pdf2image import convert_from_path
-from PIL import Image, ImageChops
+from PIL import Image
+from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
 
 
 def is_title_slide(img_path):
@@ -15,7 +17,6 @@ def is_title_slide(img_path):
     img = Image.open(img_path).convert("RGB")
     width, height = img.size
 
-    # Crop center area
     center = img.crop((
         width * 0.2,
         height * 0.2,
@@ -31,84 +32,127 @@ def is_title_slide(img_path):
 
     white_ratio = white_pixels / total_pixels
 
-    # Title slides usually mostly white
     return white_ratio > 0.85
 
 
-def crop_white_and_theme(img_path):
+def remove_ppt_background(input_ppt):
     """
-    Remove:
-    - white margins
-    - PPT decorative blue side panels
+    Remove large decorative PPT theme/background shapes
+    while preserving:
+    - screenshots
+    - arrows
+    - annotations
+    - textboxes
     """
-    img = Image.open(img_path).convert("RGB")
 
-    # Remove left/right theme borders
-    width, height = img.size
-    img = img.crop((
-        int(width * 0.08),   # remove left blue design
-        0,
-        int(width * 0.92),   # remove right blue design
-        height
-    ))
+    prs = Presentation(input_ppt)
 
-    # Remove white outer margins
-    bg = Image.new(img.mode, img.size, (255, 255, 255))
-    diff = ImageChops.difference(img, bg)
-    bbox = diff.getbbox()
+    slide_width = prs.slide_width
+    slide_height = prs.slide_height
 
-    if bbox:
-        img = img.crop(bbox)
+    for slide in prs.slides:
+        shapes_to_remove = []
 
-    cleaned_path = img_path.replace(".png", "_clean.png")
-    img.save(cleaned_path)
+        for shape in slide.shapes:
+            try:
+                shape_type = shape.shape_type
 
-    return cleaned_path
+                # Remove huge decorative auto shapes
+                if shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE:
+                    if (
+                        shape.width > slide_width * 0.30
+                        and shape.height > slide_height * 0.30
+                    ):
+                        shapes_to_remove.append(shape)
+
+                # Remove full-slide decorative images
+                elif shape_type == MSO_SHAPE_TYPE.PICTURE:
+                    if (
+                        shape.width > slide_width * 0.90
+                        and shape.height > slide_height * 0.90
+                    ):
+                        shapes_to_remove.append(shape)
+
+            except Exception:
+                continue
+
+        # Remove safely
+        for shape in shapes_to_remove:
+            try:
+                sp = shape._element
+                sp.getparent().remove(sp)
+            except Exception:
+                pass
+
+    cleaned_ppt = input_ppt.replace(".pptx", "_cleaned.pptx")
+    prs.save(cleaned_ppt)
+
+    return cleaned_ppt
 
 
 def render_ppt_slides_to_images(ppt_path):
+    """
+    Convert PPT slides to images:
+    1. Remove PPT background/theme
+    2. Convert cleaned PPT → PDF
+    3. Convert PDF → images
+    4. Skip title slides
+    """
+
     temp_dir = tempfile.mkdtemp()
 
-    pdf_path = os.path.join(
-        temp_dir,
-        f"{uuid.uuid4()}.pdf"
-    )
+    try:
+        # Step 1: clean ppt background
+        cleaned_ppt = remove_ppt_background(ppt_path)
 
-    # Convert PPT → PDF
-    subprocess.run([
-        "libreoffice",
-        "--headless",
-        "--convert-to",
-        "pdf",
-        ppt_path,
-        "--outdir",
-        temp_dir
-    ], check=True)
+        # Step 2: convert cleaned ppt -> pdf
+        subprocess.run([
+            "libreoffice",
+            "--headless",
+            "--convert-to",
+            "pdf",
+            cleaned_ppt,
+            "--outdir",
+            temp_dir
+        ], check=True)
 
-    generated_pdf = [
-        os.path.join(temp_dir, f)
-        for f in os.listdir(temp_dir)
-        if f.endswith(".pdf")
-    ][0]
+        generated_pdf = [
+            os.path.join(temp_dir, f)
+            for f in os.listdir(temp_dir)
+            if f.endswith(".pdf")
+        ][0]
 
-    pages = convert_from_path(generated_pdf, dpi=200)
-
-    final_images = []
-
-    for i, page in enumerate(pages):
-        img_path = os.path.join(
-            temp_dir,
-            f"slide_{i+1}.png"
+        # Step 3: pdf -> images
+        pages = convert_from_path(
+            generated_pdf,
+            dpi=200
         )
 
-        page.save(img_path, "PNG")
+        final_images = []
 
-        # Skip title slides
-        if is_title_slide(img_path):
-            print(f"Skipping title slide: {i+1}")
-            continue
+        for i, page in enumerate(pages):
+            img_path = os.path.join(
+                temp_dir,
+                f"slide_{i+1}.png"
+            )
 
-        cleaned = crop_white_and_theme(img_path)
-        final_images.append(cleaned)
+            page.save(img_path, "PNG")
 
-    return final_images
+            # Step 4: skip title slides
+            if is_title_slide(img_path):
+                print(f"Skipping title slide: {i+1}")
+                continue
+
+            final_images.append(img_path)
+
+        return final_images
+
+    finally:
+        # Cleanup cleaned PPT
+        cleaned_ppt_path = ppt_path.replace(".pptx", "_cleaned.pptx")
+
+        if os.path.exists(cleaned_ppt_path):
+            try:
+                os.remove(cleaned_ppt_path)
+            except Exception:
+                pass
