@@ -1,7 +1,7 @@
 from io import BytesIO
 import zipfile
-
 from datetime import datetime
+
 from modules.common.utils.links import extract_azure_id
 from modules.report.doc_generator import (
     generate_pdf,
@@ -66,12 +66,18 @@ def build_bulk_reports(
 
             r = row.iloc[0]
 
-            # Combine notes for Azure extraction
-            combined_notes = " ".join([
-                str(r.get("work notes", "")),
-                str(r.get("additional comments", "")),
-                str(r.get("resolution notes", ""))
-            ])
+            # -----------------------------------
+            # FIX:
+            # Azure bug should ONLY be extracted
+            # from resolution notes
+            # -----------------------------------
+            resolution_notes = str(
+                r.get("resolution notes", "")
+            )
+
+            azure_bug = extract_azure_id(
+                resolution_notes
+            )
 
             # FULL incident payload required by PDF/Word
             data = {
@@ -88,7 +94,8 @@ def build_bulk_reports(
                 "assigned_to": r.get("assigned to"),
                 "resolved_date": r.get("resolved"),
 
-                "azure_bug": extract_azure_id(combined_notes),
+                # Fixed Azure extraction
+                "azure_bug": azure_bug,
 
                 "ptc_case": r.get("vendor ticket"),
 
@@ -150,7 +157,10 @@ def generate_bulk_zip(reports):
         for report in reports:
             try:
                 data = report["data"]
-                number = data.get("number", "unknown_incident")
+                number = data.get(
+                    "number",
+                    "unknown_incident"
+                )
 
                 # Generate PDF
                 pdf_bytes = generate_pdf(
@@ -171,14 +181,27 @@ def generate_bulk_zip(reports):
                 )
 
                 # File names with date
-                pdf_filename = f"{number}_{current_date}.pdf"
-                word_filename = f"{number}_{current_date}.docx"
+                pdf_filename = (
+                    f"{number}_{current_date}.pdf"
+                )
+                word_filename = (
+                    f"{number}_{current_date}.docx"
+                )
 
                 # Write into ZIP
-                z.writestr(pdf_filename, pdf_bytes)
-                z.writestr(word_filename, word_bytes)
+                z.writestr(
+                    pdf_filename,
+                    pdf_bytes
+                )
 
-                print(f"Generated bulk report for {number}")
+                z.writestr(
+                    word_filename,
+                    word_bytes
+                )
+
+                print(
+                    f"Generated bulk report for {number}"
+                )
 
             except Exception as e:
                 print(f"Failed bulk report: {e}")
