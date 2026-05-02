@@ -1,8 +1,10 @@
 import os
 import tempfile
 import uuid
+import subprocess
 
 from pdf2image import convert_from_path
+from PIL import Image
 
 def render_ppt_slides_to_images(ppt_path):
     temp_dir = tempfile.mkdtemp()
@@ -39,8 +41,6 @@ def render_ppt_slides_to_images(ppt_path):
 
     return image_paths
 
-
-from PIL import Image
 
 def make_white_background(image_path):
     img = Image.open(image_path).convert("RGBA")
