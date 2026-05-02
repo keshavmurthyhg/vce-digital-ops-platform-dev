@@ -93,8 +93,8 @@ def generate_word_doc(
     ]
 
     for row in table.rows:
-        for cell in row.cells:
-            cell.width = header_width
+        for i, width in enumerate(column_widths):
+            row.cells[i].width = width
 
     def fill(r, c, key, val):
         header_cell = table.rows[r].cells[c]
@@ -173,8 +173,8 @@ def generate_word_doc(
     ]
 
     for row in t2.rows:
-        for cell in row.cells:
-            cell.width = desc_width
+        for i, width in enumerate(desc_widths):
+            row.cells[i].width = width
 
         run = p.add_run(text)
         run.bold = True
