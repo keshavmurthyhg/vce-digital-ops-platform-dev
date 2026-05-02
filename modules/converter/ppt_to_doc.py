@@ -80,6 +80,19 @@ def ppt_to_word(ppt_path, output_docx):
         metadata
     )
 
+    from docx.shared import Inches
+
+    doc.add_page_break()
+    
+    doc.add_heading("PPT Screenshots", level=1)
+    
+    for img_path in slide_images:
+        doc.add_picture(
+            img_path,
+            width=Inches(6.5)
+        )
+        doc.add_paragraph("")
+    
     # Add slide images
     add_slide_images(
         doc,
