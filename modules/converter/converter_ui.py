@@ -42,7 +42,7 @@ def normalize_snow_data(data):
         for k in keys:
             if k in data:
                 value = data[k]
-    
+
                 if value is not None and str(value).strip() not in [
                     "",
                     "nan",
@@ -50,8 +50,21 @@ def normalize_snow_data(data):
                     "None"
                 ]:
                     return value
-    
+
         return None
+
+    resolution_notes = get(
+        "resolution notes"
+    )
+
+    work_notes = get(
+        "work notes"
+    )
+
+    additional_comments = get(
+        "additional comments"
+    )
+
     return {
         "number": get("number"),
 
@@ -61,9 +74,9 @@ def normalize_snow_data(data):
         ),
 
         "created_date": get(
-                "created",
-                "created date",
-                "opened at"
+            "created",
+            "created date",
+            "opened at"
         ),
 
         "assigned_to": get(
@@ -73,12 +86,11 @@ def normalize_snow_data(data):
 
         "priority": get("priority"),
 
-        "resolved_date":get(
-                "closed",
-                "resolved date",
-                "closed at",
-                "vendor closed"
-        
+        "resolved_date": get(
+            "closed",
+            "resolved date",
+            "closed at",
+            "vendor closed"
         ),
 
         "short_description": get(
@@ -89,20 +101,26 @@ def normalize_snow_data(data):
             "description"
         ),
 
-        "work_notes": get(
-            "work notes"
-        ),
+        # --------------------------
+        # RCA fields
+        # --------------------------
+        "work_notes": work_notes,
+        "work notes": work_notes,
 
-        "comments": get(
-            "additional comments"
-        ),
+        "comments": additional_comments,
+        "additional_comments": additional_comments,
+        "additional comments": additional_comments,
 
-        "resolution": get(
-            "resolution notes"
-        ),
+        # FIX → pass all aliases
+        "resolution": resolution_notes,
+        "resolution_notes": resolution_notes,
+        "resolution notes": resolution_notes,
 
+        # --------------------------
+        # Azure extraction
+        # --------------------------
         "azure_bug": extract_azure(
-            get("resolution notes")
+            resolution_notes
         ),
 
         "ptc_case": get(
