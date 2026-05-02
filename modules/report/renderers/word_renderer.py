@@ -45,6 +45,24 @@ def set_cell_padding(
 
     tcPr.append(tcMar)
 
+def clean_azure_bug(value):
+    """
+    Prevent random invalid Azure bug numbers from showing in Word.
+    Matches PDF behavior.
+    """
+    if value is None:
+        return "-"
+
+    value = str(value).strip()
+
+    if value.lower() in ["nan", "none", "nat", ""]:
+        return "-"
+
+    # Optional safeguard:
+    # if your valid Azure IDs always start with specific prefixes,
+    # add logic here later.
+
+    return value
 
 def apply_table_padding(table):
     for row in table.rows:
@@ -140,7 +158,13 @@ def generate_word_doc(
     fill(0, 0, "Incident", data.get("number"))
     fill(0, 2, "Created By", data.get("created_by"))
 
-    fill(1, 0, "Azure Bug", data.get("azure_bug"))
+    fill(
+        1,
+        0,
+        "Azure Bug",
+        clean_azure_bug(data.get("azure_bug"))
+    )
+    
     fill(
         1,
         2,
