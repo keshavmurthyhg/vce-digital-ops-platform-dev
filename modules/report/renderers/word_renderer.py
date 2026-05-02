@@ -252,6 +252,7 @@ def generate_word_doc(
                 p.paragraph_format.space_after = Pt(4)
     
         doc.add_paragraph("")
+        
     # -----------------------------------
     # FOOTER
     # -----------------------------------
