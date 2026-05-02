@@ -52,48 +52,43 @@ def remove_ppt_background(input_ppt):
 
     for slide in prs.slides:
         shapes_to_remove = []
-
+        
         for shape in slide.shapes:
             try:
                 shape_type = shape.shape_type
-
-                # Remove huge decorative auto shapes
-                if shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE:
-
-                    # Remove large background shapes
+        
+                # Remove grouped template objects
+                if shape_type == MSO_SHAPE_TYPE.GROUP:
+                    if shape.top > slide_height * 0.55:
+                        shapes_to_remove.append(shape)
+        
+                # Remove normal large backgrounds
+                elif shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE:
                     if (
                         shape.width > slide_width * 0.30
-                        and shape.height > slide_height * 0.30
+                        and shape.height > slide_height * 0.25
                     ):
                         shapes_to_remove.append(shape)
-                
-                    # Remove bottom corner decorative triangles
+        
+                    # Remove bottom left/right template decorations
                     elif (
-                        shape.top > slide_height * 0.70
+                        shape.top > slide_height * 0.65
                         and (
-                            shape.left < slide_width * 0.20
-                            or shape.left > slide_width * 0.75
+                            shape.left < slide_width * 0.25
+                            or shape.left > slide_width * 0.70
                         )
                     ):
                         shapes_to_remove.append(shape)
-
-                # Remove full-slide decorative images
-                elif shape_type == MSO_SHAPE_TYPE.PICTURE:
-                    if (
-                        shape.width > slide_width * 0.90
-                        and shape.height > slide_height * 0.90
-                    ):
-                        shapes_to_remove.append(shape)
-
+        
             except Exception:
                 continue
-
-        # Remove safely
+        
+        
         for shape in shapes_to_remove:
             try:
                 sp = shape._element
                 sp.getparent().remove(sp)
-            except Exception:
+            except:
                 pass
 
     cleaned_ppt = input_ppt.replace(".pptx", "_cleaned.pptx")
