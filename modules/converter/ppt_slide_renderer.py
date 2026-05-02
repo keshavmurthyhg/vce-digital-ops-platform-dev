@@ -1,48 +1,40 @@
 import os
 import tempfile
 import uuid
-from pptx import Presentation
 
+from pdf2image import convert_from_path
 
 def render_ppt_slides_to_images(ppt_path):
-    """
-    Extract largest image from each slide.
-    No Aspose dependency.
-    Keeps app stable on Streamlit Cloud.
-    """
+    temp_dir = tempfile.mkdtemp()
 
-    prs = Presentation(ppt_path)
-    output_dir = tempfile.mkdtemp()
+    # convert ppt -> pdf
+    subprocess.run([
+        "libreoffice",
+        "--headless",
+        "--convert-to",
+        "pdf",
+        ppt_path,
+        "--outdir",
+        temp_dir
+    ], check=True)
 
-    slide_images = []
+    pdf_file = None
 
-    for slide_index, slide in enumerate(prs.slides):
+    for file in os.listdir(temp_dir):
+        if file.endswith(".pdf"):
+            pdf_file = os.path.join(temp_dir, file)
+            break
 
-        largest_image = None
-        largest_size = 0
+    if not pdf_file:
+        raise Exception("PDF conversion failed")
 
-        for shape in slide.shapes:
-            try:
-                if shape.shape_type == 13:  # Picture
-                    image_bytes = shape.image.blob
-                    image_size = len(image_bytes)
+    pages = convert_from_path(pdf_file, dpi=200)
 
-                    if image_size > largest_size:
-                        largest_size = image_size
-                        largest_image = image_bytes
+    image_paths = []
 
-            except Exception:
-                continue
+    for i, page in enumerate(pages):
+        img_path = os.path.join(temp_dir, f"slide_{i+1}.png")
+        page.save(img_path, "PNG")
+        image_paths.append(img_path)
 
-        if largest_image:
-            img_path = os.path.join(
-                output_dir,
-                f"slide_{slide_index+1}_{uuid.uuid4().hex}.png"
-            )
-
-            with open(img_path, "wb") as f:
-                f.write(largest_image)
-
-            slide_images.append(img_path)
-
-    return slide_images
+    return image_paths
