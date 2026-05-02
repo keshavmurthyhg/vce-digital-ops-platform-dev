@@ -72,7 +72,7 @@ def generate_word_doc(
     
     # Reduce left/right margins
     section.left_margin = Inches(0.75)
-    section.right_margin = Inches(0.75)
+    section.right_margin = Inches(0.5)
     
     # -----------------------------------
     # TITLE
