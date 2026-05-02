@@ -42,7 +42,7 @@ def add_header_table(doc, metadata):
 def add_slide_images(doc, slide_images):
     """
     Add rendered PPT slides as images
-    Skip slide 1 because metadata is already extracted from it
+    Skip slide 1 because metadata already extracted
     """
 
     if not slide_images:
@@ -51,8 +51,8 @@ def add_slide_images(doc, slide_images):
         )
         return
 
-    # Add section title once
     doc.add_page_break()
+
     doc.add_heading(
         "PPT Screenshots",
         level=1
@@ -70,38 +70,29 @@ def add_slide_images(doc, slide_images):
 
 def ppt_to_word(ppt_path, output_docx):
     """
-    Convert PPT to Word:
-    1. Extract metadata from slide 1
-    2. Render all slides as images
-    3. Insert slides into Word
+    Convert PPT → Word
     """
 
-    # Extract metadata from first slide
     metadata = extract_slide1_metadata(
         ppt_path
     )
 
-    # Render slides as images
     slide_images = render_ppt_slides_to_images(
         ppt_path
     )
 
-    # Create Word document
     doc = Document()
 
-    # Add metadata section
     add_header_table(
         doc,
         metadata
     )
 
-    # Add slide screenshots
     add_slide_images(
         doc,
         slide_images
     )
 
-    # Save final document
     doc.save(output_docx)
 
     return output_docx
