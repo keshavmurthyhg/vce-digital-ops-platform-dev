@@ -63,6 +63,18 @@ def generate_word_doc(
     doc = Document()
 
     # -----------------------------------
+    # PAGE MARGINS
+    # -----------------------------------
+    section = doc.sections[0]
+    
+    section.top_margin = Inches(0.6)
+    section.bottom_margin = Inches(0.6)
+    
+    # Reduce left/right margins
+    section.left_margin = Inches(0.75)
+    section.right_margin = Inches(0.75)
+    
+    # -----------------------------------
     # TITLE
     # -----------------------------------
     title = doc.add_heading(
