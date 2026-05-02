@@ -85,9 +85,9 @@ def generate_word_doc(
     table.autofit = False
 
     column_widths = [
-        Inches(1.25),   # label
+        Inches(1.0),   # label
         Inches(2.0),    # value
-        Inches(1.25),   # label
+        Inches(1.5),   # label
         Inches(2.0)     # value
     ]
 
