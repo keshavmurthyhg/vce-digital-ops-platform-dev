@@ -59,9 +59,21 @@ def remove_ppt_background(input_ppt):
 
                 # Remove huge decorative auto shapes
                 if shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE:
+
+                    # Remove large background shapes
                     if (
                         shape.width > slide_width * 0.30
                         and shape.height > slide_height * 0.30
+                    ):
+                        shapes_to_remove.append(shape)
+                
+                    # Remove bottom corner decorative triangles
+                    elif (
+                        shape.top > slide_height * 0.70
+                        and (
+                            shape.left < slide_width * 0.20
+                            or shape.left > slide_width * 0.75
+                        )
                     ):
                         shapes_to_remove.append(shape)
 
