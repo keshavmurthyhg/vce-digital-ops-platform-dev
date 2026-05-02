@@ -163,7 +163,7 @@ def generate_word_doc(
     t2.autofit = False
 
     t2.columns[0].width = Inches(3.25)
-    t2.columns[1].width = Inches(3.25)
+    t2.columns[1].width = Inches(3.75)
 
     headers = [
         "SHORT DESCRIPTION",
