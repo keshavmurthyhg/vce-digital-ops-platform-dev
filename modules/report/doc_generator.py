@@ -27,11 +27,7 @@ def enrich_data(data):
         safe_data.get("azure_bug")
         or safe_data.get("azure bug")
         or extract_azure_id(
-            " ".join([
-                str(safe_data.get("work notes", "")),
-                str(safe_data.get("additional comments", "")),
-                str(safe_data.get("resolution notes", ""))
-            ])
+            str(safe_data.get("resolution notes", ""))
         )
     )
 
