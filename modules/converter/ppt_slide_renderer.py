@@ -38,3 +38,18 @@ def render_ppt_slides_to_images(ppt_path):
         image_paths.append(img_path)
 
     return image_paths
+
+
+from PIL import Image
+
+def make_white_background(image_path):
+    img = Image.open(image_path).convert("RGBA")
+
+    white_bg = Image.new(
+        "RGBA",
+        img.size,
+        (255, 255, 255, 255)
+    )
+
+    white_bg.paste(img, (0, 0), img)
+    white_bg.convert("RGB").save(image_path)
