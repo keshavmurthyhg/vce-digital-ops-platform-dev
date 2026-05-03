@@ -4,7 +4,7 @@ import subprocess
 
 from pdf2image import convert_from_path
 from PIL import Image
-
+from pptx import Presentation
 
 def should_skip_slide(img_path):
     """
@@ -65,7 +65,53 @@ def render_ppt_slides_to_images(ppt_path):
     temp_dir = tempfile.mkdtemp()
 
     try:
-        # Convert original PPT directly to PDF
+        # -----------------------------------
+        # Step 1: Identify slides to skip
+        # -----------------------------------
+        prs = Presentation(ppt_path)
+
+        skip_indexes = set()
+
+        for idx, slide in enumerate(prs.slides):
+            all_text = []
+
+            for shape in slide.shapes:
+                if hasattr(shape, "text"):
+                    txt = shape.text.strip().lower()
+                    if txt:
+                        all_text.append(txt)
+
+            combined_text = " ".join(all_text)
+
+            print(f"Slide {idx+1}: {combined_text}")
+
+            # Skip thank you slides
+            if "thank you" in combined_text:
+                skip_indexes.add(idx)
+                continue
+
+            # Skip separator slides
+            if "ppt slides" in combined_text:
+                skip_indexes.add(idx)
+                continue
+
+            # Skip questions slide
+            if "questions" in combined_text:
+                skip_indexes.add(idx)
+                continue
+
+            # Skip title-only slides
+            word_count = len(combined_text.split())
+
+            if word_count <= 3:
+                skip_indexes.add(idx)
+                continue
+
+        print(f"Skipping slides: {skip_indexes}")
+
+        # -----------------------------------
+        # Step 2: Convert full PPT -> PDF
+        # -----------------------------------
         subprocess.run([
             "libreoffice",
             "--headless",
@@ -95,17 +141,16 @@ def render_ppt_slides_to_images(ppt_path):
         final_images = []
 
         for i, page in enumerate(pages):
+            if i in skip_indexes:
+                print(f"Skipping slide image {i+1}")
+                continue
+
             img_path = os.path.join(
                 temp_dir,
                 f"slide_{i+1}.png"
             )
 
             page.save(img_path, "PNG")
-
-            if should_skip_slide(img_path):
-                print(f"Skipping theme/title slide {i+1}")
-                continue
-
             final_images.append(img_path)
 
         print(f"Final usable slides: {len(final_images)}")
