@@ -1,10 +1,10 @@
 import os
-import tempfile
 from docx import Document
 from docx.shared import Inches
 
 from modules.converter.ppt_extractor import extract_ppt_content
 from modules.converter.ppt_slide_renderer import render_ppt_slides_to_images
+from modules.converter.ppt_extractor import convert_ppt_to_images
 
 
 def add_images_to_doc(doc, image_paths):
@@ -46,26 +46,48 @@ def convert_ppt_to_doc(ppt_path, output_docx):
                     doc.add_paragraph(text)
 
         # -----------------------------------
-        # Convert slides to images
+        # Render slides
         # -----------------------------------
-        image_paths = render_ppt_slides_to_images(
-            ppt_path
-        )
+        rendered_output = render_ppt_slides_to_images(ppt_path)
 
-        print(f"Generated images: {image_paths}")
+        print(f"Renderer output: {rendered_output}")
 
+        # Case 1 → renderer returned cleaned PPT path
+        if isinstance(rendered_output, str):
+            print("Renderer returned PPT path. Converting to images...")
+            image_paths = convert_ppt_to_images(rendered_output)
+
+        # Case 2 → renderer already returned image list
+        elif isinstance(rendered_output, list):
+            image_paths = rendered_output
+
+        else:
+            image_paths = []
+
+        print(f"Final image paths: {image_paths}")
+
+        # -----------------------------------
+        # Validate images
+        # -----------------------------------
         valid_images = []
 
         for img_path in image_paths:
-            if (
-                img_path
-                and os.path.exists(img_path)
-                and os.path.getsize(img_path) > 0
-            ):
-                valid_images.append(img_path)
+            try:
+                if (
+                    img_path
+                    and os.path.exists(img_path)
+                    and os.path.getsize(img_path) > 0
+                ):
+                    valid_images.append(img_path)
+
+            except Exception as e:
+                print(f"Skipping invalid image {img_path}: {e}")
 
         print(f"Valid images count: {len(valid_images)}")
 
+        # -----------------------------------
+        # Add slides to doc
+        # -----------------------------------
         if valid_images:
             doc.add_page_break()
             doc.add_heading("PPT Slides", level=1)
@@ -75,10 +97,12 @@ def convert_ppt_to_doc(ppt_path, output_docx):
                 valid_images
             )
         else:
-            print("No valid slide images found")
+            doc.add_paragraph(
+                "No valid PPT slide images found."
+            )
 
         # -----------------------------------
-        # Save final document
+        # Save document
         # -----------------------------------
         doc.save(output_docx)
 
@@ -89,7 +113,7 @@ def convert_ppt_to_doc(ppt_path, output_docx):
         raise
 
 
-# backward compatibility for converter.py
+# backward compatibility
 def ppt_to_word(ppt_path, output_docx):
     return convert_ppt_to_doc(
         ppt_path,
