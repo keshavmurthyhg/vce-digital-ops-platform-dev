@@ -124,8 +124,25 @@ def create_clean_ppt(ppt_path):
     for idx, slide in enumerate(source_prs.slides):
         print(f"Processing slide {idx+1}")
 
+        slide_text = []
+
+        for s in slide.shapes:
+            try:
+                if hasattr(s, "text"):
+                    txt = s.text.strip().lower()
+                    if txt:
+                        slide_text.append(txt)
+            except:
+                pass
+        
+        combined_text = " ".join(slide_text)
+        
         if should_skip_slide(slide):
             print("Skipping thank you slide")
+            continue
+        
+        if combined_text.strip() == "ppt slides":
+            print("Skipping PPT divider slide")
             continue
 
         new_slide = clean_prs.slides.add_slide(blank_layout)
@@ -133,7 +150,12 @@ def create_clean_ppt(ppt_path):
         for shape in slide.shapes:
             try:
                 # Handle normal screenshots/images
-                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                if shape.shape_type in [
+                    MSO_SHAPE_TYPE.PICTURE,
+                    MSO_SHAPE_TYPE.LINKED_PICTURE,
+                    MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT,
+                    MSO_SHAPE_TYPE.OLE_OBJECT
+                ]:
                     if is_background_picture(
                         shape,
                         source_prs.slide_width,
