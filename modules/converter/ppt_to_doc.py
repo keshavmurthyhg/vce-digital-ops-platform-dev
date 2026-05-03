@@ -4,12 +4,12 @@ from docx import Document
 from docx.shared import Inches
 
 from modules.converter.ppt_extractor import extract_ppt_content
-from modules.converter.ppt_slide_renderer import render_ppt_to_images
+from modules.converter.ppt_slide_renderer import render_ppt_slides_to_images
 
 
 def add_images_to_doc(doc, image_paths):
     """
-    Add slide images into word document
+    Add slide images into Word document
     """
 
     for img_path in image_paths:
@@ -27,18 +27,15 @@ def add_images_to_doc(doc, image_paths):
 
 def convert_ppt_to_doc(ppt_path, output_docx):
     """
-    Convert PPT to Word:
-    1. Extract textual content
-    2. Render slides as images
-    3. Add images into doc
+    Convert PPT -> Word
     """
 
     try:
         doc = Document()
 
-        # --------------------------------
+        # -----------------------------------
         # Extract text content
-        # --------------------------------
+        # -----------------------------------
         extracted_text = extract_ppt_content(ppt_path)
 
         if extracted_text:
@@ -48,44 +45,41 @@ def convert_ppt_to_doc(ppt_path, output_docx):
                 if text and text.strip():
                     doc.add_paragraph(text)
 
-        # --------------------------------
-        # Render PPT slides to images
-        # --------------------------------
-        with tempfile.TemporaryDirectory() as temp_dir:
+        # -----------------------------------
+        # Convert slides to images
+        # -----------------------------------
+        image_paths = render_ppt_slides_to_images(
+            ppt_path
+        )
 
-            image_paths = render_ppt_to_images(
-                ppt_path,
-                temp_dir
+        print(f"Generated images: {image_paths}")
+
+        valid_images = []
+
+        for img_path in image_paths:
+            if (
+                img_path
+                and os.path.exists(img_path)
+                and os.path.getsize(img_path) > 0
+            ):
+                valid_images.append(img_path)
+
+        print(f"Valid images count: {len(valid_images)}")
+
+        if valid_images:
+            doc.add_page_break()
+            doc.add_heading("PPT Slides", level=1)
+
+            add_images_to_doc(
+                doc,
+                valid_images
             )
+        else:
+            print("No valid slide images found")
 
-            print(f"Generated images: {image_paths}")
-
-            valid_images = []
-
-            for img_path in image_paths:
-                if (
-                    img_path
-                    and os.path.exists(img_path)
-                    and os.path.getsize(img_path) > 0
-                ):
-                    valid_images.append(img_path)
-
-            print(f"Valid images count: {len(valid_images)}")
-
-            if valid_images:
-                doc.add_page_break()
-                doc.add_heading("PPT Slides", level=1)
-
-                add_images_to_doc(
-                    doc,
-                    valid_images
-                )
-            else:
-                print("No valid PPT images found")
-
-        # --------------------------------
+        # -----------------------------------
         # Save final document
-        # --------------------------------
+        # -----------------------------------
         doc.save(output_docx)
 
         return output_docx
@@ -95,7 +89,7 @@ def convert_ppt_to_doc(ppt_path, output_docx):
         raise
 
 
-# backward compatibility
+# backward compatibility for converter.py
 def ppt_to_word(ppt_path, output_docx):
     return convert_ppt_to_doc(
         ppt_path,
