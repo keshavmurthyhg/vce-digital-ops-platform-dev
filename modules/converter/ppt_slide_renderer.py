@@ -178,18 +178,16 @@ def create_clean_ppt(ppt_path):
                             continue
                 
                         # Normal image extraction
+                        # Normal extractable image
                         if hasattr(shape, "image"):
                             add_picture_to_slide(shape, new_slide)
-                
+                        
                         else:
-                            # fallback → preserve object as-is
-                            el = shape.element
-                            new_el = copy.deepcopy(el)
-                
-                            new_slide.shapes._spTree.insert_element_before(
-                                new_el,
-                                'p:extLst'
+                            print(
+                                f"Skipping unsupported image object type: "
+                                f"{shape.shape_type}"
                             )
+                            continue
                 
                     except Exception as e:
                         print(f"Extended image handling failed: {e}")
