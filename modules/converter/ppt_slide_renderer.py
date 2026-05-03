@@ -8,7 +8,7 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 
 
 # -----------------------------------------
-# Detect thank you / closing slides
+# Detect thank you slides
 # -----------------------------------------
 def is_thank_you_slide(slide):
     try:
@@ -27,13 +27,12 @@ def is_thank_you_slide(slide):
 
         return any(k in slide_text for k in keywords)
 
-    except Exception as e:
-        print(f"Thank you detection failed: {e}")
+    except Exception:
         return False
 
 
 # -----------------------------------------
-# Detect full background image
+# Detect background screenshot
 # -----------------------------------------
 def is_background_picture(shape, slide_width, slide_height):
     try:
@@ -49,8 +48,7 @@ def is_background_picture(shape, slide_width, slide_height):
 
         return False
 
-    except Exception as e:
-        print(f"Background detection failed: {e}")
+    except:
         return False
 
 
@@ -77,7 +75,7 @@ def add_picture_to_slide(shape, target_slide):
 
 
 # -----------------------------------------
-# Copy annotation/text shapes
+# Copy annotation shapes
 # -----------------------------------------
 def copy_annotation_shape(shape, target_slide):
     try:
@@ -96,33 +94,7 @@ def copy_annotation_shape(shape, target_slide):
 
 
 # -----------------------------------------
-# Fallback → copy original slide fully
-# -----------------------------------------
-def copy_original_slide(clean_prs, original_slide, blank_layout):
-    try:
-        fallback_slide = clean_prs.slides.add_slide(blank_layout)
-
-        for shape in original_slide.shapes:
-            try:
-                element = copy.deepcopy(shape.element)
-
-                fallback_slide.shapes._spTree.insert_element_before(
-                    element,
-                    "p:extLst"
-                )
-
-            except Exception as ex:
-                print(f"Fallback shape failed: {ex}")
-
-        return True
-
-    except Exception as e:
-        print(f"Fallback slide failed: {e}")
-        return False
-
-
-# -----------------------------------------
-# Main function
+# Main renderer
 # -----------------------------------------
 def render_ppt_slides_to_images(ppt_path):
     source_prs = Presentation(ppt_path)
@@ -133,7 +105,7 @@ def render_ppt_slides_to_images(ppt_path):
 
     blank_layout = clean_prs.slide_layouts[6]
 
-    # Remove default slide
+    # Remove default blank slide
     if len(clean_prs.slides) > 0:
         try:
             rId = clean_prs.slides._sldIdLst[0].rId
@@ -143,7 +115,7 @@ def render_ppt_slides_to_images(ppt_path):
             pass
 
     for idx, slide in enumerate(source_prs.slides):
-        print(f"\nProcessing slide {idx + 1}")
+        print(f"Processing slide {idx+1}")
 
         # Skip thank you slide
         if is_thank_you_slide(slide):
@@ -152,32 +124,24 @@ def render_ppt_slides_to_images(ppt_path):
 
         new_slide = clean_prs.slides.add_slide(blank_layout)
 
-        extracted_images = 0
-
         for shape in slide.shapes:
             try:
                 # -----------------------------------
-                # IMAGE / SCREENSHOT HANDLING
+                # Handle screenshots/images
                 # -----------------------------------
                 if shape.shape_type in [
-                    MSO_SHAPE_TYPE.PICTURE,
-                    MSO_SHAPE_TYPE.LINKED_PICTURE,
-                    MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT,
-                    MSO_SHAPE_TYPE.OLE_OBJECT
+                    MSO_SHAPE_TYPE.PICTURE
                 ]:
-
-                    # Skip full slide template backgrounds
-                    if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
-                        if is_background_picture(
-                            shape,
-                            source_prs.slide_width,
-                            source_prs.slide_height
-                        ):
-                            print(
-                                f"Skipping background image "
-                                f"on slide {idx+1}"
-                            )
-                            continue
+                    if is_background_picture(
+                        shape,
+                        source_prs.slide_width,
+                        source_prs.slide_height
+                    ):
+                        print(
+                            f"Skipping background image "
+                            f"on slide {idx+1}"
+                        )
+                        continue
 
                     success = add_picture_to_slide(
                         shape,
@@ -185,13 +149,13 @@ def render_ppt_slides_to_images(ppt_path):
                     )
 
                     if success:
-                        extracted_images += 1
                         print(
-                            f"Image extracted on slide {idx+1}"
+                            f"Image extracted "
+                            f"on slide {idx+1}"
                         )
 
                 # -----------------------------------
-                # ANNOTATIONS / TEXT / ARROWS
+                # Handle annotations/arrows/textboxes
                 # -----------------------------------
                 else:
                     copy_annotation_shape(
@@ -205,31 +169,7 @@ def render_ppt_slides_to_images(ppt_path):
                     f"on slide {idx+1}: {e}"
                 )
 
-        # -----------------------------------
-        # Fallback if images missing
-        # -----------------------------------
-        if extracted_images == 0:
-            print(
-                f"No images found on slide {idx+1}. "
-                f"Using original slide fallback."
-            )
-
-            try:
-                rId = clean_prs.slides._sldIdLst[-1].rId
-                clean_prs.part.drop_rel(rId)
-                del clean_prs.slides._sldIdLst[-1]
-            except:
-                pass
-
-            copy_original_slide(
-                clean_prs,
-                slide,
-                blank_layout
-            )
-
-    # -----------------------------------
     # Save cleaned PPT
-    # -----------------------------------
     temp_dir = tempfile.mkdtemp()
 
     output_ppt = os.path.join(
