@@ -9,13 +9,14 @@ from PIL import Image
 def should_skip_slide(img_path):
     """
     Skip:
-    - thank you slides
+    - blank slides
     - title slides
-    - mostly blank/template slides
+    - separator slides
+    - thank you slides
     """
+
     try:
         img = Image.open(img_path).convert("RGB")
-
         width, height = img.size
 
         # Ignore footer area
@@ -30,19 +31,27 @@ def should_skip_slide(img_path):
         hist = gray.histogram()
 
         total_pixels = sum(hist)
-        white_pixels = hist[255]
 
+        white_pixels = hist[255]
         white_ratio = white_pixels / total_pixels
 
-        # Skip almost empty slides
+        # Mostly blank slide
         if white_ratio > 0.88:
             return True
 
-        # Detect dark theme-only slides
+        # Dark theme slide
         dark_pixels = sum(hist[:40])
         dark_ratio = dark_pixels / total_pixels
 
         if dark_ratio > 0.55:
+            return True
+
+        # Detect very low-content slides
+        non_white_pixels = total_pixels - white_pixels
+        content_ratio = non_white_pixels / total_pixels
+
+        # These are usually title/separator slides
+        if content_ratio < 0.05:
             return True
 
         return False
