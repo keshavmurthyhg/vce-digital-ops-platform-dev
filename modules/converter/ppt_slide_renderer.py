@@ -158,17 +158,41 @@ def create_clean_ppt(ppt_path):
                 # -------------------------
                 # Handle actual screenshots/images
                 # -------------------------
-                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
-
-                    if is_background_picture(
-                        shape,
-                        source_prs.slide_width,
-                        source_prs.slide_height
-                    ):
-                        print("Skipping background image")
-                        continue
-
-                    add_picture_to_slide(shape, new_slide)
+                if shape.shape_type in [
+                    MSO_SHAPE_TYPE.PICTURE,
+                    MSO_SHAPE_TYPE.LINKED_PICTURE,
+                    MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT,
+                    MSO_SHAPE_TYPE.OLE_OBJECT,
+                    MSO_SHAPE_TYPE.MEDIA
+                ]:
+                    try:
+                        if (
+                            shape.shape_type == MSO_SHAPE_TYPE.PICTURE
+                            and is_background_picture(
+                                shape,
+                                source_prs.slide_width,
+                                source_prs.slide_height
+                            )
+                        ):
+                            print("Skipping background image")
+                            continue
+                
+                        # Normal image extraction
+                        if hasattr(shape, "image"):
+                            add_picture_to_slide(shape, new_slide)
+                
+                        else:
+                            # fallback → preserve object as-is
+                            el = shape.element
+                            new_el = copy.deepcopy(el)
+                
+                            new_slide.shapes._spTree.insert_element_before(
+                                new_el,
+                                'p:extLst'
+                            )
+                
+                    except Exception as e:
+                        print(f"Extended image handling failed: {e}")
 
                 # -------------------------
                 # Handle grouped screenshots
