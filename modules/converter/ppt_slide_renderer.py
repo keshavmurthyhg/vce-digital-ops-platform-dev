@@ -1,123 +1,164 @@
 import os
+import copy
 import tempfile
 import subprocess
 
-from pdf2image import convert_from_path
-from PIL import Image
 from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
+from pdf2image import convert_from_path
 
-def should_skip_slide(img_path):
-    """
-    Skip:
-    - blank slides
-    - title slides
-    - separator slides
-    - thank you slides
-    """
 
+# -----------------------------------
+# Skip unwanted slides
+# -----------------------------------
+def should_skip_slide(slide):
+    texts = []
+
+    for shape in slide.shapes:
+        if hasattr(shape, "text"):
+            txt = shape.text.strip().lower()
+            if txt:
+                texts.append(txt)
+
+    combined_text = " ".join(texts)
+
+    if "thank you" in combined_text:
+        return True
+
+    if "ppt slides" in combined_text:
+        return True
+
+    if "questions" in combined_text:
+        return True
+
+    return False
+
+
+# -----------------------------------
+# Detect background images
+# -----------------------------------
+def is_background_picture(shape, slide_width, slide_height):
     try:
-        img = Image.open(img_path).convert("RGB")
-        width, height = img.size
+        if shape.shape_type != MSO_SHAPE_TYPE.PICTURE:
+            return False
 
-        # Ignore footer area
-        content_region = img.crop((
-            width * 0.05,
-            height * 0.05,
-            width * 0.95,
-            height * 0.85
-        ))
-
-        gray = content_region.convert("L")
-        hist = gray.histogram()
-
-        total_pixels = sum(hist)
-
-        white_pixels = hist[255]
-        white_ratio = white_pixels / total_pixels
-
-        # Mostly blank slide
-        if white_ratio > 0.88:
-            return True
-
-        # Dark theme slide
-        dark_pixels = sum(hist[:40])
-        dark_ratio = dark_pixels / total_pixels
-
-        if dark_ratio > 0.55:
-            return True
-
-        # Detect very low-content slides
-        non_white_pixels = total_pixels - white_pixels
-        content_ratio = non_white_pixels / total_pixels
-
-        # These are usually title/separator slides
-        if content_ratio < 0.05:
+        if (
+            shape.width >= slide_width * 0.90 and
+            shape.height >= slide_height * 0.90 and
+            shape.left <= slide_width * 0.05 and
+            shape.top <= slide_height * 0.05
+        ):
             return True
 
         return False
 
-    except Exception as e:
-        print(f"Slide detection error: {e}")
+    except:
         return False
 
 
-def render_ppt_slides_to_images(ppt_path):
+# -----------------------------------
+# Create clean ppt
+# -----------------------------------
+def create_clean_ppt(ppt_path):
+    source_prs = Presentation(ppt_path)
+
+    clean_prs = Presentation()
+    clean_prs.slide_width = source_prs.slide_width
+    clean_prs.slide_height = source_prs.slide_height
+
+    blank_layout = clean_prs.slide_layouts[6]
+
+    for slide in source_prs.slides:
+
+        if should_skip_slide(slide):
+            print("Skipping unwanted slide")
+            continue
+
+        new_slide = clean_prs.slides.add_slide(blank_layout)
+
+        # ----------------------------
+        # Step 1: Add screenshots/images
+        # ----------------------------
+        for shape in slide.shapes:
+            try:
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+
+                    if is_background_picture(
+                        shape,
+                        source_prs.slide_width,
+                        source_prs.slide_height
+                    ):
+                        print("Skipping background image")
+                        continue
+
+                    image = shape.image
+                    image_bytes = image.blob
+
+                    temp_img = tempfile.NamedTemporaryFile(
+                        delete=False,
+                        suffix="." + image.ext
+                    )
+                    temp_img.write(image_bytes)
+                    temp_img.close()
+
+                    new_slide.shapes.add_picture(
+                        temp_img.name,
+                        shape.left,
+                        shape.top,
+                        shape.width,
+                        shape.height
+                    )
+
+            except Exception as e:
+                print(f"Picture extraction failed: {e}")
+
+        # ----------------------------
+        # Step 2: Add annotations/shapes
+        # ----------------------------
+        for shape in slide.shapes:
+            try:
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                    continue
+
+                if shape.is_placeholder:
+                    continue
+
+                el = shape.element
+                new_el = copy.deepcopy(el)
+
+                new_slide.shapes._spTree.insert_element_before(
+                    new_el,
+                    'p:extLst'
+                )
+
+            except Exception as e:
+                print(f"Annotation copy failed: {e}")
+
     temp_dir = tempfile.mkdtemp()
 
+    clean_ppt_path = os.path.join(
+        temp_dir,
+        "clean_ppt.pptx"
+    )
+
+    clean_prs.save(clean_ppt_path)
+
+    return clean_ppt_path, temp_dir
+
+
+# -----------------------------------
+# Convert clean ppt → images
+# -----------------------------------
+def render_ppt_slides_to_images(ppt_path):
     try:
-        # -----------------------------------
-        # Step 1: Identify slides to skip
-        # -----------------------------------
-        prs = Presentation(ppt_path)
+        clean_ppt_path, temp_dir = create_clean_ppt(ppt_path)
 
-        skip_indexes = set()
-
-        for idx, slide in enumerate(prs.slides):
-            all_text = []
-
-            for shape in slide.shapes:
-                if hasattr(shape, "text"):
-                    txt = shape.text.strip().lower()
-                    if txt:
-                        all_text.append(txt)
-
-            combined_text = " ".join(all_text)
-
-            print(f"Slide {idx+1}: {combined_text}")
-
-            # Skip thank you slides
-            if "thank you" in combined_text:
-                skip_indexes.add(idx)
-                continue
-
-            # Skip separator slides
-            if "ppt slides" in combined_text:
-                skip_indexes.add(idx)
-                continue
-
-            # Skip questions slide
-            if "questions" in combined_text:
-                skip_indexes.add(idx)
-                continue
-
-            # Skip title-only slides
-            word_count = len(combined_text.split())
-
-            if word_count <= 3:
-                skip_indexes.add(idx)
-                continue
-
-        print(f"Skipping slides: {skip_indexes}")
-
-        # -----------------------------------
-        # Step 2: Convert full PPT -> PDF
-        # -----------------------------------
         subprocess.run([
             "libreoffice",
             "--headless",
             "--convert-to",
             "pdf",
-            ppt_path,
+            clean_ppt_path,
             "--outdir",
             temp_dir
         ], check=True)
@@ -141,55 +182,16 @@ def render_ppt_slides_to_images(ppt_path):
         final_images = []
 
         for i, page in enumerate(pages):
-            if i in skip_indexes:
-                print(f"Skipping slide image {i+1}")
-                continue
-
             img_path = os.path.join(
                 temp_dir,
                 f"slide_{i+1}.png"
             )
-            
-            page.save(img_path, "PNG")
-            
-            # -----------------------------
-            # Auto crop actual content area
-            # -----------------------------
-            try:
-                from PIL import Image, ImageChops
-            
-                img = Image.open(img_path).convert("RGB")
-            
-                # Create white background reference
-                bg = Image.new("RGB", img.size, (255, 255, 255))
-            
-                # Find difference from white
-                diff = ImageChops.difference(img, bg)
-                bbox = diff.getbbox()
-            
-                if bbox:
-                    left, top, right, bottom = bbox
-            
-                    # Add small padding
-                    padding = 20
-            
-                    left = max(0, left - padding)
-                    top = max(0, top - padding)
-                    right = min(img.width, right + padding)
-                    bottom = min(img.height, bottom + padding)
-            
-                    cropped = img.crop((left, top, right, bottom))
-                    cropped.save(img_path)
-            
-            except Exception as crop_err:
-                print(f"Crop failed for slide {i+1}: {crop_err}")
-            
-            final_images.append(img_path)
 
-        print(f"Final usable slides: {len(final_images)}")
+            page.save(img_path, "PNG")
+            final_images.append(img_path)
 
         return final_images
 
     except Exception as e:
-        print(f"PPT rendering failed: {e}")
+        print(f"PPT render failed: {e}")
         return []
