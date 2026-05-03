@@ -136,8 +136,7 @@ def create_clean_ppt(ppt_path):
     blank_layout = clean_prs.slide_layouts[6]
 
     for slide_index, slide in enumerate(source_prs.slides):
-
-        print(f"Processing slide {slide_index + 1}")
+        print(f"Processing slide {slide_index+1}")
 
         if should_skip_slide(slide):
             print("Skipping unwanted slide")
@@ -147,9 +146,9 @@ def create_clean_ppt(ppt_path):
 
         for shape in slide.shapes:
             try:
-                # -------------------------
-                # Normal pictures
-                # -------------------------
+                # ---------------------------
+                # Normal screenshots/images
+                # ---------------------------
                 if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
 
                     if is_background_picture(
@@ -157,32 +156,75 @@ def create_clean_ppt(ppt_path):
                         source_prs.slide_width,
                         source_prs.slide_height
                     ):
-                        print("Skipping background image")
+                        print("Skipping background")
                         continue
 
                     add_picture_to_slide(shape, new_slide)
 
-                # -------------------------
+                # ---------------------------
                 # Grouped screenshots
-                # -------------------------
+                # ---------------------------
                 elif shape.shape_type == MSO_SHAPE_TYPE.GROUP:
                     add_group_pictures(shape, new_slide)
+
+                # ---------------------------
+                # Textboxes / arrows / rectangles
+                # ---------------------------
+                elif shape.shape_type in [
+                    MSO_SHAPE_TYPE.AUTO_SHAPE,
+                    MSO_SHAPE_TYPE.TEXT_BOX,
+                    MSO_SHAPE_TYPE.FREEFORM,
+                    MSO_SHAPE_TYPE.LINE,
+                    MSO_SHAPE_TYPE.CONNECTOR
+                ]:
+
+                    try:
+                        new_shape = new_slide.shapes.add_shape(
+                            shape.auto_shape_type,
+                            shape.left,
+                            shape.top,
+                            shape.width,
+                            shape.height
+                        )
+
+                        # copy text
+                        if hasattr(shape, "text"):
+                            if shape.text:
+                                new_shape.text = shape.text
+
+                        # copy fill
+                        try:
+                            if shape.fill:
+                                if shape.fill.fore_color:
+                                    new_shape.fill.solid()
+                                    new_shape.fill.fore_color.rgb = (
+                                        shape.fill.fore_color.rgb
+                                    )
+                        except:
+                            pass
+
+                        # copy line color
+                        try:
+                            if shape.line:
+                                if shape.line.color:
+                                    new_shape.line.color.rgb = (
+                                        shape.line.color.rgb
+                                    )
+                        except:
+                            pass
+
+                    except Exception as e:
+                        print(f"Annotation recreation failed: {e}")
 
             except Exception as e:
                 print(f"Shape processing failed: {e}")
 
     temp_dir = tempfile.mkdtemp()
-
-    clean_ppt_path = os.path.join(
-        temp_dir,
-        "clean_ppt.pptx"
-    )
+    clean_ppt_path = os.path.join(temp_dir, "clean_ppt.pptx")
 
     clean_prs.save(clean_ppt_path)
 
     return clean_ppt_path, temp_dir
-
-
 # -----------------------------------
 # Convert clean PPT -> images
 # -----------------------------------
