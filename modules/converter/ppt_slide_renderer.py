@@ -39,7 +39,6 @@ def create_clean_ppt(original_ppt):
     source_prs = Presentation(original_ppt)
 
     clean_prs = Presentation()
-
     clean_prs.slide_width = source_prs.slide_width
     clean_prs.slide_height = source_prs.slide_height
 
@@ -55,22 +54,44 @@ def create_clean_ppt(original_ppt):
 
         for shape in slide.shapes:
             try:
-                # Skip placeholders/background elements
+                # Skip placeholders only
                 if shape.is_placeholder:
                     continue
 
-                # Keep actual useful content
-                if shape.shape_type in [
-                    MSO_SHAPE_TYPE.PICTURE,
-                    MSO_SHAPE_TYPE.TEXT_BOX,
-                    MSO_SHAPE_TYPE.AUTO_SHAPE,
-                    MSO_SHAPE_TYPE.LINE,
-                    MSO_SHAPE_TYPE.GROUP
-                ]:
-                    clone_shape(shape, new_slide)
+                # Skip full-slide background images
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                    try:
+                        left = shape.left
+                        top = shape.top
+                        width = shape.width
+                        height = shape.height
+
+                        slide_w = source_prs.slide_width
+                        slide_h = source_prs.slide_height
+
+                        # If image covers almost entire slide → treat as theme bg
+                        if (
+                            width >= slide_w * 0.90 and
+                            height >= slide_h * 0.90 and
+                            left <= slide_w * 0.05 and
+                            top <= slide_h * 0.05
+                        ):
+                            print("Skipping background image")
+                            continue
+
+                    except:
+                        pass
+
+                # Copy everything else
+                el = shape.element
+                new_el = copy.deepcopy(el)
+                new_slide.shapes._spTree.insert_element_before(
+                    new_el,
+                    'p:extLst'
+                )
 
             except Exception as e:
-                print(f"Skipping shape: {e}")
+                print(f"Shape copy failed: {e}")
                 continue
 
     temp_dir = tempfile.mkdtemp()
@@ -79,7 +100,6 @@ def create_clean_ppt(original_ppt):
     clean_prs.save(clean_ppt_path)
 
     return clean_ppt_path, temp_dir
-
 
 def convert_clean_ppt_to_images(clean_ppt_path, temp_dir):
     subprocess.run([
