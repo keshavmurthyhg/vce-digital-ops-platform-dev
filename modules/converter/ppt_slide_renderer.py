@@ -1,73 +1,61 @@
 import os
 import copy
 import tempfile
-import subprocess
+from io import BytesIO
 
 from pptx import Presentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
-from pdf2image import convert_from_path
 
 
-# -----------------------------------
-# Skip unwanted slides
-# -----------------------------------
-def should_skip_slide(slide):
-    texts = []
+# -----------------------------
+# Detect thank you / closing slides
+# -----------------------------
+def is_thank_you_slide(slide):
+    slide_text = ""
 
     for shape in slide.shapes:
-        try:
-            if hasattr(shape, "text"):
-                txt = shape.text.strip().lower()
-                if txt:
-                    texts.append(txt)
-        except:
-            pass
+        if hasattr(shape, "text"):
+            slide_text += shape.text.lower()
 
-    combined = " ".join(texts).strip()
-
-    return combined in [
+    keywords = [
         "thank you",
-        "questions"
+        "thanks",
+        "questions?",
+        "q&a"
     ]
 
+    return any(k in slide_text for k in keywords)
 
-# -----------------------------------
-# Detect full background images
-# -----------------------------------
+
+# -----------------------------
+# Detect full slide background screenshots
+# -----------------------------
 def is_background_picture(shape, slide_width, slide_height):
     try:
         if shape.shape_type != MSO_SHAPE_TYPE.PICTURE:
             return False
 
-        return (
-            shape.width >= slide_width * 0.90
-            and shape.height >= slide_height * 0.90
-            and shape.left <= slide_width * 0.05
-            and shape.top <= slide_height * 0.05
-        )
+        width_ratio = shape.width / slide_width
+        height_ratio = shape.height / slide_height
+
+        if width_ratio >= 0.90 and height_ratio >= 0.90:
+            return True
+
+        return False
 
     except:
         return False
 
 
-# -----------------------------------
-# Extract normal images
-# -----------------------------------
-def add_picture(shape, new_slide):
+# -----------------------------
+# Add extracted image safely
+# -----------------------------
+def add_picture(shape, target_slide):
     try:
-        image = shape.image
-        image_bytes = image.blob
+        image_bytes = shape.image.blob
 
-        temp_img = tempfile.NamedTemporaryFile(
-            delete=False,
-            suffix=f".{image.ext}"
-        )
-
-        temp_img.write(image_bytes)
-        temp_img.close()
-
-        new_slide.shapes.add_picture(
-            temp_img.name,
+        target_slide.shapes.add_picture(
+            BytesIO(image_bytes),
             shape.left,
             shape.top,
             shape.width,
@@ -77,64 +65,62 @@ def add_picture(shape, new_slide):
         return True
 
     except Exception as e:
-        print(f"Picture extraction failed: {e}")
+        print(f"Image extraction failed: {e}")
         return False
 
 
-# -----------------------------------
-# Process grouped objects
-# -----------------------------------
-def process_group_shape(group_shape, new_slide):
+# -----------------------------
+# Copy annotations/text/shapes
+# -----------------------------
+def copy_non_picture_shapes(source_slide, target_slide):
+    for shape in source_slide.shapes:
+        try:
+            if shape.shape_type in [
+                MSO_SHAPE_TYPE.PICTURE,
+                MSO_SHAPE_TYPE.LINKED_PICTURE,
+                MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT,
+                MSO_SHAPE_TYPE.OLE_OBJECT
+            ]:
+                continue
+
+            el = copy.deepcopy(shape.element)
+
+            target_slide.shapes._spTree.insert_element_before(
+                el,
+                "p:extLst"
+            )
+
+        except Exception as e:
+            print(f"Shape copy failed: {e}")
+
+
+# -----------------------------
+# Full fallback → copy original slide
+# -----------------------------
+def fallback_to_original_slide(clean_prs, slide, blank_layout):
     try:
-        for subshape in group_shape.shapes:
+        fallback_slide = clean_prs.slides.add_slide(blank_layout)
 
-            # grouped image
-            if subshape.shape_type == MSO_SHAPE_TYPE.PICTURE:
-                try:
-                    image = subshape.image
-                    image_bytes = image.blob
+        for original_shape in slide.shapes:
+            try:
+                el = copy.deepcopy(original_shape.element)
 
-                    temp_img = tempfile.NamedTemporaryFile(
-                        delete=False,
-                        suffix=f".{image.ext}"
-                    )
+                fallback_slide.shapes._spTree.insert_element_before(
+                    el,
+                    "p:extLst"
+                )
 
-                    temp_img.write(image_bytes)
-                    temp_img.close()
-
-                    new_slide.shapes.add_picture(
-                        temp_img.name,
-                        group_shape.left + subshape.left,
-                        group_shape.top + subshape.top,
-                        subshape.width,
-                        subshape.height
-                    )
-
-                except Exception as e:
-                    print(f"Group image failed: {e}")
-
-            # grouped annotations
-            else:
-                try:
-                    el = subshape.element
-                    new_el = copy.deepcopy(el)
-
-                    new_slide.shapes._spTree.insert_element_before(
-                        new_el,
-                        "p:extLst"
-                    )
-
-                except Exception as e:
-                    print(f"Group annotation failed: {e}")
+            except Exception as ex:
+                print(f"Fallback shape failed: {ex}")
 
     except Exception as e:
-        print(f"Group processing failed: {e}")
+        print(f"Fallback slide creation failed: {e}")
 
 
-# -----------------------------------
-# Build cleaned PPT
-# -----------------------------------
-def create_clean_ppt(ppt_path):
+# -----------------------------
+# Main renderer
+# -----------------------------
+def render_ppt_slides_to_images(ppt_path):
     source_prs = Presentation(ppt_path)
 
     clean_prs = Presentation()
@@ -143,121 +129,77 @@ def create_clean_ppt(ppt_path):
 
     blank_layout = clean_prs.slide_layouts[6]
 
+    # remove default slide
+    if len(clean_prs.slides) > 0:
+        rId = clean_prs.slides._sldIdLst[0].rId
+        clean_prs.part.drop_rel(rId)
+        del clean_prs.slides._sldIdLst[0]
+
     for idx, slide in enumerate(source_prs.slides):
         print(f"Processing slide {idx+1}")
 
-        # collect slide text
-        slide_text = []
-
-        for s in slide.shapes:
-            try:
-                if hasattr(s, "text"):
-                    txt = s.text.strip().lower()
-                    if txt:
-                        slide_text.append(txt)
-            except:
-                pass
-
-        combined_text = " ".join(slide_text).strip()
-
-        # skip thank you slides
-        if should_skip_slide(slide):
-            print("Skipping thank you/questions slide")
+        # Skip thank you slides
+        if is_thank_you_slide(slide):
+            print(f"Skipping thank you slide {idx+1}")
             continue
 
-        # skip divider slide
-        if combined_text == "ppt slides":
-            print("Skipping PPT divider slide")
-            continue
+        slide_failed = False
 
         new_slide = clean_prs.slides.add_slide(blank_layout)
 
         for shape in slide.shapes:
             try:
-
-                # -----------------------------
-                # Normal screenshots
-                # -----------------------------
+                # --------------------------------
+                # Standard picture
+                # --------------------------------
                 if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+
                     if is_background_picture(
                         shape,
                         source_prs.slide_width,
                         source_prs.slide_height
                     ):
-                        print("Skipping background image")
+                        print(
+                            f"Skipping background image "
+                            f"on slide {idx+1}"
+                        )
                         continue
 
-                    success = add_picture(
-                        shape,
-                        new_slide
-                    )
+                    success = add_picture(shape, new_slide)
 
                     if not success:
-                        print(
-                            f"Image failed on slide {idx+1}"
-                        )
+                        slide_failed = True
+                        break
 
-                # -----------------------------
-                # OLE / linked screenshots
-                # -----------------------------
+                # --------------------------------
+                # OLE / embedded screenshots
+                # --------------------------------
                 elif shape.shape_type in [
                     MSO_SHAPE_TYPE.LINKED_PICTURE,
                     MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT,
                     MSO_SHAPE_TYPE.OLE_OBJECT
                 ]:
-                    try:
-                        print(
-                            f"Trying OLE extraction on slide {idx+1}"
-                        )
 
-                        if hasattr(shape, "image"):
-                            success = add_picture(
-                                shape,
-                                new_slide
-                            )
-
-                            if success:
-                                print(
-                                    f"OLE image extracted successfully "
-                                    f"on slide {idx+1}"
-                                )
-                            else:
-                                print(
-                                    f"OLE image extraction failed "
-                                    f"on slide {idx+1}"
-                                )
-
-                        else:
-                            print(
-                                f"No image attribute for OLE object "
-                                f"on slide {idx+1}"
-                            )
-
-                    except Exception as e:
-                        print(
-                            f"OLE extraction failed on slide "
-                            f"{idx+1}: {e}"
-                        )
-
-                # -----------------------------
-                # Grouped screenshots
-                # -----------------------------
-                elif shape.shape_type == MSO_SHAPE_TYPE.GROUP:
-                    process_group_shape(
-                        shape,
-                        new_slide
+                    print(
+                        f"Processing embedded image "
+                        f"on slide {idx+1}"
                     )
 
-                # -----------------------------
-                # Textboxes / arrows / lines
-                # -----------------------------
+                    success = add_picture(shape, new_slide)
+
+                    if not success:
+                        slide_failed = True
+                        break
+
+                # --------------------------------
+                # annotations/text/arrows
+                # --------------------------------
                 else:
                     try:
-                        el = shape.element
-                        new_el = copy.deepcopy(el)
+                        el = copy.deepcopy(shape.element)
 
                         new_slide.shapes._spTree.insert_element_before(
-                            new_el,
+                            el,
                             "p:extLst"
                         )
 
@@ -269,78 +211,43 @@ def create_clean_ppt(ppt_path):
 
             except Exception as e:
                 print(
-                    f"Shape failed on slide "
-                    f"{idx+1}: {e}"
+                    f"Slide {idx+1} failed: {e}"
                 )
+                slide_failed = True
+                break
 
+        # --------------------------------
+        # Fallback for problematic slides
+        # --------------------------------
+        if slide_failed:
+            print(
+                f"Using fallback original slide "
+                f"for slide {idx+1}"
+            )
+
+            try:
+                rId = clean_prs.slides._sldIdLst[-1].rId
+                clean_prs.part.drop_rel(rId)
+                del clean_prs.slides._sldIdLst[-1]
+            except:
+                pass
+
+            fallback_to_original_slide(
+                clean_prs,
+                slide,
+                blank_layout
+            )
+
+    # --------------------------------
+    # Save cleaned ppt
+    # --------------------------------
     temp_dir = tempfile.mkdtemp()
 
-    clean_ppt_path = os.path.join(
+    output_ppt = os.path.join(
         temp_dir,
-        "clean_ppt.pptx"
+        "cleaned_slides.pptx"
     )
 
-    clean_prs.save(clean_ppt_path)
+    clean_prs.save(output_ppt)
 
-    return clean_ppt_path, temp_dir
-
-
-# -----------------------------------
-# PPT → images
-# -----------------------------------
-def render_ppt_slides_to_images(ppt_path):
-    try:
-        clean_ppt_path, temp_dir = create_clean_ppt(
-            ppt_path
-        )
-
-        subprocess.run([
-            "libreoffice",
-            "--headless",
-            "--convert-to",
-            "pdf",
-            clean_ppt_path,
-            "--outdir",
-            temp_dir
-        ], check=True)
-
-        pdf_files = [
-            os.path.join(temp_dir, f)
-            for f in os.listdir(temp_dir)
-            if f.endswith(".pdf")
-        ]
-
-        if not pdf_files:
-            raise Exception("PDF conversion failed")
-
-        pdf_path = pdf_files[0]
-
-        pages = convert_from_path(
-            pdf_path,
-            dpi=200
-        )
-
-        final_images = []
-
-        for i, page in enumerate(pages):
-            img_path = os.path.join(
-                temp_dir,
-                f"slide_{i+1}.png"
-            )
-
-            page.save(
-                img_path,
-                "PNG"
-            )
-
-            final_images.append(img_path)
-
-        print(
-            f"Generated {len(final_images)} images"
-        )
-
-        return final_images
-
-    except Exception as e:
-        print(f"PPT conversion failed: {e}")
-        return []
+    return output_ppt
