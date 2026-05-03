@@ -134,6 +134,8 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 
 
 def create_clean_ppt(ppt_path):
+    import copy
+
     source_prs = Presentation(ppt_path)
 
     clean_prs = Presentation()
@@ -151,41 +153,47 @@ def create_clean_ppt(ppt_path):
 
         new_slide = clean_prs.slides.add_slide(blank_layout)
 
-        shapes_to_remove = []
-
         for shape in slide.shapes:
             try:
-                # clone original shape completely
-                el = shape.element
-                new_el = copy.deepcopy(el)
-                new_slide.shapes._spTree.insert_element_before(
-                    new_el,
-                    'p:extLst'
-                )
+                # -------------------------
+                # Handle actual screenshots/images
+                # -------------------------
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
 
-                # mark only full-slide background images
-                if (
-                    shape.shape_type == MSO_SHAPE_TYPE.PICTURE
-                    and is_background_picture(
+                    if is_background_picture(
                         shape,
                         source_prs.slide_width,
                         source_prs.slide_height
-                    )
-                ):
-                    shapes_to_remove.append(
-                        new_slide.shapes[-1]
-                    )
+                    ):
+                        print("Skipping background image")
+                        continue
+
+                    add_picture_to_slide(shape, new_slide)
+
+                # -------------------------
+                # Handle grouped screenshots
+                # -------------------------
+                elif shape.shape_type == MSO_SHAPE_TYPE.GROUP:
+                    add_group_pictures(shape, new_slide)
+
+                # -------------------------
+                # Handle annotations safely
+                # -------------------------
+                else:
+                    try:
+                        el = shape.element
+                        new_el = copy.deepcopy(el)
+
+                        new_slide.shapes._spTree.insert_element_before(
+                            new_el,
+                            'p:extLst'
+                        )
+
+                    except Exception as e:
+                        print(f"Annotation clone failed: {e}")
 
             except Exception as e:
-                print(f"Shape clone failed: {e}")
-
-        # remove only background shapes
-        for bg_shape in shapes_to_remove:
-            try:
-                sp = bg_shape._element
-                sp.getparent().remove(sp)
-            except Exception as e:
-                print(f"Background removal failed: {e}")
+                print(f"Shape processing failed: {e}")
 
     temp_dir = tempfile.mkdtemp()
 
