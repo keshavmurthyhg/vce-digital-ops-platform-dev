@@ -150,7 +150,50 @@ def create_clean_ppt(ppt_path):
         for shape in slide.shapes:
             try:
                 # Handle normal screenshots/images
+                # Normal screenshots/images
                 if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                    if is_background_picture(
+                        shape,
+                        source_prs.slide_width,
+                        source_prs.slide_height
+                    ):
+                        print("Skipping background image")
+                        continue
+                
+                    success = add_picture(shape, new_slide)
+                
+                    if not success:
+                        print(f"Image failed on slide {idx+1}")
+                
+                
+                # OLE / linked images → preserve via XML copy
+                elif shape.shape_type in [
+                    MSO_SHAPE_TYPE.LINKED_PICTURE,
+                    MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT,
+                    MSO_SHAPE_TYPE.OLE_OBJECT
+                ]:
+                    try:
+                        print(
+                            f"Copying OLE/linked object on slide {idx+1}"
+                        )
+                
+                        el = shape.element
+                        new_el = copy.deepcopy(el)
+                
+                        new_slide.shapes._spTree.insert_element_before(
+                            new_el,
+                            "p:extLst"
+                        )
+                
+                    except Exception as e:
+                        print(
+                            f"OLE fallback failed on slide {idx+1}: {e}"
+                        )
+                
+                
+                # Grouped screenshots
+                elif shape.shape_type == MSO_SHAPE_TYPE.GROUP:
+                    process_group_shape(shape, new_slide)
                     if is_background_picture(
                         shape,
                         source_prs.slide_width,
