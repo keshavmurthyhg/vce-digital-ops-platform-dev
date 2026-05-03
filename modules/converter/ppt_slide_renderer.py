@@ -150,12 +150,7 @@ def create_clean_ppt(ppt_path):
         for shape in slide.shapes:
             try:
                 # Handle normal screenshots/images
-                if shape.shape_type in [
-                    MSO_SHAPE_TYPE.PICTURE,
-                    MSO_SHAPE_TYPE.LINKED_PICTURE,
-                    MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT,
-                    MSO_SHAPE_TYPE.OLE_OBJECT
-                ]:
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
                     if is_background_picture(
                         shape,
                         source_prs.slide_width,
