@@ -1,20 +1,17 @@
 import os
 import tempfile
 import subprocess
-import copy
 
 from pdf2image import convert_from_path
 from PIL import Image
 from pptx import Presentation
+from pptx.enum.shapes import PP_PLACEHOLDER
 
 
 # -----------------------------
 # Detect title slides
 # -----------------------------
 def is_title_slide(img_path):
-    """
-    Skip title slides that contain very little content
-    """
     try:
         img = Image.open(img_path).convert("RGB")
         width, height = img.size
@@ -41,79 +38,58 @@ def is_title_slide(img_path):
 
 
 # -----------------------------
-# Find blank layout
+# Remove slide background
 # -----------------------------
-def get_blank_layout(prs):
+def remove_background_and_placeholders(input_ppt):
     """
-    Return blank slide layout if available
+    Remove only:
+    - slide background
+    - title placeholders
+    - footer placeholders
+
+    Keep:
+    - screenshots
+    - annotations
+    - arrows
+    - text boxes
+    - lines
     """
-    for layout in prs.slide_layouts:
-        try:
-            if layout.name.lower() == "blank":
-                return layout
-        except:
-            continue
 
-    # fallback → last layout
-    return prs.slide_layouts[-1]
-
-
-# -----------------------------
-# Clone shapes
-# -----------------------------
-def clone_shapes(source_slide, target_slide):
-    """
-    Copy all user content from original slide
-    into blank slide
-    """
-    for shape in source_slide.shapes:
-        try:
-            el = copy.deepcopy(shape.element)
-            target_slide.shapes._spTree.insert_element_before(
-                el,
-                'p:extLst'
-            )
-        except Exception:
-            continue
-
-
-# -----------------------------
-# Remove original slides
-# -----------------------------
-def remove_slide(prs, index):
-    slide_id = prs.slides._sldIdLst[index]
-    prs.part.drop_rel(slide_id.rId)
-    prs.slides._sldIdLst.remove(slide_id)
-
-
-# -----------------------------
-# Create blank-layout PPT
-# -----------------------------
-def convert_to_blank_layout(input_ppt):
-    """
-    Rebuild presentation using blank slides only
-    This removes:
-    - theme backgrounds
-    - master templates
-    - footer graphics
-    - decorative layouts
-    """
     prs = Presentation(input_ppt)
 
-    blank_layout = get_blank_layout(prs)
+    for slide in prs.slides:
+        try:
+            # reset background
+            slide.background.fill.solid()
+            slide.background.fill.fore_color.rgb = None
+        except:
+            pass
 
-    original_slides = list(prs.slides)
+        shapes_to_remove = []
 
-    # Create new blank slides
-    for slide in original_slides:
-        new_slide = prs.slides.add_slide(blank_layout)
-        clone_shapes(slide, new_slide)
+        for shape in slide.shapes:
+            try:
+                if shape.is_placeholder:
+                    placeholder_type = shape.placeholder_format.type
 
-    # Remove original slides
-    original_count = len(original_slides)
+                    if placeholder_type in [
+                        PP_PLACEHOLDER.TITLE,
+                        PP_PLACEHOLDER.CENTER_TITLE,
+                        PP_PLACEHOLDER.FOOTER,
+                        PP_PLACEHOLDER.DATE,
+                        PP_PLACEHOLDER.SLIDE_NUMBER
+                    ]:
+                        shapes_to_remove.append(shape)
 
-    for i in range(original_count):
-        remove_slide(prs, 0)
+            except:
+                continue
+
+        for shape in shapes_to_remove:
+            try:
+                sp = shape._element
+                sp.getparent().remove(sp)
+            except:
+                pass
 
     cleaned_ppt = input_ppt.replace(
         ".pptx",
@@ -126,16 +102,16 @@ def convert_to_blank_layout(input_ppt):
 
 
 # -----------------------------
-# Render PPT → images
+# Convert PPT -> images
 # -----------------------------
 def render_ppt_slides_to_images(ppt_path):
     temp_dir = tempfile.mkdtemp()
 
     try:
-        # Step 1 → rebuild using blank layout
-        cleaned_ppt = convert_to_blank_layout(ppt_path)
+        # Step 1
+        cleaned_ppt = remove_background_and_placeholders(ppt_path)
 
-        # Step 2 → convert to PDF
+        # Step 2
         subprocess.run([
             "libreoffice",
             "--headless",
@@ -157,7 +133,7 @@ def render_ppt_slides_to_images(ppt_path):
 
         generated_pdf = pdf_files[0]
 
-        # Step 3 → PDF to images
+        # Step 3
         pages = convert_from_path(
             generated_pdf,
             dpi=200
@@ -173,9 +149,8 @@ def render_ppt_slides_to_images(ppt_path):
 
             page.save(img_path, "PNG")
 
-            # Skip title slides
             if is_title_slide(img_path):
-                print(f"Skipping title slide: {i+1}")
+                print(f"Skipping title slide {i+1}")
                 continue
 
             final_images.append(img_path)
