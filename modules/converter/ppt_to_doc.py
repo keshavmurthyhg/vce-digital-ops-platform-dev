@@ -1,12 +1,27 @@
 import os
 import tempfile
 from docx import Document
+from docx.shared import Inches
 
 from modules.converter.ppt_extractor import extract_ppt_content
 from modules.converter.ppt_slide_renderer import render_ppt_to_images
-from modules.converter.ppt_to_doc import add_images_to_doc
 
+def add_images_to_doc(doc, image_paths):
+    """
+    Add slide images into word document
+    """
 
+    for img_path in image_paths:
+        try:
+            doc.add_picture(
+                img_path,
+                width=Inches(6.5)
+            )
+            doc.add_page_break()
+
+        except Exception as e:
+            print(f"Failed to insert image {img_path}: {e}")
+            
 def convert_ppt_to_doc(ppt_path, output_docx):
     """
     Final stable flow:
