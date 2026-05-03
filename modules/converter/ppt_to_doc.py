@@ -1,98 +1,75 @@
 import os
-
+import tempfile
 from docx import Document
-from docx.shared import Inches
 
-from modules.converter.ppt_metadata import extract_slide1_metadata
-from modules.converter.ppt_slide_renderer import render_ppt_slides_to_images
+from modules.converter.ppt_extractor import extract_ppt_content
+from modules.converter.ppt_slide_renderer import render_ppt_to_images
+from modules.converter.ppt_to_doc import add_images_to_doc
 
 
-def add_header_table(doc, metadata):
+def convert_ppt_to_doc(ppt_path, output_docx):
     """
-    Add metadata table extracted from slide 1
-    """
-
-    doc.add_heading(
-        "INCIDENT REPORT",
-        level=0
-    )
-
-    table = doc.add_table(
-        rows=2,
-        cols=2
-    )
-
-    table.style = "Table Grid"
-
-    # Incident
-    table.cell(0, 0).text = "Incident"
-    table.cell(0, 1).text = metadata.get(
-        "incident",
-        "-"
-    )
-
-    # Created Date
-    table.cell(1, 0).text = "Created Date"
-    table.cell(1, 1).text = metadata.get(
-        "created_date",
-        "-"
-    )
-
-
-def add_slide_images(doc, slide_images):
-    """
-    Add rendered PPT slides as images
-    Skip slide 1 because metadata already extracted
+    Final stable flow:
+    1. Extract text content
+    2. Render slides as images
+    3. Insert only valid images into doc
     """
 
-    if not slide_images:
-        doc.add_paragraph(
-            "No PPT slides found."
-        )
-        return
+    try:
+        doc = Document()
 
-    doc.add_page_break()
+        # -----------------------------
+        # Extract textual content
+        # -----------------------------
+        extracted_text = extract_ppt_content(ppt_path)
 
-    doc.add_heading(
-        "PPT Screenshots",
-        level=1
-    )
+        if extracted_text:
+            doc.add_heading("PPT Content", level=1)
 
-    # Skip first slide
-    for img_path in slide_images[1:]:
-        if os.path.exists(img_path):
-            doc.add_picture(
-                img_path,
-                width=Inches(6.5)
+            for text in extracted_text:
+                if text.strip():
+                    doc.add_paragraph(text)
+
+        # -----------------------------
+        # Render slides to images
+        # -----------------------------
+        with tempfile.TemporaryDirectory() as temp_dir:
+            image_paths = render_ppt_to_images(
+                ppt_path,
+                temp_dir
             )
-            doc.add_paragraph("")
 
+            print(f"Generated slide images: {image_paths}")
 
-def ppt_to_word(ppt_path, output_docx):
-    """
-    Convert PPT → Word
-    """
+            valid_images = []
 
-    metadata = extract_slide1_metadata(
-        ppt_path
-    )
+            for img_path in image_paths:
+                if (
+                    img_path
+                    and os.path.exists(img_path)
+                    and os.path.getsize(img_path) > 0
+                ):
+                    valid_images.append(img_path)
 
-    slide_images = render_ppt_slides_to_images(
-        ppt_path
-    )
+            print(f"Valid images count: {len(valid_images)}")
 
-    doc = Document()
+            # -----------------------------
+            # Add images only if valid
+            # -----------------------------
+            if valid_images:
+                doc.add_page_break()
+                doc.add_heading("PPT Slides", level=1)
 
-    add_header_table(
-        doc,
-        metadata
-    )
+                add_images_to_doc(
+                    doc,
+                    valid_images
+                )
+            else:
+                print("No valid PPT images found")
 
-    add_slide_images(
-        doc,
-        slide_images
-    )
+        doc.save(output_docx)
+        return output_docx
 
-    doc.save(output_docx)
-
-    return output_docx
+    except Exception as e:
+        print(f"PPT conversion failed: {e}")
+        raise
