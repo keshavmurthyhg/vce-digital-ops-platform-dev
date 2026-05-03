@@ -179,18 +179,35 @@ def create_clean_ppt(ppt_path):
                 
                         # Normal image extraction
                         # Normal extractable image
+                        image_added = False
+
+                        # Normal extractable image
                         if hasattr(shape, "image"):
-                            add_picture_to_slide(shape, new_slide)
-                        
-                        else:
-                            print(
-                                f"Skipping unsupported image object type: "
-                                f"{shape.shape_type}"
+                            image_added = add_picture_to_slide(
+                                shape,
+                                new_slide
                             )
-                            continue
-                
-                    except Exception as e:
-                        print(f"Extended image handling failed: {e}")
+                        
+                        # fallback → clone original image XML
+                        if not image_added:
+                            try:
+                                print(
+                                    f"Using fallback clone for slide "
+                                    f"{slide_index + 1}"
+                                )
+                        
+                                el = shape.element
+                                new_el = copy.deepcopy(el)
+                        
+                                new_slide.shapes._spTree.insert_element_before(
+                                    new_el,
+                                    'p:extLst'
+                                )
+                        
+                            except Exception as clone_error:
+                                print(
+                                    f"Fallback clone failed: {clone_error}"
+                                )
 
                 # -------------------------
                 # Handle grouped screenshots
