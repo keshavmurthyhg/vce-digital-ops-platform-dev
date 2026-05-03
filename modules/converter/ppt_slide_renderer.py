@@ -1,5 +1,4 @@
 import os
-import time
 import tempfile
 import subprocess
 
@@ -7,10 +6,13 @@ from pdf2image import convert_from_path
 from PIL import Image
 
 
-# -----------------------------------
-# Remove title/empty slides
-# -----------------------------------
 def should_skip_slide(img_path):
+    """
+    Skip:
+    - thank you slides
+    - blank slides
+    """
+
     try:
         img = Image.open(img_path).convert("RGB")
 
@@ -31,120 +33,54 @@ def should_skip_slide(img_path):
 
         white_ratio = white_pixels / total_pixels
 
-        return white_ratio > 0.92
+        if white_ratio > 0.92:
+            return True
+
+        return False
 
     except:
         return False
 
 
-# -----------------------------------
-# Clean PPT using LibreOffice UNO
-# -----------------------------------
-def clean_ppt_theme(input_ppt, output_ppt):
-    """
-    Opens PPT in LibreOffice and removes
-    master/layout formatting
-    """
-
-    uno_script = f"""
-import uno
-import os
-from com.sun.star.beans import PropertyValue
-
-local_ctx = uno.getComponentContext()
-resolver = local_ctx.ServiceManager.createInstanceWithContext(
-    "com.sun.star.bridge.UnoUrlResolver",
-    local_ctx
-)
-
-ctx = resolver.resolve(
-    "uno:socket,host=localhost,port=2002;urp;StarOffice.ComponentContext"
-)
-
-smgr = ctx.ServiceManager
-desktop = smgr.createInstanceWithContext(
-    "com.sun.star.frame.Desktop",
-    ctx
-)
-
-def to_url(path):
-    return "file://" + os.path.abspath(path)
-
-props = []
-
-doc = desktop.loadComponentFromURL(
-    to_url(r"{input_ppt}"),
-    "_blank",
-    0,
-    tuple(props)
-)
-
-slides = doc.getDrawPages()
-
-for i in range(slides.getCount()):
-    slide = slides.getByIndex(i)
-
-    try:
-        slide.setMasterPage(None)
-    except:
-        pass
-
-doc.storeAsURL(
-    to_url(r"{output_ppt}"),
-    tuple(props)
-)
-
-doc.close(True)
-"""
-
-    script_file = os.path.join(
-        tempfile.gettempdir(),
-        "clean_ppt_theme.py"
-    )
-
-    with open(script_file, "w") as f:
-        f.write(uno_script)
-
-    # Start LibreOffice listener
-    subprocess.Popen([
-        "soffice",
-        "--headless",
-        "--accept=socket,host=localhost,port=2002;urp;"
-    ])
-
-    time.sleep(5)
-
-    subprocess.run(
-        ["python3", script_file],
-        check=True
-    )
-
-
-# -----------------------------------
-# Convert PPT → images
-# -----------------------------------
 def render_ppt_slides_to_images(ppt_path):
     temp_dir = tempfile.mkdtemp()
 
     try:
-        cleaned_ppt = os.path.join(
-            temp_dir,
-            "cleaned.pptx"
-        )
-
-        # Step 1 → remove theme
-        clean_ppt_theme(
+        # -----------------------------
+        # Step 1: PPT -> ODP
+        # -----------------------------
+        subprocess.run([
+            "libreoffice",
+            "--headless",
+            "--convert-to",
+            "odp",
             ppt_path,
-            cleaned_ppt
-        )
+            "--outdir",
+            temp_dir
+        ], check=True)
 
-        # Step 2 → convert to PDF
+        odp_files = [
+            os.path.join(temp_dir, f)
+            for f in os.listdir(temp_dir)
+            if f.endswith(".odp")
+        ]
+
+        if not odp_files:
+            raise Exception("ODP conversion failed")
+
+        odp_path = odp_files[0]
+
+        print(f"ODP created: {odp_path}")
+
+        # -----------------------------
+        # Step 2: ODP -> PDF
+        # -----------------------------
         subprocess.run([
             "libreoffice",
             "--headless",
             "--convert-to",
             "pdf",
-            cleaned_ppt,
+            odp_path,
             "--outdir",
             temp_dir
         ], check=True)
@@ -156,10 +92,15 @@ def render_ppt_slides_to_images(ppt_path):
         ]
 
         if not pdf_files:
-            raise Exception("PDF not generated")
+            raise Exception("PDF conversion failed")
 
         pdf_path = pdf_files[0]
 
+        print(f"PDF created: {pdf_path}")
+
+        # -----------------------------
+        # Step 3: PDF -> images
+        # -----------------------------
         pages = convert_from_path(
             pdf_path,
             dpi=200
@@ -173,13 +114,15 @@ def render_ppt_slides_to_images(ppt_path):
                 f"slide_{i+1}.png"
             )
 
-            page.save(img_path)
+            page.save(img_path, "PNG")
 
             if should_skip_slide(img_path):
-                print(f"Skipping slide {i+1}")
+                print(f"Skipping blank/title slide {i+1}")
                 continue
 
             final_images.append(img_path)
+
+        print(f"Final slide count: {len(final_images)}")
 
         return final_images
 
