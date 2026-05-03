@@ -4,36 +4,27 @@ import subprocess
 
 from pdf2image import convert_from_path
 from PIL import Image
+from pptx import Presentation
+from pptx.util import Inches
 
 
-def should_skip_slide(img_path):
+def is_useless_slide(img_path):
     """
     Skip:
-    - thank you slides
     - blank slides
+    - thank you slides
     """
-
     try:
-        img = Image.open(img_path).convert("RGB")
+        img = Image.open(img_path).convert("L")
 
-        width, height = img.size
-
-        center = img.crop((
-            width * 0.2,
-            height * 0.2,
-            width * 0.8,
-            height * 0.8
-        ))
-
-        gray = center.convert("L")
-        hist = gray.histogram()
+        hist = img.histogram()
 
         white_pixels = hist[255]
         total_pixels = sum(hist)
 
         white_ratio = white_pixels / total_pixels
 
-        if white_ratio > 0.92:
+        if white_ratio > 0.90:
             return True
 
         return False
@@ -42,87 +33,138 @@ def should_skip_slide(img_path):
         return False
 
 
+def convert_original_ppt_to_images(ppt_path, temp_dir):
+    """
+    Convert original PPT -> PDF -> images
+    """
+    subprocess.run([
+        "libreoffice",
+        "--headless",
+        "--convert-to",
+        "pdf",
+        ppt_path,
+        "--outdir",
+        temp_dir
+    ], check=True)
+
+    pdf_files = [
+        os.path.join(temp_dir, f)
+        for f in os.listdir(temp_dir)
+        if f.endswith(".pdf")
+    ]
+
+    if not pdf_files:
+        raise Exception("PDF conversion failed")
+
+    pdf_path = pdf_files[0]
+
+    pages = convert_from_path(pdf_path, dpi=200)
+
+    image_paths = []
+
+    for i, page in enumerate(pages):
+        img_path = os.path.join(temp_dir, f"original_slide_{i+1}.png")
+        page.save(img_path, "PNG")
+
+        if is_useless_slide(img_path):
+            print(f"Skipping useless slide {i+1}")
+            continue
+
+        image_paths.append(img_path)
+
+    return image_paths
+
+
+def create_blank_ppt_with_images(image_paths, temp_dir):
+    """
+    Create new blank PPT with only slide images
+    """
+    prs = Presentation()
+
+    prs.slide_width = Inches(13.333)
+    prs.slide_height = Inches(7.5)
+
+    blank_layout = prs.slide_layouts[6]
+
+    for img_path in image_paths:
+        slide = prs.slides.add_slide(blank_layout)
+
+        slide.shapes.add_picture(
+            img_path,
+            0,
+            0,
+            width=prs.slide_width,
+            height=prs.slide_height
+        )
+
+    output_ppt = os.path.join(temp_dir, "cleaned_output.pptx")
+    prs.save(output_ppt)
+
+    return output_ppt
+
+
+def convert_clean_ppt_to_images(clean_ppt, temp_dir):
+    """
+    Convert cleaned PPT -> PDF -> final images
+    """
+    subprocess.run([
+        "libreoffice",
+        "--headless",
+        "--convert-to",
+        "pdf",
+        clean_ppt,
+        "--outdir",
+        temp_dir
+    ], check=True)
+
+    pdf_files = [
+        os.path.join(temp_dir, f)
+        for f in os.listdir(temp_dir)
+        if f.endswith(".pdf")
+        and "cleaned_output" in f
+    ]
+
+    if not pdf_files:
+        raise Exception("Final PDF conversion failed")
+
+    pdf_path = pdf_files[0]
+
+    pages = convert_from_path(pdf_path, dpi=200)
+
+    final_images = []
+
+    for i, page in enumerate(pages):
+        img_path = os.path.join(temp_dir, f"final_slide_{i+1}.png")
+        page.save(img_path, "PNG")
+        final_images.append(img_path)
+
+    return final_images
+
+
 def render_ppt_slides_to_images(ppt_path):
     temp_dir = tempfile.mkdtemp()
 
     try:
-        # -----------------------------
-        # Step 1: PPT -> ODP
-        # -----------------------------
-        subprocess.run([
-            "libreoffice",
-            "--headless",
-            "--convert-to",
-            "odp",
+        # Step 1
+        original_images = convert_original_ppt_to_images(
             ppt_path,
-            "--outdir",
             temp_dir
-        ], check=True)
-
-        odp_files = [
-            os.path.join(temp_dir, f)
-            for f in os.listdir(temp_dir)
-            if f.endswith(".odp")
-        ]
-
-        if not odp_files:
-            raise Exception("ODP conversion failed")
-
-        odp_path = odp_files[0]
-
-        print(f"ODP created: {odp_path}")
-
-        # -----------------------------
-        # Step 2: ODP -> PDF
-        # -----------------------------
-        subprocess.run([
-            "libreoffice",
-            "--headless",
-            "--convert-to",
-            "pdf",
-            odp_path,
-            "--outdir",
-            temp_dir
-        ], check=True)
-
-        pdf_files = [
-            os.path.join(temp_dir, f)
-            for f in os.listdir(temp_dir)
-            if f.endswith(".pdf")
-        ]
-
-        if not pdf_files:
-            raise Exception("PDF conversion failed")
-
-        pdf_path = pdf_files[0]
-
-        print(f"PDF created: {pdf_path}")
-
-        # -----------------------------
-        # Step 3: PDF -> images
-        # -----------------------------
-        pages = convert_from_path(
-            pdf_path,
-            dpi=200
         )
 
-        final_images = []
+        if not original_images:
+            return []
 
-        for i, page in enumerate(pages):
-            img_path = os.path.join(
-                temp_dir,
-                f"slide_{i+1}.png"
-            )
+        # Step 2
+        clean_ppt = create_blank_ppt_with_images(
+            original_images,
+            temp_dir
+        )
 
-            page.save(img_path, "PNG")
-
-            if should_skip_slide(img_path):
-                print(f"Skipping blank/title slide {i+1}")
-                continue
-
-            final_images.append(img_path)
-
-        print(f"Final slide count: {len(final_images)}")
+        # Step 3
+        final_images = convert_clean_ppt_to_images(
+            clean_ppt,
+            temp_dir
+        )
 
         return final_images
 
