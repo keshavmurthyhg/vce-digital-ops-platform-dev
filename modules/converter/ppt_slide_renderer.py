@@ -167,45 +167,45 @@ def create_clean_ppt(ppt_path):
                 
                 
                 # OLE / linked images → preserve via XML copy
-               elif shape.shape_type in [
-                    MSO_SHAPE_TYPE.LINKED_PICTURE,
-                    MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT,
-                    MSO_SHAPE_TYPE.OLE_OBJECT
-                ]:
-                    try:
-                        print(
-                            f"Trying image extraction for OLE object "
-                            f"on slide {idx+1}"
-                        )
-                
-                        if hasattr(shape, "image"):
-                            success = add_picture(
-                                shape,
-                                new_slide
-                            )
-                
-                            if success:
+                       elif shape.shape_type in [
+                            MSO_SHAPE_TYPE.LINKED_PICTURE,
+                            MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT,
+                            MSO_SHAPE_TYPE.OLE_OBJECT
+                        ]:
+                            try:
                                 print(
-                                    f"OLE image extracted successfully "
+                                    f"Trying image extraction for OLE object "
                                     f"on slide {idx+1}"
                                 )
-                            else:
+                        
+                                if hasattr(shape, "image"):
+                                    success = add_picture(
+                                        shape,
+                                        new_slide
+                                    )
+                        
+                                    if success:
+                                        print(
+                                            f"OLE image extracted successfully "
+                                            f"on slide {idx+1}"
+                                        )
+                                    else:
+                                        print(
+                                            f"OLE image extraction failed "
+                                            f"on slide {idx+1}"
+                                        )
+                        
+                                else:
+                                    print(
+                                        f"No image attribute for OLE object "
+                                        f"on slide {idx+1}"
+                                    )
+                        
+                            except Exception as e:
                                 print(
-                                    f"OLE image extraction failed "
-                                    f"on slide {idx+1}"
+                                    f"OLE extraction failed on slide "
+                                    f"{idx+1}: {e}"
                                 )
-                
-                        else:
-                            print(
-                                f"No image attribute for OLE object "
-                                f"on slide {idx+1}"
-                            )
-                
-                    except Exception as e:
-                        print(
-                            f"OLE extraction failed on slide "
-                            f"{idx+1}: {e}"
-                        )
                 
                 
                 # Grouped screenshots
