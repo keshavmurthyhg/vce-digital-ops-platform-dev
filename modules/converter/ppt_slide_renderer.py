@@ -1,113 +1,119 @@
 import os
 import tempfile
 import subprocess
+import copy
 
 from pdf2image import convert_from_path
 from PIL import Image
 from pptx import Presentation
-from pptx.enum.shapes import MSO_SHAPE_TYPE
 
 
+# -----------------------------
+# Detect title slides
+# -----------------------------
 def is_title_slide(img_path):
     """
-    Detect title slides:
-    mostly white background with minimal content
+    Skip title slides that contain very little content
     """
-    img = Image.open(img_path).convert("RGB")
-    width, height = img.size
-
-    center = img.crop((
-        width * 0.2,
-        height * 0.2,
-        width * 0.8,
-        height * 0.8
-    ))
-
-    gray = center.convert("L")
-    histogram = gray.histogram()
-
-    white_pixels = histogram[255]
-    total_pixels = sum(histogram)
-
-    white_ratio = white_pixels / total_pixels
-
-    return white_ratio > 0.85
-
-
-def should_keep_shape(shape, slide_width, slide_height):
-    """
-    Keep useful shapes:
-    - screenshots/images
-    - annotations
-    - arrows
-    - lines
-    - textboxes
-    - grouped objects
-    """
-
     try:
-        shape_type = shape.shape_type
+        img = Image.open(img_path).convert("RGB")
+        width, height = img.size
 
-        # Always keep screenshots/images
-        if shape_type == MSO_SHAPE_TYPE.PICTURE:
-            return True
+        center = img.crop((
+            width * 0.2,
+            height * 0.2,
+            width * 0.8,
+            height * 0.8
+        ))
 
-        # Keep text boxes
-        if shape.has_text_frame:
-            return True
+        gray = center.convert("L")
+        histogram = gray.histogram()
 
-        # Keep lines/arrows/connectors
-        if shape_type == MSO_SHAPE_TYPE.LINE:
-            return True
+        white_pixels = histogram[255]
+        total_pixels = sum(histogram)
 
-        # Keep grouped content
-        if shape_type == MSO_SHAPE_TYPE.GROUP:
-            return True
+        white_ratio = white_pixels / total_pixels
 
-        # Keep small annotation rectangles/callouts
-        if shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE:
-            if (
-                shape.width < slide_width * 0.35
-                and shape.height < slide_height * 0.25
-            ):
-                return True
-
-        return False
+        return white_ratio > 0.90
 
     except Exception:
-        return True
+        return False
 
 
-def clean_slide_background(input_ppt):
+# -----------------------------
+# Find blank layout
+# -----------------------------
+def get_blank_layout(prs):
     """
-    Remove decorative/template shapes while keeping useful content
+    Return blank slide layout if available
+    """
+    for layout in prs.slide_layouts:
+        try:
+            if layout.name.lower() == "blank":
+                return layout
+        except:
+            continue
+
+    # fallback → last layout
+    return prs.slide_layouts[-1]
+
+
+# -----------------------------
+# Clone shapes
+# -----------------------------
+def clone_shapes(source_slide, target_slide):
+    """
+    Copy all user content from original slide
+    into blank slide
+    """
+    for shape in source_slide.shapes:
+        try:
+            el = copy.deepcopy(shape.element)
+            target_slide.shapes._spTree.insert_element_before(
+                el,
+                'p:extLst'
+            )
+        except Exception:
+            continue
+
+
+# -----------------------------
+# Remove original slides
+# -----------------------------
+def remove_slide(prs, index):
+    slide_id = prs.slides._sldIdLst[index]
+    prs.part.drop_rel(slide_id.rId)
+    prs.slides._sldIdLst.remove(slide_id)
+
+
+# -----------------------------
+# Create blank-layout PPT
+# -----------------------------
+def convert_to_blank_layout(input_ppt):
+    """
+    Rebuild presentation using blank slides only
+    This removes:
+    - theme backgrounds
+    - master templates
+    - footer graphics
+    - decorative layouts
     """
     prs = Presentation(input_ppt)
 
-    slide_width = prs.slide_width
-    slide_height = prs.slide_height
+    blank_layout = get_blank_layout(prs)
 
-    for slide in prs.slides:
-        shapes_to_remove = []
+    original_slides = list(prs.slides)
 
-        for shape in slide.shapes:
-            try:
-                if not should_keep_shape(
-                    shape,
-                    slide_width,
-                    slide_height
-                ):
-                    shapes_to_remove.append(shape)
+    # Create new blank slides
+    for slide in original_slides:
+        new_slide = prs.slides.add_slide(blank_layout)
+        clone_shapes(slide, new_slide)
 
-            except Exception:
-                continue
+    # Remove original slides
+    original_count = len(original_slides)
 
-        for shape in shapes_to_remove:
-            try:
-                sp = shape._element
-                sp.getparent().remove(sp)
-            except Exception:
-                pass
+    for i in range(original_count):
+        remove_slide(prs, 0)
 
     cleaned_ppt = input_ppt.replace(
         ".pptx",
@@ -119,17 +125,17 @@ def clean_slide_background(input_ppt):
     return cleaned_ppt
 
 
+# -----------------------------
+# Render PPT → images
+# -----------------------------
 def render_ppt_slides_to_images(ppt_path):
-    """
-    Convert PPT slides → cleaned images
-    """
     temp_dir = tempfile.mkdtemp()
 
     try:
-        # Step 1: clean PPT
-        cleaned_ppt = clean_slide_background(ppt_path)
+        # Step 1 → rebuild using blank layout
+        cleaned_ppt = convert_to_blank_layout(ppt_path)
 
-        # Step 2: PPT → PDF
+        # Step 2 → convert to PDF
         subprocess.run([
             "libreoffice",
             "--headless",
@@ -140,13 +146,18 @@ def render_ppt_slides_to_images(ppt_path):
             temp_dir
         ], check=True)
 
-        generated_pdf = [
+        pdf_files = [
             os.path.join(temp_dir, f)
             for f in os.listdir(temp_dir)
             if f.endswith(".pdf")
-        ][0]
+        ]
 
-        # Step 3: PDF → images
+        if not pdf_files:
+            raise Exception("PDF conversion failed")
+
+        generated_pdf = pdf_files[0]
+
+        # Step 3 → PDF to images
         pages = convert_from_path(
             generated_pdf,
             dpi=200
@@ -160,12 +171,9 @@ def render_ppt_slides_to_images(ppt_path):
                 f"slide_{i+1}.png"
             )
 
-            page.save(
-                img_path,
-                "PNG"
-            )
+            page.save(img_path, "PNG")
 
-            # Step 4: skip title slides
+            # Skip title slides
             if is_title_slide(img_path):
                 print(f"Skipping title slide: {i+1}")
                 continue
@@ -175,13 +183,13 @@ def render_ppt_slides_to_images(ppt_path):
         return final_images
 
     finally:
-        cleaned_ppt_path = ppt_path.replace(
+        cleaned_ppt = ppt_path.replace(
             ".pptx",
             "_cleaned.pptx"
         )
 
-        if os.path.exists(cleaned_ppt_path):
+        if os.path.exists(cleaned_ppt):
             try:
-                os.remove(cleaned_ppt_path)
-            except Exception:
+                os.remove(cleaned_ppt)
+            except:
                 pass
