@@ -8,6 +8,9 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pdf2image import convert_from_path
 
 
+# -----------------------------------
+# Skip unwanted slides
+# -----------------------------------
 def should_skip_slide(slide):
     texts = []
 
@@ -20,26 +23,36 @@ def should_skip_slide(slide):
         except:
             pass
 
-    combined = " ".join(texts)
+    combined = " ".join(texts).strip()
 
-    return combined.strip() in ["thank you", "questions"]
+    return combined in [
+        "thank you",
+        "questions"
+    ]
 
 
+# -----------------------------------
+# Detect full background images
+# -----------------------------------
 def is_background_picture(shape, slide_width, slide_height):
     try:
         if shape.shape_type != MSO_SHAPE_TYPE.PICTURE:
             return False
 
         return (
-            shape.width >= slide_width * 0.9
-            and shape.height >= slide_height * 0.9
+            shape.width >= slide_width * 0.90
+            and shape.height >= slide_height * 0.90
             and shape.left <= slide_width * 0.05
             and shape.top <= slide_height * 0.05
         )
+
     except:
         return False
 
 
+# -----------------------------------
+# Extract normal images
+# -----------------------------------
 def add_picture(shape, new_slide):
     try:
         image = shape.image
@@ -68,10 +81,14 @@ def add_picture(shape, new_slide):
         return False
 
 
+# -----------------------------------
+# Process grouped objects
+# -----------------------------------
 def process_group_shape(group_shape, new_slide):
     try:
         for subshape in group_shape.shapes:
 
+            # grouped image
             if subshape.shape_type == MSO_SHAPE_TYPE.PICTURE:
                 try:
                     image = subshape.image
@@ -96,6 +113,7 @@ def process_group_shape(group_shape, new_slide):
                 except Exception as e:
                     print(f"Group image failed: {e}")
 
+            # grouped annotations
             else:
                 try:
                     el = subshape.element
@@ -105,6 +123,7 @@ def process_group_shape(group_shape, new_slide):
                         new_el,
                         "p:extLst"
                     )
+
                 except Exception as e:
                     print(f"Group annotation failed: {e}")
 
@@ -112,6 +131,9 @@ def process_group_shape(group_shape, new_slide):
         print(f"Group processing failed: {e}")
 
 
+# -----------------------------------
+# Build cleaned PPT
+# -----------------------------------
 def create_clean_ppt(ppt_path):
     source_prs = Presentation(ppt_path)
 
@@ -124,6 +146,7 @@ def create_clean_ppt(ppt_path):
     for idx, slide in enumerate(source_prs.slides):
         print(f"Processing slide {idx+1}")
 
+        # collect slide text
         slide_text = []
 
         for s in slide.shapes:
@@ -134,14 +157,16 @@ def create_clean_ppt(ppt_path):
                         slide_text.append(txt)
             except:
                 pass
-        
-        combined_text = " ".join(slide_text)
-        
+
+        combined_text = " ".join(slide_text).strip()
+
+        # skip thank you slides
         if should_skip_slide(slide):
-            print("Skipping thank you slide")
+            print("Skipping thank you/questions slide")
             continue
-        
-        if combined_text.strip() == "ppt slides":
+
+        # skip divider slide
+        if combined_text == "ppt slides":
             print("Skipping PPT divider slide")
             continue
 
@@ -149,8 +174,10 @@ def create_clean_ppt(ppt_path):
 
         for shape in slide.shapes:
             try:
-                # Handle normal screenshots/images
-                # Normal screenshots/images
+
+                # -----------------------------
+                # Normal screenshots
+                # -----------------------------
                 if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
                     if is_background_picture(
                         shape,
@@ -159,87 +186,92 @@ def create_clean_ppt(ppt_path):
                     ):
                         print("Skipping background image")
                         continue
-                
-                    success = add_picture(shape, new_slide)
-                
-                    if not success:
-                        print(f"Image failed on slide {idx+1}")
-                
-                
-                # OLE / linked images → preserve via XML copy
-                       elif shape.shape_type in [
-                            MSO_SHAPE_TYPE.LINKED_PICTURE,
-                            MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT,
-                            MSO_SHAPE_TYPE.OLE_OBJECT
-                        ]:
-                            try:
-                                print(
-                                    f"Trying image extraction for OLE object "
-                                    f"on slide {idx+1}"
-                                )
-                        
-                                if hasattr(shape, "image"):
-                                    success = add_picture(
-                                        shape,
-                                        new_slide
-                                    )
-                        
-                                    if success:
-                                        print(
-                                            f"OLE image extracted successfully "
-                                            f"on slide {idx+1}"
-                                        )
-                                    else:
-                                        print(
-                                            f"OLE image extraction failed "
-                                            f"on slide {idx+1}"
-                                        )
-                        
-                                else:
-                                    print(
-                                        f"No image attribute for OLE object "
-                                        f"on slide {idx+1}"
-                                    )
-                        
-                            except Exception as e:
-                                print(
-                                    f"OLE extraction failed on slide "
-                                    f"{idx+1}: {e}"
-                                )
-                
-                
-                # Grouped screenshots
-                elif shape.shape_type == MSO_SHAPE_TYPE.GROUP:
-                    process_group_shape(shape, new_slide)
-                    if is_background_picture(
+
+                    success = add_picture(
                         shape,
-                        source_prs.slide_width,
-                        source_prs.slide_height
-                    ):
-                        print("Skipping background image")
-                        continue
-
-                    success = add_picture(shape, new_slide)
-
-                    if not success:
-                        print(f"Image failed on slide {idx+1}")
-
-                # Handle grouped screenshots
-                elif shape.shape_type == MSO_SHAPE_TYPE.GROUP:
-                    process_group_shape(shape, new_slide)
-
-                # Handle textboxes/arrows/lines
-                else:
-                    el = shape.element
-                    new_el = copy.deepcopy(el)
-
-                    new_slide.shapes._spTree.insert_element_before(
-                        new_el,
-                        "p:extLst"
+                        new_slide
                     )
 
+                    if not success:
+                        print(
+                            f"Image failed on slide {idx+1}"
+                        )
+
+                # -----------------------------
+                # OLE / linked screenshots
+                # -----------------------------
+                elif shape.shape_type in [
+                    MSO_SHAPE_TYPE.LINKED_PICTURE,
+                    MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT,
+                    MSO_SHAPE_TYPE.OLE_OBJECT
+                ]:
+                    try:
+                        print(
+                            f"Trying OLE extraction on slide {idx+1}"
+                        )
+
+                        if hasattr(shape, "image"):
+                            success = add_picture(
+                                shape,
+                                new_slide
+                            )
+
+                            if success:
+                                print(
+                                    f"OLE image extracted successfully "
+                                    f"on slide {idx+1}"
+                                )
+                            else:
+                                print(
+                                    f"OLE image extraction failed "
+                                    f"on slide {idx+1}"
+                                )
+
+                        else:
+                            print(
+                                f"No image attribute for OLE object "
+                                f"on slide {idx+1}"
+                            )
+
+                    except Exception as e:
+                        print(
+                            f"OLE extraction failed on slide "
+                            f"{idx+1}: {e}"
+                        )
+
+                # -----------------------------
+                # Grouped screenshots
+                # -----------------------------
+                elif shape.shape_type == MSO_SHAPE_TYPE.GROUP:
+                    process_group_shape(
+                        shape,
+                        new_slide
+                    )
+
+                # -----------------------------
+                # Textboxes / arrows / lines
+                # -----------------------------
+                else:
+                    try:
+                        el = shape.element
+                        new_el = copy.deepcopy(el)
+
+                        new_slide.shapes._spTree.insert_element_before(
+                            new_el,
+                            "p:extLst"
+                        )
+
+                    except Exception as e:
+                        print(
+                            f"Annotation copy failed "
+                            f"on slide {idx+1}: {e}"
+                        )
+
             except Exception as e:
-                print(f"Shape failed: {e}")
+                print(
+                    f"Shape failed on slide "
+                    f"{idx+1}: {e}"
+                )
 
     temp_dir = tempfile.mkdtemp()
 
@@ -253,9 +285,14 @@ def create_clean_ppt(ppt_path):
     return clean_ppt_path, temp_dir
 
 
+# -----------------------------------
+# PPT → images
+# -----------------------------------
 def render_ppt_slides_to_images(ppt_path):
     try:
-        clean_ppt_path, temp_dir = create_clean_ppt(ppt_path)
+        clean_ppt_path, temp_dir = create_clean_ppt(
+            ppt_path
+        )
 
         subprocess.run([
             "libreoffice",
@@ -291,10 +328,16 @@ def render_ppt_slides_to_images(ppt_path):
                 f"slide_{i+1}.png"
             )
 
-            page.save(img_path, "PNG")
+            page.save(
+                img_path,
+                "PNG"
+            )
+
             final_images.append(img_path)
 
-        print(f"Generated {len(final_images)} images")
+        print(
+            f"Generated {len(final_images)} images"
+        )
 
         return final_images
 
