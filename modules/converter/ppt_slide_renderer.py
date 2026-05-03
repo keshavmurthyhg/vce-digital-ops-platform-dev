@@ -126,6 +126,13 @@ def add_group_pictures(group_shape, new_slide):
 # -----------------------------------
 # Create clean PPT
 # -----------------------------------
+import copy
+import os
+import tempfile
+from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
+
+
 def create_clean_ppt(ppt_path):
     source_prs = Presentation(ppt_path)
 
@@ -136,7 +143,7 @@ def create_clean_ppt(ppt_path):
     blank_layout = clean_prs.slide_layouts[6]
 
     for slide_index, slide in enumerate(source_prs.slides):
-        print(f"Processing slide {slide_index+1}")
+        print(f"Processing slide {slide_index + 1}")
 
         if should_skip_slide(slide):
             print("Skipping unwanted slide")
@@ -144,83 +151,48 @@ def create_clean_ppt(ppt_path):
 
         new_slide = clean_prs.slides.add_slide(blank_layout)
 
+        shapes_to_remove = []
+
         for shape in slide.shapes:
             try:
-                # ---------------------------
-                # Normal screenshots/images
-                # ---------------------------
-                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                # clone original shape completely
+                el = shape.element
+                new_el = copy.deepcopy(el)
+                new_slide.shapes._spTree.insert_element_before(
+                    new_el,
+                    'p:extLst'
+                )
 
-                    if is_background_picture(
+                # mark only full-slide background images
+                if (
+                    shape.shape_type == MSO_SHAPE_TYPE.PICTURE
+                    and is_background_picture(
                         shape,
                         source_prs.slide_width,
                         source_prs.slide_height
-                    ):
-                        print("Skipping background")
-                        continue
-
-                    add_picture_to_slide(shape, new_slide)
-
-                # ---------------------------
-                # Grouped screenshots
-                # ---------------------------
-                elif shape.shape_type == MSO_SHAPE_TYPE.GROUP:
-                    add_group_pictures(shape, new_slide)
-
-                # ---------------------------
-                # Textboxes / arrows / rectangles
-                # ---------------------------
-                elif shape.shape_type in [
-                    MSO_SHAPE_TYPE.AUTO_SHAPE,
-                    MSO_SHAPE_TYPE.TEXT_BOX,
-                    MSO_SHAPE_TYPE.FREEFORM,
-                    MSO_SHAPE_TYPE.LINE,
-                    MSO_SHAPE_TYPE.CONNECTOR
-                ]:
-
-                    try:
-                        new_shape = new_slide.shapes.add_shape(
-                            shape.auto_shape_type,
-                            shape.left,
-                            shape.top,
-                            shape.width,
-                            shape.height
-                        )
-
-                        # copy text
-                        if hasattr(shape, "text"):
-                            if shape.text:
-                                new_shape.text = shape.text
-
-                        # copy fill
-                        try:
-                            if shape.fill:
-                                if shape.fill.fore_color:
-                                    new_shape.fill.solid()
-                                    new_shape.fill.fore_color.rgb = (
-                                        shape.fill.fore_color.rgb
-                                    )
-                        except:
-                            pass
-
-                        # copy line color
-                        try:
-                            if shape.line:
-                                if shape.line.color:
-                                    new_shape.line.color.rgb = (
-                                        shape.line.color.rgb
-                                    )
-                        except:
-                            pass
-
-                    except Exception as e:
-                        print(f"Annotation recreation failed: {e}")
+                    )
+                ):
+                    shapes_to_remove.append(
+                        new_slide.shapes[-1]
+                    )
 
             except Exception as e:
-                print(f"Shape processing failed: {e}")
+                print(f"Shape clone failed: {e}")
+
+        # remove only background shapes
+        for bg_shape in shapes_to_remove:
+            try:
+                sp = bg_shape._element
+                sp.getparent().remove(sp)
+            except Exception as e:
+                print(f"Background removal failed: {e}")
 
     temp_dir = tempfile.mkdtemp()
-    clean_ppt_path = os.path.join(temp_dir, "clean_ppt.pptx")
+
+    clean_ppt_path = os.path.join(
+        temp_dir,
+        "clean_ppt.pptx"
+    )
 
     clean_prs.save(clean_ppt_path)
 
