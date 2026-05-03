@@ -3,10 +3,13 @@ import tempfile
 import subprocess
 
 from pptx import Presentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pdf2image import convert_from_path
-from PIL import Image
 
 
+# -----------------------------------
+# Skip unwanted slides
+# -----------------------------------
 def should_skip_slide(slide):
     texts = []
 
@@ -30,49 +33,169 @@ def should_skip_slide(slide):
     return False
 
 
-def crop_white_space(img_path):
+# -----------------------------------
+# Detect full slide background images
+# -----------------------------------
+def is_background_picture(shape, slide_width, slide_height):
     try:
-        img = Image.open(img_path).convert("RGB")
+        if shape.shape_type != MSO_SHAPE_TYPE.PICTURE:
+            return False
 
-        width, height = img.size
+        # full slide template/background detection
+        if (
+            shape.width >= slide_width * 0.90 and
+            shape.height >= slide_height * 0.90 and
+            shape.left <= slide_width * 0.05 and
+            shape.top <= slide_height * 0.05
+        ):
+            return True
 
-        # crop only footer area
-        cropped = img.crop((
-            0,
-            0,
-            width,
-            int(height * 0.92)
-        ))
+        return False
 
-        cropped.save(img_path)
+    except Exception:
+        return False
+
+
+# -----------------------------------
+# Extract normal picture
+# -----------------------------------
+def add_picture_to_slide(shape, new_slide):
+    try:
+        image = shape.image
+        image_bytes = image.blob
+
+        temp_img = tempfile.NamedTemporaryFile(
+            delete=False,
+            suffix="." + image.ext
+        )
+
+        temp_img.write(image_bytes)
+        temp_img.close()
+
+        new_slide.shapes.add_picture(
+            temp_img.name,
+            shape.left,
+            shape.top,
+            shape.width,
+            shape.height
+        )
+
+        return True
 
     except Exception as e:
-        print(f"Crop failed: {e}")
+        print(f"Normal picture extraction failed: {e}")
+        return False
 
 
-def render_ppt_slides_to_images(ppt_path):
+# -----------------------------------
+# Extract grouped pictures
+# -----------------------------------
+def add_group_pictures(group_shape, new_slide):
+    try:
+        print("Processing grouped shapes")
+
+        for subshape in group_shape.shapes:
+            try:
+                if subshape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+                    image = subshape.image
+                    image_bytes = image.blob
+
+                    temp_img = tempfile.NamedTemporaryFile(
+                        delete=False,
+                        suffix="." + image.ext
+                    )
+
+                    temp_img.write(image_bytes)
+                    temp_img.close()
+
+                    new_slide.shapes.add_picture(
+                        temp_img.name,
+                        group_shape.left + subshape.left,
+                        group_shape.top + subshape.top,
+                        subshape.width,
+                        subshape.height
+                    )
+
+            except Exception as e:
+                print(f"Grouped image extraction failed: {e}")
+
+    except Exception as e:
+        print(f"Group processing failed: {e}")
+
+
+# -----------------------------------
+# Create clean PPT
+# -----------------------------------
+def create_clean_ppt(ppt_path):
+    source_prs = Presentation(ppt_path)
+
+    clean_prs = Presentation()
+    clean_prs.slide_width = source_prs.slide_width
+    clean_prs.slide_height = source_prs.slide_height
+
+    blank_layout = clean_prs.slide_layouts[6]
+
+    for slide_index, slide in enumerate(source_prs.slides):
+
+        print(f"Processing slide {slide_index + 1}")
+
+        if should_skip_slide(slide):
+            print("Skipping unwanted slide")
+            continue
+
+        new_slide = clean_prs.slides.add_slide(blank_layout)
+
+        for shape in slide.shapes:
+            try:
+                # -------------------------
+                # Normal pictures
+                # -------------------------
+                if shape.shape_type == MSO_SHAPE_TYPE.PICTURE:
+
+                    if is_background_picture(
+                        shape,
+                        source_prs.slide_width,
+                        source_prs.slide_height
+                    ):
+                        print("Skipping background image")
+                        continue
+
+                    add_picture_to_slide(shape, new_slide)
+
+                # -------------------------
+                # Grouped screenshots
+                # -------------------------
+                elif shape.shape_type == MSO_SHAPE_TYPE.GROUP:
+                    add_group_pictures(shape, new_slide)
+
+            except Exception as e:
+                print(f"Shape processing failed: {e}")
+
     temp_dir = tempfile.mkdtemp()
 
+    clean_ppt_path = os.path.join(
+        temp_dir,
+        "clean_ppt.pptx"
+    )
+
+    clean_prs.save(clean_ppt_path)
+
+    return clean_ppt_path, temp_dir
+
+
+# -----------------------------------
+# Convert clean PPT -> images
+# -----------------------------------
+def render_ppt_slides_to_images(ppt_path):
     try:
-        prs = Presentation(ppt_path)
-
-        valid_indexes = []
-
-        for i, slide in enumerate(prs.slides):
-            if should_skip_slide(slide):
-                print(f"Skipping slide {i+1}")
-                continue
-
-            valid_indexes.append(i)
-
-        print(f"Valid slides: {valid_indexes}")
+        clean_ppt_path, temp_dir = create_clean_ppt(ppt_path)
 
         subprocess.run([
             "libreoffice",
             "--headless",
             "--convert-to",
             "pdf",
-            ppt_path,
+            clean_ppt_path,
             "--outdir",
             temp_dir
         ], check=True)
@@ -90,28 +213,24 @@ def render_ppt_slides_to_images(ppt_path):
 
         pages = convert_from_path(
             pdf_path,
-            dpi=220
+            dpi=200
         )
 
         final_images = []
 
         for i, page in enumerate(pages):
-            if i not in valid_indexes:
-                continue
-
             img_path = os.path.join(
                 temp_dir,
                 f"slide_{i+1}.png"
             )
 
             page.save(img_path, "PNG")
-
-            crop_white_space(img_path)
-
             final_images.append(img_path)
+
+        print(f"Generated {len(final_images)} slide images")
 
         return final_images
 
     except Exception as e:
-        print(f"PPT rendering failed: {e}")
+        print(f"PPT render failed: {e}")
         return []
