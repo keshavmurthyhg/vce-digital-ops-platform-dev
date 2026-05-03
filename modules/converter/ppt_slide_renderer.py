@@ -167,27 +167,44 @@ def create_clean_ppt(ppt_path):
                 
                 
                 # OLE / linked images → preserve via XML copy
-                elif shape.shape_type in [
+               elif shape.shape_type in [
                     MSO_SHAPE_TYPE.LINKED_PICTURE,
                     MSO_SHAPE_TYPE.EMBEDDED_OLE_OBJECT,
                     MSO_SHAPE_TYPE.OLE_OBJECT
                 ]:
                     try:
                         print(
-                            f"Copying OLE/linked object on slide {idx+1}"
+                            f"Trying image extraction for OLE object "
+                            f"on slide {idx+1}"
                         )
                 
-                        el = shape.element
-                        new_el = copy.deepcopy(el)
+                        if hasattr(shape, "image"):
+                            success = add_picture(
+                                shape,
+                                new_slide
+                            )
                 
-                        new_slide.shapes._spTree.insert_element_before(
-                            new_el,
-                            "p:extLst"
-                        )
+                            if success:
+                                print(
+                                    f"OLE image extracted successfully "
+                                    f"on slide {idx+1}"
+                                )
+                            else:
+                                print(
+                                    f"OLE image extraction failed "
+                                    f"on slide {idx+1}"
+                                )
+                
+                        else:
+                            print(
+                                f"No image attribute for OLE object "
+                                f"on slide {idx+1}"
+                            )
                 
                     except Exception as e:
                         print(
-                            f"OLE fallback failed on slide {idx+1}: {e}"
+                            f"OLE extraction failed on slide "
+                            f"{idx+1}: {e}"
                         )
                 
                 
