@@ -11,7 +11,7 @@ from pptx.enum.shapes import MSO_SHAPE_TYPE
 def is_title_slide(img_path):
     """
     Detect title slides:
-    mostly white background + very little content
+    mostly white background with minimal content
     """
     img = Image.open(img_path).convert("RGB")
     width, height = img.size
@@ -34,9 +34,53 @@ def is_title_slide(img_path):
     return white_ratio > 0.85
 
 
-def remove_ppt_background(input_ppt):
+def should_keep_shape(shape, slide_width, slide_height):
     """
-    Remove removable shapes from PPT
+    Keep useful shapes:
+    - screenshots/images
+    - annotations
+    - arrows
+    - lines
+    - textboxes
+    - grouped objects
+    """
+
+    try:
+        shape_type = shape.shape_type
+
+        # Always keep screenshots/images
+        if shape_type == MSO_SHAPE_TYPE.PICTURE:
+            return True
+
+        # Keep text boxes
+        if shape.has_text_frame:
+            return True
+
+        # Keep lines/arrows/connectors
+        if shape_type == MSO_SHAPE_TYPE.LINE:
+            return True
+
+        # Keep grouped content
+        if shape_type == MSO_SHAPE_TYPE.GROUP:
+            return True
+
+        # Keep small annotation rectangles/callouts
+        if shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE:
+            if (
+                shape.width < slide_width * 0.35
+                and shape.height < slide_height * 0.25
+            ):
+                return True
+
+        return False
+
+    except Exception:
+        return True
+
+
+def clean_slide_background(input_ppt):
+    """
+    Remove decorative/template shapes while keeping useful content
     """
     prs = Presentation(input_ppt)
 
@@ -48,29 +92,12 @@ def remove_ppt_background(input_ppt):
 
         for shape in slide.shapes:
             try:
-                shape_type = shape.shape_type
-
-                # grouped template objects
-                if shape_type == MSO_SHAPE_TYPE.GROUP:
-                    if shape.top > slide_height * 0.55:
-                        shapes_to_remove.append(shape)
-
-                # large decorative shapes
-                elif shape_type == MSO_SHAPE_TYPE.AUTO_SHAPE:
-                    if (
-                        shape.width > slide_width * 0.30
-                        and shape.height > slide_height * 0.25
-                    ):
-                        shapes_to_remove.append(shape)
-
-                    elif (
-                        shape.top > slide_height * 0.65
-                        and (
-                            shape.left < slide_width * 0.25
-                            or shape.left > slide_width * 0.70
-                        )
-                    ):
-                        shapes_to_remove.append(shape)
+                if not should_keep_shape(
+                    shape,
+                    slide_width,
+                    slide_height
+                ):
+                    shapes_to_remove.append(shape)
 
             except Exception:
                 continue
@@ -79,64 +106,30 @@ def remove_ppt_background(input_ppt):
             try:
                 sp = shape._element
                 sp.getparent().remove(sp)
-            except:
+            except Exception:
                 pass
 
-    cleaned_ppt = input_ppt.replace(".pptx", "_cleaned.pptx")
+    cleaned_ppt = input_ppt.replace(
+        ".pptx",
+        "_cleaned.pptx"
+    )
+
     prs.save(cleaned_ppt)
 
     return cleaned_ppt
 
 
-def crop_bottom_template_if_needed(img_path):
-    """
-    Remove bottom blue PPT template after image generation
-    ONLY if large blank/template area exists
-    """
-    img = Image.open(img_path)
-    width, height = img.size
-
-    bottom_section = img.crop((
-        0,
-        int(height * 0.70),
-        width,
-        height
-    ))
-
-    pixels = bottom_section.convert("RGB").getdata()
-
-    blue_pixels = 0
-
-    for r, g, b in pixels:
-        if b > r + 30 and b > g + 30:
-            blue_pixels += 1
-
-    blue_ratio = blue_pixels / len(pixels)
-
-    # Crop only when template dominates bottom area
-    if blue_ratio > 0.08:
-        crop_height = int(height * 0.70)
-
-        cropped = img.crop((
-            0,
-            0,
-            width,
-            crop_height
-        ))
-
-        cropped.save(img_path)
-        print(f"Removed bottom template from {img_path}")
-
-
 def render_ppt_slides_to_images(ppt_path):
     """
-    Convert PPT slides → images
+    Convert PPT slides → cleaned images
     """
     temp_dir = tempfile.mkdtemp()
 
     try:
-        cleaned_ppt = remove_ppt_background(ppt_path)
+        # Step 1: clean PPT
+        cleaned_ppt = clean_slide_background(ppt_path)
 
+        # Step 2: PPT → PDF
         subprocess.run([
             "libreoffice",
             "--headless",
@@ -153,6 +146,7 @@ def render_ppt_slides_to_images(ppt_path):
             if f.endswith(".pdf")
         ][0]
 
+        # Step 3: PDF → images
         pages = convert_from_path(
             generated_pdf,
             dpi=200
@@ -166,15 +160,15 @@ def render_ppt_slides_to_images(ppt_path):
                 f"slide_{i+1}.png"
             )
 
-            page.save(img_path, "PNG")
+            page.save(
+                img_path,
+                "PNG"
+            )
 
-            # Skip title slides
+            # Step 4: skip title slides
             if is_title_slide(img_path):
                 print(f"Skipping title slide: {i+1}")
                 continue
-
-            # Final cleanup for leftover blue template
-            crop_bottom_template_if_needed(img_path)
 
             final_images.append(img_path)
 
