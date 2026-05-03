@@ -1,20 +1,54 @@
 import os
+import tempfile
+import subprocess
+
 from docx import Document
 from docx.shared import Inches
 
 from modules.converter.ppt_extractor import extract_ppt_content
 from modules.converter.ppt_slide_renderer import render_ppt_slides_to_images
-from modules.converter.ppt_extractor import convert_ppt_to_images
+
+
+def convert_clean_ppt_to_images(clean_ppt_path):
+    """
+    Convert cleaned PPT into PNG images
+    """
+    try:
+        output_dir = tempfile.mkdtemp()
+
+        subprocess.run([
+            "libreoffice",
+            "--headless",
+            "--convert-to",
+            "png",
+            clean_ppt_path,
+            "--outdir",
+            output_dir
+        ], check=True)
+
+        images = []
+
+        for file in sorted(os.listdir(output_dir)):
+            if file.lower().endswith(".png"):
+                images.append(
+                    os.path.join(output_dir, file)
+                )
+
+        print(f"Converted images: {images}")
+        return images
+
+    except Exception as e:
+        print(f"PNG conversion failed: {e}")
+        return []
 
 
 def add_images_to_doc(doc, image_paths):
     """
-    Add slide images into Word document
+    Add images to word
     """
-
     for img_path in image_paths:
         try:
-            if os.path.exists(img_path) and os.path.getsize(img_path) > 0:
+            if os.path.exists(img_path):
                 doc.add_picture(
                     img_path,
                     width=Inches(6.5)
@@ -22,88 +56,56 @@ def add_images_to_doc(doc, image_paths):
                 doc.add_page_break()
 
         except Exception as e:
-            print(f"Failed to insert image {img_path}: {e}")
+            print(f"Image insert failed: {e}")
 
 
 def convert_ppt_to_doc(ppt_path, output_docx):
-    """
-    Convert PPT -> Word
-    """
-
     try:
         doc = Document()
 
-        # -----------------------------------
-        # Extract text content
-        # -----------------------------------
+        # ---------------------------
+        # Extract text
+        # ---------------------------
         extracted_text = extract_ppt_content(ppt_path)
 
         if extracted_text:
             doc.add_heading("PPT Content", level=1)
 
             for text in extracted_text:
-                if text and text.strip():
+                if text.strip():
                     doc.add_paragraph(text)
 
-        # -----------------------------------
-        # Render slides
-        # -----------------------------------
-        rendered_output = render_ppt_slides_to_images(ppt_path)
+        # ---------------------------
+        # Clean ppt
+        # ---------------------------
+        cleaned_ppt_path = render_ppt_slides_to_images(
+            ppt_path
+        )
 
-        print(f"Renderer output: {rendered_output}")
+        print(f"Clean PPT path: {cleaned_ppt_path}")
 
-        # Case 1 → renderer returned cleaned PPT path
-        if isinstance(rendered_output, str):
-            print("Renderer returned PPT path. Converting to images...")
-            image_paths = convert_ppt_to_images(rendered_output)
+        # ---------------------------
+        # Convert cleaned ppt → png
+        # ---------------------------
+        image_paths = convert_clean_ppt_to_images(
+            cleaned_ppt_path
+        )
 
-        # Case 2 → renderer already returned image list
-        elif isinstance(rendered_output, list):
-            image_paths = rendered_output
+        print(f"Final images: {image_paths}")
 
-        else:
-            image_paths = []
-
-        print(f"Final image paths: {image_paths}")
-
-        # -----------------------------------
-        # Validate images
-        # -----------------------------------
-        valid_images = []
-
-        for img_path in image_paths:
-            try:
-                if (
-                    img_path
-                    and os.path.exists(img_path)
-                    and os.path.getsize(img_path) > 0
-                ):
-                    valid_images.append(img_path)
-
-            except Exception as e:
-                print(f"Skipping invalid image {img_path}: {e}")
-
-        print(f"Valid images count: {len(valid_images)}")
-
-        # -----------------------------------
-        # Add slides to doc
-        # -----------------------------------
-        if valid_images:
+        if image_paths:
             doc.add_page_break()
             doc.add_heading("PPT Slides", level=1)
 
             add_images_to_doc(
                 doc,
-                valid_images
+                image_paths
             )
         else:
             doc.add_paragraph(
-                "No valid PPT slide images found."
+                "No PPT slide images generated."
             )
 
-        # -----------------------------------
-        # Save document
-        # -----------------------------------
         doc.save(output_docx)
 
         return output_docx
@@ -113,7 +115,6 @@ def convert_ppt_to_doc(ppt_path, output_docx):
         raise
 
 
-# backward compatibility
 def ppt_to_word(ppt_path, output_docx):
     return convert_ppt_to_doc(
         ppt_path,
