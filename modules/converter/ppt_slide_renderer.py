@@ -149,8 +149,41 @@ def render_ppt_slides_to_images(ppt_path):
                 temp_dir,
                 f"slide_{i+1}.png"
             )
-
+            
             page.save(img_path, "PNG")
+            
+            # -----------------------------
+            # Auto crop actual content area
+            # -----------------------------
+            try:
+                from PIL import Image, ImageChops
+            
+                img = Image.open(img_path).convert("RGB")
+            
+                # Create white background reference
+                bg = Image.new("RGB", img.size, (255, 255, 255))
+            
+                # Find difference from white
+                diff = ImageChops.difference(img, bg)
+                bbox = diff.getbbox()
+            
+                if bbox:
+                    left, top, right, bottom = bbox
+            
+                    # Add small padding
+                    padding = 20
+            
+                    left = max(0, left - padding)
+                    top = max(0, top - padding)
+                    right = min(img.width, right + padding)
+                    bottom = min(img.height, bottom + padding)
+            
+                    cropped = img.crop((left, top, right, bottom))
+                    cropped.save(img_path)
+            
+            except Exception as crop_err:
+                print(f"Crop failed for slide {i+1}: {crop_err}")
+            
             final_images.append(img_path)
 
         print(f"Final usable slides: {len(final_images)}")
