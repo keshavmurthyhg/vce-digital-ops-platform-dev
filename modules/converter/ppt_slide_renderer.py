@@ -1,19 +1,19 @@
 import os
+import time
 import tempfile
 import subprocess
 
 from pdf2image import convert_from_path
 from PIL import Image
-from pptx import Presentation
-from pptx.enum.shapes import PP_PLACEHOLDER
 
 
-# -----------------------------
-# Detect title slides
-# -----------------------------
-def is_title_slide(img_path):
+# -----------------------------------
+# Remove title/empty slides
+# -----------------------------------
+def should_skip_slide(img_path):
     try:
         img = Image.open(img_path).convert("RGB")
+
         width, height = img.size
 
         center = img.crop((
@@ -24,94 +24,121 @@ def is_title_slide(img_path):
         ))
 
         gray = center.convert("L")
-        histogram = gray.histogram()
+        hist = gray.histogram()
 
-        white_pixels = histogram[255]
-        total_pixels = sum(histogram)
+        white_pixels = hist[255]
+        total_pixels = sum(hist)
 
         white_ratio = white_pixels / total_pixels
 
-        return white_ratio > 0.90
+        return white_ratio > 0.92
 
-    except Exception:
+    except:
         return False
 
 
-# -----------------------------
-# Remove slide background
-# -----------------------------
-def remove_background_and_placeholders(input_ppt):
+# -----------------------------------
+# Clean PPT using LibreOffice UNO
+# -----------------------------------
+def clean_ppt_theme(input_ppt, output_ppt):
     """
-    Remove only:
-    - slide background
-    - title placeholders
-    - footer placeholders
-
-    Keep:
-    - screenshots
-    - annotations
-    - arrows
-    - text boxes
-    - lines
+    Opens PPT in LibreOffice and removes
+    master/layout formatting
     """
 
-    prs = Presentation(input_ppt)
+    uno_script = f"""
+import uno
+import os
+from com.sun.star.beans import PropertyValue
 
-    for slide in prs.slides:
-        try:
-            # reset background
-            slide.background.fill.solid()
-            slide.background.fill.fore_color.rgb = None
-        except:
-            pass
+local_ctx = uno.getComponentContext()
+resolver = local_ctx.ServiceManager.createInstanceWithContext(
+    "com.sun.star.bridge.UnoUrlResolver",
+    local_ctx
+)
 
-        shapes_to_remove = []
+ctx = resolver.resolve(
+    "uno:socket,host=localhost,port=2002;urp;StarOffice.ComponentContext"
+)
 
-        for shape in slide.shapes:
-            try:
-                if shape.is_placeholder:
-                    placeholder_type = shape.placeholder_format.type
+smgr = ctx.ServiceManager
+desktop = smgr.createInstanceWithContext(
+    "com.sun.star.frame.Desktop",
+    ctx
+)
 
-                    if placeholder_type in [
-                        PP_PLACEHOLDER.TITLE,
-                        PP_PLACEHOLDER.CENTER_TITLE,
-                        PP_PLACEHOLDER.FOOTER,
-                        PP_PLACEHOLDER.DATE,
-                        PP_PLACEHOLDER.SLIDE_NUMBER
-                    ]:
-                        shapes_to_remove.append(shape)
+def to_url(path):
+    return "file://" + os.path.abspath(path)
 
-            except:
-                continue
+props = []
 
-        for shape in shapes_to_remove:
-            try:
-                sp = shape._element
-                sp.getparent().remove(sp)
-            except:
-                pass
+doc = desktop.loadComponentFromURL(
+    to_url(r"{input_ppt}"),
+    "_blank",
+    0,
+    tuple(props)
+)
 
-    cleaned_ppt = input_ppt.replace(
-        ".pptx",
-        "_cleaned.pptx"
+slides = doc.getDrawPages()
+
+for i in range(slides.getCount()):
+    slide = slides.getByIndex(i)
+
+    try:
+        slide.setMasterPage(None)
+    except:
+        pass
+
+doc.storeAsURL(
+    to_url(r"{output_ppt}"),
+    tuple(props)
+)
+
+doc.close(True)
+"""
+
+    script_file = os.path.join(
+        tempfile.gettempdir(),
+        "clean_ppt_theme.py"
     )
 
-    prs.save(cleaned_ppt)
+    with open(script_file, "w") as f:
+        f.write(uno_script)
 
-    return cleaned_ppt
+    # Start LibreOffice listener
+    subprocess.Popen([
+        "soffice",
+        "--headless",
+        "--accept=socket,host=localhost,port=2002;urp;"
+    ])
+
+    time.sleep(5)
+
+    subprocess.run(
+        ["python3", script_file],
+        check=True
+    )
 
 
-# -----------------------------
-# Convert PPT -> images
-# -----------------------------
+# -----------------------------------
+# Convert PPT → images
+# -----------------------------------
 def render_ppt_slides_to_images(ppt_path):
     temp_dir = tempfile.mkdtemp()
 
     try:
-        # Step 1
-        cleaned_ppt = remove_background_and_placeholders(ppt_path)
+        cleaned_ppt = os.path.join(
+            temp_dir,
+            "cleaned.pptx"
+        )
 
-        # Step 2
+        # Step 1 → remove theme
+        clean_ppt_theme(
+            ppt_path,
+            cleaned_ppt
+        )
+
+        # Step 2 → convert to PDF
         subprocess.run([
             "libreoffice",
             "--headless",
@@ -129,13 +156,12 @@ def render_ppt_slides_to_images(ppt_path):
         ]
 
         if not pdf_files:
-            raise Exception("PDF conversion failed")
+            raise Exception("PDF not generated")
 
-        generated_pdf = pdf_files[0]
+        pdf_path = pdf_files[0]
 
-        # Step 3
         pages = convert_from_path(
-            generated_pdf,
+            pdf_path,
             dpi=200
         )
 
@@ -147,24 +173,16 @@ def render_ppt_slides_to_images(ppt_path):
                 f"slide_{i+1}.png"
             )
 
-            page.save(img_path, "PNG")
+            page.save(img_path)
 
-            if is_title_slide(img_path):
-                print(f"Skipping title slide {i+1}")
+            if should_skip_slide(img_path):
+                print(f"Skipping slide {i+1}")
                 continue
 
             final_images.append(img_path)
 
         return final_images
 
-    finally:
-        cleaned_ppt = ppt_path.replace(
-            ".pptx",
-            "_cleaned.pptx"
-        )
-
-        if os.path.exists(cleaned_ppt):
-            try:
-                os.remove(cleaned_ppt)
-            except:
-                pass
+    except Exception as e:
+        print(f"PPT processing failed: {e}")
+        return []
