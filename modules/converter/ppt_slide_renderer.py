@@ -25,17 +25,14 @@ def should_skip_slide(slide):
 
     combined_text = " ".join(texts)
 
-    if "thank you" in combined_text:
+    # Skip only actual closing slides
+    if combined_text.strip() == "thank you":
         return True
 
-    if "ppt slides" in combined_text:
-        return True
-
-    if "questions" in combined_text:
+    if combined_text.strip() == "questions":
         return True
 
     return False
-
 
 # -----------------------------------
 # Detect full-slide background images
