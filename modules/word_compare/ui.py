@@ -1,3 +1,4 @@
+import time
 import streamlit as st
 
 from modules.word_compare.sidebar import render_sidebar
@@ -65,7 +66,7 @@ def render():
 
     try:
         # -----------------------------------
-        # Extract content
+        # Extract preview content
         # -----------------------------------
         old_file.seek(0)
         old_lines = extract_doc_content(old_file)
@@ -81,24 +82,44 @@ def render():
         # -----------------------------------
         # Top messages
         # -----------------------------------
-        st.success("Files loaded successfully.")
+        st.success(
+            "Files loaded successfully."
+        )
 
-        if st.session_state.get("generation_success"):
+        if st.session_state.get(
+            "generation_success"
+        ):
             st.success(
                 "Highlighted document generated successfully."
             )
 
         # -----------------------------------
-        # Generate output file
+        # Generate output file with progress
         # -----------------------------------
         if generate_clicked:
             try:
                 old_file.seek(0)
                 new_file.seek(0)
 
+                progress_bar = st.progress(0)
+                status_box = st.empty()
+
+                def update_progress(
+                    percent,
+                    message
+                ):
+                    progress_bar.progress(
+                        percent
+                    )
+
+                    status_box.info(
+                        f"{message} ({percent}%)"
+                    )
+
                 output_data = generate_output_file(
                     old_file,
-                    new_file
+                    new_file,
+                    progress_callback=update_progress
                 )
 
                 st.session_state[
@@ -109,6 +130,12 @@ def render():
                     "generation_success"
                 ] = True
 
+                progress_bar.progress(100)
+                status_box.success(
+                    "File generation completed successfully."
+                )
+
+                time.sleep(1)
                 st.rerun()
 
             except Exception as e:
