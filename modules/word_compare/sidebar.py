@@ -2,26 +2,30 @@ import streamlit as st
 
 
 def render_sidebar():
-    st.sidebar.subheader("Word Compare Controls")
+    st.sidebar.subheader(
+        "Word Compare Controls"
+    )
 
     old_file = st.sidebar.file_uploader(
-        "Upload Old Document (Master)",
+        "Upload Old Document (DOCX | 200MB)",
         type=["docx"],
         key="wc_old_doc"
     )
 
     new_file = st.sidebar.file_uploader(
-        "Upload New Document",
+        "Upload New Document (DOCX | 200MB)",
         type=["docx"],
         key="wc_new_doc"
     )
 
     generate_clicked = st.sidebar.button(
-        "Generate Highlighted File"
+        "Generate Highlighted File",
+        use_container_width=True
     )
 
     clear_clicked = st.sidebar.button(
-        "Clear Files"
+        "Clear Files",
+        use_container_width=True
     )
 
     if clear_clicked:
@@ -32,10 +36,8 @@ def render_sidebar():
         ]
 
         for key in keys_to_clear:
-            st.session_state.pop(
-                key,
-                None
-            )
+            if key in st.session_state:
+                del st.session_state[key]
 
         st.rerun()
 
