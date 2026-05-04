@@ -18,9 +18,15 @@ def render():
     with title_col1:
         st.markdown(
             """
-            <h1 style='margin-top:-20px; margin-bottom:5px;'>
+            <div style="
+                font-size:64px;
+                font-weight:700;
+                margin-top:-15px;
+                margin-bottom:5px;
+                color:#2f3342;
+            ">
                 Word Compare Utility
-            </h1>
+            </div>
             """,
             unsafe_allow_html=True
         )
