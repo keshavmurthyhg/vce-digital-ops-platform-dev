@@ -10,9 +10,9 @@ from modules.word_compare.generator import generate_output_file
 
 
 def render():
-    # -------------------------
-    # Top title section
-    # -------------------------
+    # -----------------------------------
+    # Header
+    # -----------------------------------
     title_col1, title_col2 = st.columns([0.8, 9.2])
 
     with title_col1:
@@ -20,7 +20,7 @@ def render():
             "https://cdn-icons-png.flaticon.com/512/281/281760.png",
             width=55
         )
-    
+
     with title_col2:
         st.markdown(
             """
@@ -51,9 +51,9 @@ def render():
         unsafe_allow_html=True
     )
 
-    # -------------------------
+    # -----------------------------------
     # Sidebar controls
-    # -------------------------
+    # -----------------------------------
     controls = render_sidebar()
 
     old_file = controls["old_file"]
@@ -64,6 +64,9 @@ def render():
         return
 
     try:
+        # -----------------------------------
+        # Extract content
+        # -----------------------------------
         old_file.seek(0)
         old_lines = extract_doc_content(old_file)
 
@@ -75,22 +78,53 @@ def render():
             new_lines
         )
 
-        # compact message
-        # File upload success message
-        st.success(
-            "Files loaded successfully."
-        )
-        
-        # Generation success message
-        if st.session_state.get(
-            "generation_success"
-        ):
+        # -----------------------------------
+        # Top messages
+        # -----------------------------------
+        st.success("Files loaded successfully.")
+
+        if st.session_state.get("generation_success"):
             st.success(
                 "Highlighted document generated successfully."
             )
 
+        # -----------------------------------
+        # Generate output file
+        # -----------------------------------
+        if generate_clicked:
+            try:
+                old_file.seek(0)
+                new_file.seek(0)
+
+                output_data = generate_output_file(
+                    old_file,
+                    new_file
+                )
+
+                st.session_state[
+                    "word_compare_output"
+                ] = output_data
+
+                st.session_state[
+                    "generation_success"
+                ] = True
+
+                st.rerun()
+
+            except Exception as e:
+                st.error(
+                    f"Generation Error: {str(e)}"
+                )
+
+        # -----------------------------------
+        # Preview section
+        # -----------------------------------
         st.markdown(
-            "<h3 style='margin-bottom:5px;'>Difference Preview</h3>",
+            """
+            <h3 style='margin-bottom:5px;'>
+                Difference Preview
+            </h3>
+            """,
             unsafe_allow_html=True
         )
 
@@ -99,9 +133,11 @@ def render():
         with col1:
             st.markdown(
                 f"""
-                <div style='font-size:18px;
-                            font-weight:600;
-                            margin-bottom:4px;'>
+                <div style="
+                    font-size:18px;
+                    font-weight:600;
+                    margin-bottom:4px;
+                ">
                     {old_file.name}
                 </div>
                 """,
@@ -111,9 +147,11 @@ def render():
         with col2:
             st.markdown(
                 f"""
-                <div style='font-size:18px;
-                            font-weight:600;
-                            margin-bottom:4px;'>
+                <div style="
+                    font-size:18px;
+                    font-weight:600;
+                    margin-bottom:4px;
+                ">
                     {new_file.name}
                 </div>
                 """,
@@ -124,41 +162,6 @@ def render():
             old_html,
             new_html
         )
-
-        if generate_clicked:
-            try:
-                output_data = generate_output_file(
-                    old_file,
-                    new_file
-                )
-        
-                st.session_state[
-                    "word_compare_output"
-                ] = output_data
-        
-                # FIX: trigger success message
-                st.session_state[
-                    "generation_success"
-                ] = True
-        
-                st.rerun()
-        
-            except Exception as e:
-                st.error(
-                    f"Generation Error: {str(e)}"
-                )
-
-        if "word_compare_output" in st.session_state:
-            output_data = st.session_state[
-                "word_compare_output"
-            ]
-
-            st.sidebar.download_button(
-                label="Download Compared File",
-                data=output_data["file_bytes"],
-                file_name=output_data["file_name"],
-                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            )
 
     except Exception as e:
         st.error(
