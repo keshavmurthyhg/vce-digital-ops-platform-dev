@@ -13,24 +13,24 @@ def render():
     # -------------------------
     # Top title section
     # -------------------------
-    title_col1, title_col2 = st.columns([1, 8])
+    title_col1, title_col2 = st.columns([0.8, 9.2])
 
     with title_col1:
         st.image(
             "https://cdn-icons-png.flaticon.com/512/281/281760.png",
-            width=60
+            width=55
         )
     
     with title_col2:
         st.markdown(
             """
             <div style="
-                font-size:52px;
+                font-size:42px;
                 font-weight:700;
-                margin-top:-5px;
-                margin-bottom:0px;
                 color:#2f3342;
-                line-height:1.1;
+                margin-top:8px;
+                white-space:nowrap;
+                line-height:1;
             ">
                 Word Compare Utility
             </div>
