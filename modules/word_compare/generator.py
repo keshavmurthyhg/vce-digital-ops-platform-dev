@@ -1,8 +1,7 @@
 import os
 import tempfile
-import pytz
 
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from modules.word_compare.comparator import compare_documents
 
 
@@ -27,8 +26,14 @@ def generate_output_file(
         old_file.name
     )[0]
 
-    ist = pytz.timezone("Asia/Kolkata")
-    current_date = datetime.now(ist).strftime("%d%b%Y")
+    # IST timezone (UTC +5:30)
+    ist_timezone = timezone(
+        timedelta(hours=5, minutes=30)
+    )
+
+    current_date = datetime.now(
+        ist_timezone
+    ).strftime("%d%b%Y")
 
     output_filename = (
         f"{base_name}"
