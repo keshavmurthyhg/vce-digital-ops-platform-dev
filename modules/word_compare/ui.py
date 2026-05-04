@@ -36,6 +36,7 @@ def extract_doc_content(doc_file):
 
     # Images
     image_count = 0
+
     for rel in doc.part.rels.values():
         try:
             if rel.is_external:
@@ -55,6 +56,22 @@ def extract_doc_content(doc_file):
 
 
 # --------------------------------------------------
+# Build row html
+# --------------------------------------------------
+def build_row(text, css_class):
+    safe_text = html.escape(text)
+
+    return f"""
+    <div 
+        class="line {css_class}"
+        title="{safe_text}"
+    >
+        {safe_text}
+    </div>
+    """
+
+
+# --------------------------------------------------
 # Create aligned rows for both previews
 # --------------------------------------------------
 def generate_aligned_diff_rows(old_lines, new_lines):
@@ -69,24 +86,38 @@ def generate_aligned_diff_rows(old_lines, new_lines):
 
     for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
 
-        # ---------------------------
         # Equal rows
-        # ---------------------------
         if opcode == "equal":
-            for old_line, new_line in zip(
-                old_lines[i1:i2],
-                new_lines[j1:j2]
-            ):
-                old_rows.append(
-                    build_row(old_line, "normal")
-                )
-                new_rows.append(
-                    build_row(new_line, "normal")
+            max_len = max(i2 - i1, j2 - j1)
+
+            for idx in range(max_len):
+                old_line = (
+                    old_lines[i1 + idx]
+                    if (i1 + idx) < i2
+                    else ""
                 )
 
-        # ---------------------------
+                new_line = (
+                    new_lines[j1 + idx]
+                    if (j1 + idx) < j2
+                    else ""
+                )
+
+                old_rows.append(
+                    build_row(
+                        old_line,
+                        "normal" if old_line else "blank"
+                    )
+                )
+
+                new_rows.append(
+                    build_row(
+                        new_line,
+                        "normal" if new_line else "blank"
+                    )
+                )
+
         # Delete rows
-        # ---------------------------
         elif opcode == "delete":
             deleted_lines = old_lines[i1:i2]
 
@@ -98,14 +129,11 @@ def generate_aligned_diff_rows(old_lines, new_lines):
                     )
                 )
 
-                # placeholder in new
                 new_rows.append(
                     build_row("", "blank")
                 )
 
-        # ---------------------------
         # Insert rows
-        # ---------------------------
         elif opcode == "insert":
             inserted_lines = new_lines[j1:j2]
 
@@ -121,9 +149,7 @@ def generate_aligned_diff_rows(old_lines, new_lines):
                     )
                 )
 
-        # ---------------------------
         # Replace rows
-        # ---------------------------
         elif opcode == "replace":
             old_chunk = old_lines[i1:i2]
             new_chunk = new_lines[j1:j2]
@@ -166,28 +192,9 @@ def generate_aligned_diff_rows(old_lines, new_lines):
 
 
 # --------------------------------------------------
-# Build row html
-# --------------------------------------------------
-def build_row(text, css_class):
-    safe_text = html.escape(text)
-
-    return f"""
-    <div 
-        class="line {css_class}"
-        title="{safe_text}"
-    >
-        {safe_text}
-    </div>
-    """
-
-
-# --------------------------------------------------
 # Render synchronized preview
 # --------------------------------------------------
-def render_synced_preview(
-    old_html,
-    new_html
-):
+def render_synced_preview(old_html, new_html):
     combined_html = f"""
     <html>
     <head>
@@ -208,18 +215,19 @@ def render_synced_preview(
             width:50%;
             overflow-y:auto;
             border-right:1px solid #ddd;
+            font-family:Consolas, monospace;
         }}
 
         .line {{
-            height:32px;
-            line-height:20px;
-            padding:6px;
-            margin:2px;
-            border-radius:4px;
-            font-size:13px;
+            height:24px;
+            line-height:24px;
+            padding:0 6px;
+            margin:0;
+            font-size:12px;
             white-space:nowrap;
             overflow:hidden;
             text-overflow:ellipsis;
+            border-radius:3px;
             box-sizing:border-box;
         }}
 
@@ -228,15 +236,15 @@ def render_synced_preview(
         }}
 
         .removed {{
-            background:#ffcccc;
+            background:#ffd6d6;
         }}
 
         .added {{
-            background:#ccffcc;
+            background:#d6f5d6;
         }}
 
         .updated {{
-            background:#ffe599;
+            background:#fff2cc;
         }}
 
         .blank {{
@@ -333,18 +341,13 @@ def render():
 
         st.subheader("Difference Preview")
 
-        # filenames OUTSIDE preview pane
         h1, h2 = st.columns(2)
 
         with h1:
-            st.markdown(
-                f"### {old_file.name}"
-            )
+            st.markdown(f"### {old_file.name}")
 
         with h2:
-            st.markdown(
-                f"### {new_file.name}"
-            )
+            st.markdown(f"### {new_file.name}")
 
         render_synced_preview(
             old_html,
@@ -353,9 +356,7 @@ def render():
 
         st.divider()
 
-        if st.button(
-            "Generate Highlighted Word File"
-        ):
+        if st.button("Generate Highlighted Word File"):
             try:
                 old_file.seek(0)
                 new_file.seek(0)
