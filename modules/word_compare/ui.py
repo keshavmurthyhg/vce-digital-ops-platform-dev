@@ -28,7 +28,7 @@ def render():
                 font-size:42px;
                 font-weight:700;
                 color:#2f3342;
-                margin-top:1px;
+                margin-top:0px;
                 white-space:nowrap;
                 line-height:1;
             ">
