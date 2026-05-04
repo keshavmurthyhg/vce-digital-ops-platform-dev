@@ -135,28 +135,89 @@ def compare_images(old_doc, new_doc, output_doc):
 # ------------------------------------------
 # Main compare
 # ------------------------------------------
-def compare_documents(old_file, new_file, output_path):
+def compare_documents(
+    old_file,
+    new_file,
+    old_output_path,
+    new_output_path
+):
     old_doc = Document(old_file)
     new_doc = Document(new_file)
 
-    output_doc = deepcopy(old_doc)
+    # Old output -> preserve old document
+    old_output_doc = deepcopy(old_doc)
 
-    compare_paragraphs(
-        old_doc,
-        new_doc,
-        output_doc
+    # New output -> preserve new document
+    new_output_doc = deepcopy(new_doc)
+
+    old_paras = old_doc.paragraphs
+    new_paras = new_doc.paragraphs
+
+    max_len = max(
+        len(old_paras),
+        len(new_paras)
     )
 
-    compare_tables(
-        old_doc,
-        new_doc,
-        output_doc
-    )
+    for i in range(max_len):
 
+        # --------------------------
+        # Added content -> highlight in NEW file
+        # --------------------------
+        if i >= len(old_paras):
+            run = new_output_doc.paragraphs[i].runs
+
+            for r in run:
+                highlight_run(r, "green")
+
+            continue
+
+        # --------------------------
+        # Deleted content -> highlight in OLD file
+        # --------------------------
+        if i >= len(new_paras):
+            run = old_output_doc.paragraphs[i].runs
+
+            for r in run:
+                highlight_run(r, "red")
+
+            continue
+
+        old_text = old_paras[i].text
+        new_text = new_paras[i].text
+
+        if old_text != new_text:
+
+            # OLD file → deleted version
+            old_output_doc.paragraphs[i].clear()
+            old_run = old_output_doc.paragraphs[i].add_run(
+                old_text
+            )
+            highlight_run(
+                old_run,
+                "red"
+            )
+
+            # NEW file → updated version
+            new_output_doc.paragraphs[i].clear()
+            new_run = new_output_doc.paragraphs[i].add_run(
+                new_text
+            )
+            highlight_run(
+                new_run,
+                "yellow"
+            )
+
+    # Compare images
     compare_images(
         old_doc,
         new_doc,
-        output_doc
+        new_output_doc
     )
 
-    output_doc.save(output_path)
+    old_output_doc.save(
+        old_output_path
+    )
+
+    new_output_doc.save(
+        new_output_path
+    )
