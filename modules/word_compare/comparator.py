@@ -53,8 +53,6 @@ def compare_paragraphs(
     old_output_doc,
     new_output_doc
 ):
-    import difflib
-
     old_paras = old_doc.paragraphs
     new_paras = new_doc.paragraphs
 
@@ -66,27 +64,21 @@ def compare_paragraphs(
     for i in range(max_len):
 
         # -------------------------
-        # Added paragraph
+        # Entire paragraph added
         # -------------------------
         if i >= len(old_paras):
             if i < len(new_output_doc.paragraphs):
                 for run in new_output_doc.paragraphs[i].runs:
-                    highlight_run(
-                        run,
-                        "green"
-                    )
+                    highlight_run(run, "green")
             continue
 
         # -------------------------
-        # Deleted paragraph
+        # Entire paragraph deleted
         # -------------------------
         if i >= len(new_paras):
             if i < len(old_output_doc.paragraphs):
                 for run in old_output_doc.paragraphs[i].runs:
-                    highlight_run(
-                        run,
-                        "red"
-                    )
+                    highlight_run(run, "red")
             continue
 
         old_text = old_paras[i].text.strip()
@@ -95,19 +87,52 @@ def compare_paragraphs(
         if old_text == new_text:
             continue
 
+        old_words = old_text.split()
+        new_words = new_text.split()
+
         matcher = difflib.SequenceMatcher(
             None,
-            old_text.split(),
-            new_text.split()
+            old_words,
+            new_words
         )
 
         operations = matcher.get_opcodes()
 
-        has_delete = any(
+        # -------------------------
+        # OLD FILE
+        # Only true DELETE ops
+        # -------------------------
+        has_actual_delete = any(
             tag == "delete"
             for tag, *_ in operations
         )
 
+        if has_actual_delete:
+            old_output_doc.paragraphs[i].clear()
+
+            for tag, a1, a2, b1, b2 in operations:
+                segment = " ".join(
+                    old_words[a1:a2]
+                )
+
+                if not segment:
+                    continue
+
+                run = old_output_doc.paragraphs[i].add_run(
+                    segment + " "
+                )
+
+                if tag == "delete":
+                    highlight_run(
+                        run,
+                        "red"
+                    )
+
+        # -------------------------
+        # NEW FILE
+        # Added → green
+        # Updated → yellow
+        # -------------------------
         has_insert = any(
             tag == "insert"
             for tag, *_ in operations
@@ -118,36 +143,20 @@ def compare_paragraphs(
             for tag, *_ in operations
         )
 
-        # -------------------------
-        # OLD FILE
-        # Only true deletions
-        # -------------------------
-        if has_delete and not has_replace:
-            for run in old_output_doc.paragraphs[i].runs:
-                highlight_run(
-                    run,
-                    "red"
-                )
-
-        # -------------------------
-        # NEW FILE
-        # Added = green
-        # Updated = yellow
-        # -------------------------
-        if has_insert and not has_replace:
+        if has_insert or has_replace:
             for run in new_output_doc.paragraphs[i].runs:
-                highlight_run(
-                    run,
-                    "green"
-                )
 
-        elif has_replace:
-            for run in new_output_doc.paragraphs[i].runs:
-                highlight_run(
-                    run,
-                    "yellow"
-                )
+                if has_insert and not has_replace:
+                    highlight_run(
+                        run,
+                        "green"
+                    )
 
+                elif has_replace:
+                    highlight_run(
+                        run,
+                        "yellow"
+                    )
 # ------------------------------------------
 # Compare tables
 # ------------------------------------------
