@@ -119,10 +119,8 @@ def compare_paragraphs(
                 segment + " "
             )
 
-            if tag in [
-                "delete",
-                "replace"
-            ]:
+            # ONLY true deletions should be red
+            if tag == "delete":
                 highlight_run(
                     run,
                     "red"
@@ -213,7 +211,8 @@ def compare_tables(
                 if old_text == new_text:
                     continue
 
-                # Old table → deleted
+                # Only deleted table content
+                if old_text and not new_text:
                 old_cell = (
                     old_output_table
                     .rows[r_idx]
