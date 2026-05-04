@@ -362,6 +362,6 @@ def render_synced_preview(
 
     components.html(
         combined_html,
-        height=700,
+        height=420,
         scrolling=False
     )
