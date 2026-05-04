@@ -1,4 +1,5 @@
 import os
+import zipfile
 import tempfile
 
 from datetime import datetime, timezone, timedelta
@@ -13,20 +14,20 @@ def generate_output_file(
     old_file.seek(0)
     new_file.seek(0)
 
-    # -----------------------------
-    # Step 1: Prepare filenames
-    # -----------------------------
     if progress_callback:
         progress_callback(
             10,
-            "Preparing output file..."
+            "Preparing output files..."
         )
 
-    base_name = os.path.splitext(
+    old_base = os.path.splitext(
         old_file.name
     )[0]
 
-    # IST timezone (UTC +5:30)
+    new_base = os.path.splitext(
+        new_file.name
+    )[0]
+
     ist_timezone = timezone(
         timedelta(hours=5, minutes=30)
     )
@@ -35,64 +36,86 @@ def generate_output_file(
         ist_timezone
     ).strftime("%d%b%Y")
 
-    output_filename = (
-        f"{base_name}"
+    old_output_name = (
+        f"{old_base}"
         f"_Diff-Highlighted_"
         f"{current_date}.docx"
     )
 
-    # -----------------------------
-    # Step 2: Create temp file
-    # -----------------------------
-    if progress_callback:
-        progress_callback(
-            25,
-            "Creating temporary workspace..."
-        )
-
-    with tempfile.NamedTemporaryFile(
-        delete=False,
-        suffix=".docx"
-    ) as tmp:
-        output_path = tmp.name
-
-    # -----------------------------
-    # Step 3: Compare documents
-    # -----------------------------
-    if progress_callback:
-        progress_callback(
-            50,
-            "Comparing documents and detecting changes..."
-        )
-
-    compare_documents(
-        old_file,
-        new_file,
-        output_path
+    new_output_name = (
+        f"{new_base}"
+        f"_Diff-Highlighted_"
+        f"{current_date}.docx"
     )
 
-    # -----------------------------
-    # Step 4: Read generated file
-    # -----------------------------
+    zip_name = (
+        f"Word-Doc_Compared_"
+        f"{current_date}.zip"
+    )
+
     if progress_callback:
         progress_callback(
-            80,
-            "Preparing final document..."
+            30,
+            "Creating temporary files..."
         )
 
-    with open(output_path, "rb") as f:
-        file_bytes = f.read()
+    with tempfile.TemporaryDirectory() as temp_dir:
 
-    # -----------------------------
-    # Step 5: Cleanup
-    # -----------------------------
-    if progress_callback:
-        progress_callback(
-            95,
-            "Cleaning temporary files..."
+        old_output_path = os.path.join(
+            temp_dir,
+            old_output_name
         )
 
-    os.remove(output_path)
+        new_output_path = os.path.join(
+            temp_dir,
+            new_output_name
+        )
+
+        if progress_callback:
+            progress_callback(
+                50,
+                "Comparing documents..."
+            )
+
+        compare_documents(
+            old_file,
+            new_file,
+            old_output_path,
+            new_output_path
+        )
+
+        zip_path = os.path.join(
+            temp_dir,
+            zip_name
+        )
+
+        if progress_callback:
+            progress_callback(
+                80,
+                "Creating ZIP package..."
+            )
+
+        with zipfile.ZipFile(
+            zip_path,
+            "w",
+            zipfile.ZIP_DEFLATED
+        ) as zipf:
+
+            zipf.write(
+                old_output_path,
+                old_output_name
+            )
+
+            zipf.write(
+                new_output_path,
+                new_output_name
+            )
+
+        with open(
+            zip_path,
+            "rb"
+        ) as f:
+            file_bytes = f.read()
 
     if progress_callback:
         progress_callback(
@@ -102,5 +125,5 @@ def generate_output_file(
 
     return {
         "file_bytes": file_bytes,
-        "file_name": output_filename
+        "file_name": zip_name
     }
