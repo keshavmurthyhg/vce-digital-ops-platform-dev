@@ -1,41 +1,72 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import tempfile
 import os
 import difflib
+import html
 from docx import Document
 
 from modules.word_compare.comparator import compare_documents
 
 
-# -----------------------------
-# Extract text from word file
-# -----------------------------
+# ---------------------------------------------------
+# Extract paragraphs + tables in original doc order
+# ---------------------------------------------------
 def extract_doc_text(doc_file):
     doc = Document(doc_file)
-
     content = []
 
-    # paragraphs
+    # Extract paragraphs
     for para in doc.paragraphs:
         text = para.text.strip()
         if text:
-            content.append(text)
+            content.append({
+                "type": "paragraph",
+                "content": text
+            })
 
-    # tables
-    for table in doc.tables:
+    # Extract tables
+    for table_index, table in enumerate(doc.tables):
+        table_rows = []
+
         for row in table.rows:
             row_text = " | ".join(
-                cell.text.strip() for cell in row.cells
+                cell.text.strip()
+                for cell in row.cells
             )
+
             if row_text.strip():
-                content.append(row_text)
+                table_rows.append(row_text)
+
+        if table_rows:
+            content.append({
+                "type": "table",
+                "content": table_rows
+            })
 
     return content
 
 
-# -----------------------------
-# Generate HTML diff preview
-# -----------------------------
+# ---------------------------------------------------
+# Flatten content for diff comparison
+# ---------------------------------------------------
+def flatten_content(content):
+    lines = []
+
+    for item in content:
+        if item["type"] == "paragraph":
+            lines.append(item["content"])
+
+        elif item["type"] == "table":
+            for row in item["content"]:
+                lines.append(f"[TABLE] {row}")
+
+    return lines
+
+
+# ---------------------------------------------------
+# Generate HTML preview
+# ---------------------------------------------------
 def generate_diff_html(old_lines, new_lines, is_old=True):
     matcher = difflib.SequenceMatcher(
         None,
@@ -43,80 +74,113 @@ def generate_diff_html(old_lines, new_lines, is_old=True):
         new_lines
     )
 
-    html_lines = []
+    html_output = []
 
     for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
 
+        # ---------------------------
+        # Equal content
+        # ---------------------------
         if opcode == "equal":
             lines = old_lines[i1:i2] if is_old else new_lines[j1:j2]
 
             for line in lines:
-                html_lines.append(
+                html_output.append(
                     f"""
-                    <div style='padding:4px'>
-                        {line}
-                    </div>
+                    <p style="
+                        margin:6px 0;
+                        padding:4px;
+                        font-family:Calibri;
+                        font-size:14px;
+                    ">
+                        {html.escape(line)}
+                    </p>
                     """
                 )
 
+        # ---------------------------
+        # Removed content
+        # ---------------------------
         elif opcode == "delete" and is_old:
             for line in old_lines[i1:i2]:
-                html_lines.append(
+                html_output.append(
                     f"""
-                    <div style='background-color:#ffcccc;
-                                padding:4px;
-                                margin:2px;
-                                border-radius:4px'>
-                        ❌ Removed: {line}
-                    </div>
+                    <p style="
+                        background-color:#ffcccc;
+                        margin:6px 0;
+                        padding:6px;
+                        border-radius:4px;
+                        font-family:Calibri;
+                    ">
+                        ❌ Removed: {html.escape(line)}
+                    </p>
                     """
                 )
 
+        # ---------------------------
+        # Added content
+        # ---------------------------
         elif opcode == "insert" and not is_old:
             for line in new_lines[j1:j2]:
-                html_lines.append(
+                html_output.append(
                     f"""
-                    <div style='background-color:#ccffcc;
-                                padding:4px;
-                                margin:2px;
-                                border-radius:4px'>
-                        ➕ Added: {line}
-                    </div>
+                    <p style="
+                        background-color:#ccffcc;
+                        margin:6px 0;
+                        padding:6px;
+                        border-radius:4px;
+                        font-family:Calibri;
+                    ">
+                        ➕ Added: {html.escape(line)}
+                    </p>
                     """
                 )
 
+        # ---------------------------
+        # Replaced content
+        # ---------------------------
         elif opcode == "replace":
             if is_old:
-                for line in old_lines[i1:i2]:
-                    html_lines.append(
-                        f"""
-                        <div style='background-color:#ffd699;
-                                    padding:4px;
-                                    margin:2px;
-                                    border-radius:4px'>
-                            🔄 Replaced: {line}
-                        </div>
-                        """
-                    )
+                lines = old_lines[i1:i2]
+                prefix = "🔄 Replaced:"
             else:
-                for line in new_lines[j1:j2]:
-                    html_lines.append(
-                        f"""
-                        <div style='background-color:#ffd699;
-                                    padding:4px;
-                                    margin:2px;
-                                    border-radius:4px'>
-                            🔄 Updated: {line}
-                        </div>
-                        """
-                    )
+                lines = new_lines[j1:j2]
+                prefix = "🔄 Updated:"
 
-    return "".join(html_lines)
+            for line in lines:
+                html_output.append(
+                    f"""
+                    <p style="
+                        background-color:#ffe599;
+                        margin:6px 0;
+                        padding:6px;
+                        border-radius:4px;
+                        font-family:Calibri;
+                    ">
+                        {prefix} {html.escape(line)}
+                    </p>
+                    """
+                )
+
+    final_html = "".join(html_output)
+
+    return f"""
+    <div style="
+        height:600px;
+        overflow-y:auto;
+        border:1px solid #d3d3d3;
+        padding:15px;
+        background:white;
+        font-family:Calibri;
+    ">
+        {final_html}
+    </div>
+    """
 
 
-# -----------------------------
+# ---------------------------------------------------
 # Main UI
-# -----------------------------
+# ---------------------------------------------------
 def render():
     st.title("Word Compare Utility")
 
@@ -143,86 +207,92 @@ def render():
 
     if old_file and new_file:
 
-        # Preview section
-        st.subheader("Difference Preview")
+        try:
+            # Reset file pointers
+            old_file.seek(0)
+            new_file.seek(0)
 
-        old_lines = extract_doc_text(old_file)
-        new_lines = extract_doc_text(new_file)
+            old_content = extract_doc_text(old_file)
 
-        old_html = generate_diff_html(
-            old_lines,
-            new_lines,
-            is_old=True
-        )
+            old_file.seek(0)
+            new_file.seek(0)
 
-        new_html = generate_diff_html(
-            old_lines,
-            new_lines,
-            is_old=False
-        )
+            new_content = extract_doc_text(new_file)
 
-        preview_col1, preview_col2 = st.columns(2)
+            old_lines = flatten_content(old_content)
+            new_lines = flatten_content(new_content)
 
-        with preview_col1:
-            st.markdown("### Old Document Preview")
-            st.markdown(
-                f"""
-                <div style="
-                    height:500px;
-                    overflow-y:auto;
-                    border:1px solid #ccc;
-                    padding:10px;
-                    background:white;">
-                    {old_html}
-                </div>
-                """,
-                unsafe_allow_html=True
+            st.subheader("Difference Preview")
+
+            old_html = generate_diff_html(
+                old_lines,
+                new_lines,
+                is_old=True
             )
 
-        with preview_col2:
-            st.markdown("### New Document Preview")
-            st.markdown(
-                f"""
-                <div style="
-                    height:500px;
-                    overflow-y:auto;
-                    border:1px solid #ccc;
-                    padding:10px;
-                    background:white;">
-                    {new_html}
-                </div>
-                """,
-                unsafe_allow_html=True
+            new_html = generate_diff_html(
+                old_lines,
+                new_lines,
+                is_old=False
             )
 
-        st.divider()
+            preview_col1, preview_col2 = st.columns(2)
 
-        # Download highlighted doc
-        if st.button("Generate Highlighted Word File"):
-            try:
-                with tempfile.NamedTemporaryFile(
-                    delete=False,
-                    suffix=".docx"
-                ) as tmp:
-                    output_path = tmp.name
-
-                compare_documents(
-                    old_file,
-                    new_file,
-                    output_path
+            with preview_col1:
+                st.markdown("### Old Document Preview")
+                components.html(
+                    old_html,
+                    height=650,
+                    scrolling=True
                 )
 
-                st.success("Comparison completed successfully")
+            with preview_col2:
+                st.markdown("### New Document Preview")
+                components.html(
+                    new_html,
+                    height=650,
+                    scrolling=True
+                )
 
-                with open(output_path, "rb") as f:
-                    st.download_button(
-                        label="Download Compared Document",
-                        data=f,
-                        file_name="comparison_output.docx",
-                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            st.divider()
+
+            if st.button("Generate Highlighted Word File"):
+                try:
+                    old_file.seek(0)
+                    new_file.seek(0)
+
+                    with tempfile.NamedTemporaryFile(
+                        delete=False,
+                        suffix=".docx"
+                    ) as tmp:
+                        output_path = tmp.name
+
+                    compare_documents(
+                        old_file,
+                        new_file,
+                        output_path
                     )
 
-                os.remove(output_path)
+                    st.success(
+                        "Comparison completed successfully"
+                    )
 
-            except Exception as e:
-                st.error(f"Error: {str(e)}")
+                    with open(output_path, "rb") as f:
+                        st.download_button(
+                            label="Download Compared Document",
+                            data=f,
+                            file_name="comparison_output.docx",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                        )
+
+                    os.remove(output_path)
+
+                except Exception as e:
+                    st.error(
+                        f"Document generation error: {str(e)}"
+                    )
+
+        except Exception as e:
+            st.error(
+                f"Preview generation error: {str(e)}"
+            )
