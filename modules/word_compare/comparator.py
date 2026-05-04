@@ -213,18 +213,18 @@ def compare_tables(
 
                 # Only deleted table content
                 if old_text and not new_text:
-                old_cell = (
-                    old_output_table
-                    .rows[r_idx]
-                    .cells[c_idx]
-                )
+                    old_cell = (
+                        old_output_table
+                        .rows[r_idx]
+                        .cells[c_idx]
+                    )
 
-                for para in old_cell.paragraphs:
-                    for run in para.runs:
-                        highlight_run(
-                            run,
-                            "red"
-                        )
+                    for para in old_cell.paragraphs:
+                        for run in para.runs:
+                            highlight_run(
+                                run,
+                                "red"
+                            )
 
                 # New table → updated
                 new_cell = (
