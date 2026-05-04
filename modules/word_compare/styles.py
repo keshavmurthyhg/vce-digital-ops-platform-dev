@@ -9,7 +9,7 @@ def get_preview_css():
         .container {
             display:flex;
             width:100%;
-            height:650px;
+            height:380px;
             border:1px solid #ccc;
         }
 
