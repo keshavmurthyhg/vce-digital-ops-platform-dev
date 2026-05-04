@@ -155,6 +155,7 @@ def render():
 
             st.sidebar.download_button(
                 label="Download Compared File",
+                use_container_width=True
                 data=output_data["file_bytes"],
                 file_name=output_data["file_name"],
                 mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
