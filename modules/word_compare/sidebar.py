@@ -18,7 +18,7 @@ def render_sidebar():
     # -------------------------
     # Old file upload
     # -------------------------
-    st.sidebar.markdown(
+    st.sidebar.write(
         "Upload Old Document (DOCX)"
     )
 
@@ -31,7 +31,7 @@ def render_sidebar():
     # -------------------------
     # New file upload
     # -------------------------
-    st.sidebar.markdown(
+    st.sidebar.write(
         "Upload New Document (DOCX)"
     )
 
