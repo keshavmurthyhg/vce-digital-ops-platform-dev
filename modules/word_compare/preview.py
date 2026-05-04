@@ -251,8 +251,9 @@ def render_synced_preview(
         .container {{
             display:flex;
             width:100%;
-            height:650px;
+            height:400px;
             border:1px solid #ccc;
+            overflow:hidden;
         }}
 
         .pane {{
@@ -362,6 +363,6 @@ def render_synced_preview(
 
     components.html(
         combined_html,
-        height=420,
+        height=410,
         scrolling=False
     )
