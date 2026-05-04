@@ -13,17 +13,24 @@ def render():
     # -------------------------
     # Top title section
     # -------------------------
-    title_col1, title_col2 = st.columns([8, 1])
+    title_col1, title_col2 = st.columns([1, 8])
 
     with title_col1:
+        st.image(
+            "https://cdn-icons-png.flaticon.com/512/281/281760.png",
+            width=60
+        )
+    
+    with title_col2:
         st.markdown(
             """
             <div style="
-                font-size:64px;
+                font-size:52px;
                 font-weight:700;
-                margin-top:-15px;
-                margin-bottom:5px;
+                margin-top:-5px;
+                margin-bottom:0px;
                 color:#2f3342;
+                line-height:1.1;
             ">
                 Word Compare Utility
             </div>
@@ -31,15 +38,13 @@ def render():
             unsafe_allow_html=True
         )
 
-    with title_col2:
-        st.image(
-            "https://cdn-icons-png.flaticon.com/512/281/281760.png",
-            width=55
-        )
-
     st.markdown(
         """
-        <div style='margin-top:-10px; margin-bottom:10px;'>
+        <div style="
+            margin-top:-5px;
+            margin-bottom:10px;
+            font-size:16px;
+        ">
             Compare old and new word documents.
         </div>
         """,
