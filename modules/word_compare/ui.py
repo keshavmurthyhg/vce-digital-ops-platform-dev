@@ -1,304 +1,18 @@
 import streamlit as st
-import streamlit.components.v1 as components
-import tempfile
-import os
-import difflib
-import html
-from datetime import datetime
-from docx import Document
 
-from modules.word_compare.comparator import compare_documents
+from modules.word_compare.sidebar import (
+    render_sidebar
+)
 
+from modules.word_compare.preview import (
+    extract_doc_content,
+    generate_aligned_diff_rows,
+    render_synced_preview
+)
 
-# --------------------------------------------------
-# Extract document content
-# --------------------------------------------------
-def extract_doc_content(doc_file):
-    doc = Document(doc_file)
-    content = []
-
-    # Paragraphs
-    for para in doc.paragraphs:
-        text = para.text.strip()
-        if text:
-            content.append(text)
-
-    # Tables
-    for table_index, table in enumerate(doc.tables):
-        content.append(f"[TABLE-{table_index+1}]")
-
-        for row in table.rows:
-            row_text = " | ".join(
-                cell.text.strip()
-                for cell in row.cells
-            )
-            content.append(f"[TABLE] {row_text}")
-
-    # Images
-    image_count = 0
-
-    for rel in doc.part.rels.values():
-        try:
-            if rel.is_external:
-                continue
-
-            if "image" in rel.target_ref.lower():
-                image_count += 1
-        except Exception:
-            continue
-
-    if image_count:
-        content.append(
-            f"[IMAGES FOUND: {image_count}]"
-        )
-
-    return content
-
-
-# --------------------------------------------------
-# Build row html
-# --------------------------------------------------
-def build_row(text, css_class):
-    safe_text = html.escape(text)
-
-    return f"""
-    <div 
-        class="line {css_class}"
-        title="{safe_text}"
-    >
-        {safe_text}
-    </div>
-    """
-
-
-# --------------------------------------------------
-# Create aligned rows for both previews
-# --------------------------------------------------
-def generate_aligned_diff_rows(old_lines, new_lines):
-    matcher = difflib.SequenceMatcher(
-        None,
-        old_lines,
-        new_lines
-    )
-
-    old_rows = []
-    new_rows = []
-
-    for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
-
-        # Equal rows
-        if opcode == "equal":
-            max_len = max(i2 - i1, j2 - j1)
-
-            for idx in range(max_len):
-                old_line = (
-                    old_lines[i1 + idx]
-                    if (i1 + idx) < i2
-                    else ""
-                )
-
-                new_line = (
-                    new_lines[j1 + idx]
-                    if (j1 + idx) < j2
-                    else ""
-                )
-
-                old_rows.append(
-                    build_row(
-                        old_line,
-                        "normal" if old_line else "blank"
-                    )
-                )
-
-                new_rows.append(
-                    build_row(
-                        new_line,
-                        "normal" if new_line else "blank"
-                    )
-                )
-
-        # Delete rows
-        elif opcode == "delete":
-            deleted_lines = old_lines[i1:i2]
-
-            for line in deleted_lines:
-                old_rows.append(
-                    build_row(
-                        f"❌ Removed: {line}",
-                        "removed"
-                    )
-                )
-
-                new_rows.append(
-                    build_row("", "blank")
-                )
-
-        # Insert rows
-        elif opcode == "insert":
-            inserted_lines = new_lines[j1:j2]
-
-            for line in inserted_lines:
-                old_rows.append(
-                    build_row("", "blank")
-                )
-
-                new_rows.append(
-                    build_row(
-                        f"➕ Added: {line}",
-                        "added"
-                    )
-                )
-
-        # Replace rows
-        elif opcode == "replace":
-            old_chunk = old_lines[i1:i2]
-            new_chunk = new_lines[j1:j2]
-
-            max_len = max(
-                len(old_chunk),
-                len(new_chunk)
-            )
-
-            for idx in range(max_len):
-                old_line = (
-                    old_chunk[idx]
-                    if idx < len(old_chunk)
-                    else ""
-                )
-
-                new_line = (
-                    new_chunk[idx]
-                    if idx < len(new_chunk)
-                    else ""
-                )
-
-                old_rows.append(
-                    build_row(
-                        f"🔄 Replaced: {old_line}"
-                        if old_line else "",
-                        "updated" if old_line else "blank"
-                    )
-                )
-
-                new_rows.append(
-                    build_row(
-                        f"🔄 Updated: {new_line}"
-                        if new_line else "",
-                        "updated" if new_line else "blank"
-                    )
-                )
-
-    return "".join(old_rows), "".join(new_rows)
-
-
-# --------------------------------------------------
-# Render synchronized preview
-# --------------------------------------------------
-def render_synced_preview(old_html, new_html):
-    combined_html = f"""
-    <html>
-    <head>
-    <style>
-        body {{
-            margin:0;
-            font-family:Arial;
-        }}
-
-        .container {{
-            display:flex;
-            width:100%;
-            height:650px;
-            border:1px solid #ccc;
-        }}
-
-        .pane {{
-            width:50%;
-            overflow-y:auto;
-            border-right:1px solid #ddd;
-            font-family:Consolas, monospace;
-        }}
-
-        .line {{
-            height:24px;
-            line-height:24px;
-            padding:0 6px;
-            margin:0;
-            font-size:12px;
-            white-space:nowrap;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            border-radius:3px;
-            box-sizing:border-box;
-        }}
-
-        .normal {{
-            background:white;
-        }}
-
-        .removed {{
-            background:#ffd6d6;
-        }}
-
-        .added {{
-            background:#d6f5d6;
-        }}
-
-        .updated {{
-            background:#fff2cc;
-        }}
-
-        .blank {{
-            background:white;
-        }}
-    </style>
-    </head>
-
-    <body>
-
-    <div class="container">
-
-        <div class="pane" id="leftPane">
-            {old_html}
-        </div>
-
-        <div class="pane" id="rightPane">
-            {new_html}
-        </div>
-
-    </div>
-
-    <script>
-        const left = document.getElementById("leftPane");
-        const right = document.getElementById("rightPane");
-
-        let syncing = false;
-
-        left.addEventListener("scroll", function() {{
-            if (!syncing) {{
-                syncing = true;
-                right.scrollTop = left.scrollTop;
-                syncing = false;
-            }}
-        }});
-
-        right.addEventListener("scroll", function() {{
-            if (!syncing) {{
-                syncing = true;
-                left.scrollTop = right.scrollTop;
-                syncing = false;
-            }}
-        }});
-    </script>
-
-    </body>
-    </html>
-    """
-
-    components.html(
-        combined_html,
-        height=700,
-        scrolling=False
-    )
+from modules.word_compare.generator import (
+    generate_output_file
+)
 
 
 # --------------------------------------------------
@@ -309,97 +23,133 @@ def render():
 
     st.write(
         "Upload old master document and new document "
-        "to preview and highlight changes."
+        "from sidebar to compare changes."
     )
 
-    col1, col2 = st.columns(2)
+    # ------------------------------------------
+    # Sidebar Controls
+    # ------------------------------------------
+    controls = render_sidebar()
 
-    with col1:
-        old_file = st.file_uploader(
-            "Upload Old Document (Master)",
-            type=["docx"]
+    old_file = controls["old_file"]
+    new_file = controls["new_file"]
+    generate_clicked = controls["generate_clicked"]
+
+    # ------------------------------------------
+    # Initial state
+    # ------------------------------------------
+    if not old_file or not new_file:
+        st.info(
+            "Upload both documents from the sidebar "
+            "to start comparison."
         )
+        return
 
-    with col2:
-        new_file = st.file_uploader(
-            "Upload New Document",
-            type=["docx"]
-        )
-
-    if old_file and new_file:
-
+    try:
+        # ------------------------------------------
+        # Extract preview content
+        # ------------------------------------------
         old_file.seek(0)
-        old_lines = extract_doc_content(old_file)
+        old_lines = extract_doc_content(
+            old_file
+        )
 
         new_file.seek(0)
-        new_lines = extract_doc_content(new_file)
-
-        old_html, new_html = generate_aligned_diff_rows(
-            old_lines,
-            new_lines
+        new_lines = extract_doc_content(
+            new_file
         )
 
-        st.subheader("Difference Preview")
+        # ------------------------------------------
+        # Generate preview rows
+        # ------------------------------------------
+        old_html, new_html = (
+            generate_aligned_diff_rows(
+                old_lines,
+                new_lines
+            )
+        )
 
-        h1, h2 = st.columns(2)
+        # ------------------------------------------
+        # Success message
+        # ------------------------------------------
+        st.success(
+            "Files loaded successfully. "
+            "Review the preview below."
+        )
 
-        with h1:
-            st.markdown(f"### {old_file.name}")
+        # ------------------------------------------
+        # Preview Section
+        # ------------------------------------------
+        st.subheader(
+            "Difference Preview"
+        )
 
-        with h2:
-            st.markdown(f"### {new_file.name}")
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(
+                f"### {old_file.name}"
+            )
+
+        with col2:
+            st.markdown(
+                f"### {new_file.name}"
+            )
 
         render_synced_preview(
             old_html,
             new_html
         )
 
-        st.divider()
-
-        if st.button("Generate Highlighted Word File"):
+        # ------------------------------------------
+        # Generate Output
+        # ------------------------------------------
+        if generate_clicked:
             try:
-                old_file.seek(0)
-                new_file.seek(0)
-
-                base_name = os.path.splitext(
-                    old_file.name
-                )[0]
-
-                current_date = datetime.now().strftime(
-                    "%d%b%Y"
+                output_data = (
+                    generate_output_file(
+                        old_file,
+                        new_file
+                    )
                 )
 
-                output_filename = (
-                    f"{base_name}"
-                    f"_Diff-Highlighted_"
-                    f"{current_date}.docx"
+                st.session_state[
+                    "word_compare_output"
+                ] = output_data
+
+                st.success(
+                    "Highlighted document "
+                    "generated successfully."
                 )
-
-                with tempfile.NamedTemporaryFile(
-                    delete=False,
-                    suffix=".docx"
-                ) as tmp:
-                    output_path = tmp.name
-
-                compare_documents(
-                    old_file,
-                    new_file,
-                    output_path
-                )
-
-                with open(output_path, "rb") as f:
-                    file_bytes = f.read()
-
-                st.download_button(
-                    label="Download Compared Document",
-                    data=file_bytes,
-                    file_name=output_filename,
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                )
-
-                os.remove(output_path)
 
             except Exception as e:
                 st.error(
-                    f"Error: {str(e)}"
+                    f"Generation Error: {str(e)}"
                 )
+
+        # ------------------------------------------
+        # Download Button
+        # ------------------------------------------
+        if (
+            "word_compare_output"
+            in st.session_state
+        ):
+            output_data = st.session_state[
+                "word_compare_output"
+            ]
+
+            st.sidebar.download_button(
+                label="Download Compared File",
+                data=output_data[
+                    "file_bytes"
+                ],
+                file_name=output_data[
+                    "file_name"
+                ],
+                mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            )
+
+    except Exception as e:
+        st.error(
+            f"Preview Error: {str(e)}"
+        )
