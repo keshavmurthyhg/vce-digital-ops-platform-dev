@@ -40,25 +40,40 @@ def render_sidebar():
     )
     
     if clear_clicked:
+        # Current uploader keys
+        old_key = st.session_state.get(
+            "old_uploader_key"
+        )
+        new_key = st.session_state.get(
+            "new_uploader_key"
+        )
+    
+        # Remove uploaded file objects
+        if old_key and old_key in st.session_state:
+            del st.session_state[old_key]
+    
+        if new_key and new_key in st.session_state:
+            del st.session_state[new_key]
+    
+        # Remove generated file/output
         keys_to_remove = [
             "word_compare_output",
-            "generation_success",
-            "wc_old_doc",
-            "wc_new_doc"
+            "generation_success"
         ]
     
-        # Remove stored session values
         for key in keys_to_remove:
             if key in st.session_state:
                 del st.session_state[key]
     
-        # Reset uploader keys completely
+        # Create fresh uploader keys
+        import uuid
+    
         st.session_state["old_uploader_key"] = (
-            f"old_upload_{len(st.session_state)}"
+            f"old_upload_{uuid.uuid4().hex}"
         )
     
         st.session_state["new_uploader_key"] = (
-            f"new_upload_{len(st.session_state)+1}"
+            f"new_upload_{uuid.uuid4().hex}"
         )
     
         st.rerun()
