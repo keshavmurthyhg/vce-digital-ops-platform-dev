@@ -10,9 +10,9 @@ from docx import Document
 from modules.word_compare.comparator import compare_documents
 
 
-# ------------------------------------------
+# --------------------------------------------------
 # Extract document content
-# ------------------------------------------
+# --------------------------------------------------
 def extract_doc_content(doc_file):
     doc = Document(doc_file)
     content = []
@@ -43,7 +43,6 @@ def extract_doc_content(doc_file):
 
             if "image" in rel.target_ref.lower():
                 image_count += 1
-
         except Exception:
             continue
 
@@ -55,81 +54,134 @@ def extract_doc_content(doc_file):
     return content
 
 
-# ------------------------------------------
-# Generate diff HTML
-# ------------------------------------------
-def generate_diff_html(old_lines, new_lines, is_old=True):
+# --------------------------------------------------
+# Create aligned rows for both previews
+# --------------------------------------------------
+def generate_aligned_diff_rows(old_lines, new_lines):
     matcher = difflib.SequenceMatcher(
         None,
         old_lines,
         new_lines
     )
 
-    output = []
+    old_rows = []
+    new_rows = []
 
     for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
 
+        # ---------------------------
+        # Equal rows
+        # ---------------------------
         if opcode == "equal":
-            lines = old_lines[i1:i2] if is_old else new_lines[j1:j2]
-
-            for line in lines:
-                output.append(
-                    f"""
-                    <div class="line normal">
-                        {html.escape(line)}
-                    </div>
-                    """
+            for old_line, new_line in zip(
+                old_lines[i1:i2],
+                new_lines[j1:j2]
+            ):
+                old_rows.append(
+                    build_row(old_line, "normal")
+                )
+                new_rows.append(
+                    build_row(new_line, "normal")
                 )
 
-        elif opcode == "delete" and is_old:
-            for line in old_lines[i1:i2]:
-                output.append(
-                    f"""
-                    <div class="line removed">
-                        ❌ Removed: {html.escape(line)}
-                    </div>
-                    """
+        # ---------------------------
+        # Delete rows
+        # ---------------------------
+        elif opcode == "delete":
+            deleted_lines = old_lines[i1:i2]
+
+            for line in deleted_lines:
+                old_rows.append(
+                    build_row(
+                        f"❌ Removed: {line}",
+                        "removed"
+                    )
                 )
 
-        elif opcode == "insert" and not is_old:
-            for line in new_lines[j1:j2]:
-                output.append(
-                    f"""
-                    <div class="line added">
-                        ➕ Added: {html.escape(line)}
-                    </div>
-                    """
+                # placeholder in new
+                new_rows.append(
+                    build_row("", "blank")
                 )
 
+        # ---------------------------
+        # Insert rows
+        # ---------------------------
+        elif opcode == "insert":
+            inserted_lines = new_lines[j1:j2]
+
+            for line in inserted_lines:
+                old_rows.append(
+                    build_row("", "blank")
+                )
+
+                new_rows.append(
+                    build_row(
+                        f"➕ Added: {line}",
+                        "added"
+                    )
+                )
+
+        # ---------------------------
+        # Replace rows
+        # ---------------------------
         elif opcode == "replace":
-            lines = old_lines[i1:i2] if is_old else new_lines[j1:j2]
+            old_chunk = old_lines[i1:i2]
+            new_chunk = new_lines[j1:j2]
 
-            for line in lines:
-                label = (
-                    "🔄 Replaced"
-                    if is_old
-                    else "🔄 Updated"
+            max_len = max(
+                len(old_chunk),
+                len(new_chunk)
+            )
+
+            for idx in range(max_len):
+                old_line = (
+                    old_chunk[idx]
+                    if idx < len(old_chunk)
+                    else ""
                 )
 
-                output.append(
-                    f"""
-                    <div class="line updated">
-                        {label}: {html.escape(line)}
-                    </div>
-                    """
+                new_line = (
+                    new_chunk[idx]
+                    if idx < len(new_chunk)
+                    else ""
                 )
 
-    return "".join(output)
+                old_rows.append(
+                    build_row(
+                        f"🔄 Replaced: {old_line}"
+                        if old_line else "",
+                        "updated" if old_line else "blank"
+                    )
+                )
+
+                new_rows.append(
+                    build_row(
+                        f"🔄 Updated: {new_line}"
+                        if new_line else "",
+                        "updated" if new_line else "blank"
+                    )
+                )
+
+    return "".join(old_rows), "".join(new_rows)
 
 
-# ------------------------------------------
-# Combined synchronized preview
-# ------------------------------------------
+# --------------------------------------------------
+# Build row html
+# --------------------------------------------------
+def build_row(text, css_class):
+    return f"""
+    <div class="line {css_class}">
+        {html.escape(text)}
+    </div>
+    """
+
+
+# --------------------------------------------------
+# Render synchronized preview
+# --------------------------------------------------
 def render_synced_preview(
     old_html,
-    new_html,
-    old_filename,
-    new_filename
+    new_html
 ):
     combined_html = f"""
     <html>
@@ -151,25 +203,15 @@ def render_synced_preview(
             width:50%;
             overflow-y:auto;
             border-right:1px solid #ddd;
-            padding:10px;
-        }}
-
-        .header {{
-            font-weight:bold;
-            font-size:16px;
-            margin-bottom:10px;
-            position:sticky;
-            top:0;
-            background:white;
-            padding:10px;
-            z-index:100;
         }}
 
         .line {{
+            min-height:32px;
             padding:6px;
-            margin:4px 0;
+            margin:2px;
             border-radius:4px;
             font-size:13px;
+            white-space:pre-wrap;
         }}
 
         .normal {{
@@ -187,6 +229,10 @@ def render_synced_preview(
         .updated {{
             background:#ffe599;
         }}
+
+        .blank {{
+            background:white;
+        }}
     </style>
     </head>
 
@@ -195,12 +241,10 @@ def render_synced_preview(
     <div class="container">
 
         <div class="pane" id="leftPane">
-            <div class="header">{old_filename}</div>
             {old_html}
         </div>
 
         <div class="pane" id="rightPane">
-            <div class="header">{new_filename}</div>
             {new_html}
         </div>
 
@@ -240,9 +284,9 @@ def render_synced_preview(
     )
 
 
-# ------------------------------------------
+# --------------------------------------------------
 # Main UI
-# ------------------------------------------
+# --------------------------------------------------
 def render():
     st.title("Word Compare Utility")
 
@@ -273,31 +317,36 @@ def render():
         new_file.seek(0)
         new_lines = extract_doc_content(new_file)
 
-        old_html = generate_diff_html(
+        old_html, new_html = generate_aligned_diff_rows(
             old_lines,
-            new_lines,
-            True
-        )
-
-        new_html = generate_diff_html(
-            old_lines,
-            new_lines,
-            False
+            new_lines
         )
 
         st.subheader("Difference Preview")
 
+        # filenames OUTSIDE preview pane
+        h1, h2 = st.columns(2)
+
+        with h1:
+            st.markdown(
+                f"### {old_file.name}"
+            )
+
+        with h2:
+            st.markdown(
+                f"### {new_file.name}"
+            )
+
         render_synced_preview(
             old_html,
-            new_html,
-            old_file.name,
-            new_file.name
+            new_html
         )
 
         st.divider()
 
-        if st.button("Generate Highlighted Word File"):
-
+        if st.button(
+            "Generate Highlighted Word File"
+        ):
             try:
                 old_file.seek(0)
                 new_file.seek(0)
@@ -326,10 +375,6 @@ def render():
                     old_file,
                     new_file,
                     output_path
-                )
-
-                st.success(
-                    "Comparison completed successfully"
                 )
 
                 with open(output_path, "rb") as f:
