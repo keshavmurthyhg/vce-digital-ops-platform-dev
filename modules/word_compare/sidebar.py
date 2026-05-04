@@ -19,7 +19,7 @@ def render_sidebar():
     # Old file upload
     # -------------------------
     old_file = st.sidebar.file_uploader(
-        "Upload Old Document (DOCX | 200MB)",
+        "Upload Old Document",
         type=["docx"],
         key="wc_old_doc"
     )
@@ -28,7 +28,7 @@ def render_sidebar():
     # New file upload
     # -------------------------
     new_file = st.sidebar.file_uploader(
-        "Upload New Document (DOCX | 200MB)",
+        "Upload New Document",
         type=["docx"],
         key="wc_new_doc"
     )
