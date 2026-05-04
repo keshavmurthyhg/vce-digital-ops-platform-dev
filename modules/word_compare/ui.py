@@ -169,9 +169,14 @@ def generate_aligned_diff_rows(old_lines, new_lines):
 # Build row html
 # --------------------------------------------------
 def build_row(text, css_class):
+    safe_text = html.escape(text)
+
     return f"""
-    <div class="line {css_class}">
-        {html.escape(text)}
+    <div 
+        class="line {css_class}"
+        title="{safe_text}"
+    >
+        {safe_text}
     </div>
     """
 
@@ -206,12 +211,16 @@ def render_synced_preview(
         }}
 
         .line {{
-            min-height:32px;
+            height:32px;
+            line-height:20px;
             padding:6px;
             margin:2px;
             border-radius:4px;
             font-size:13px;
-            white-space:pre-wrap;
+            white-space:nowrap;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            box-sizing:border-box;
         }}
 
         .normal {{
