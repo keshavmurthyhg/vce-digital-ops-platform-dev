@@ -76,9 +76,18 @@ def render():
         )
 
         # compact message
+        # File upload success message
         st.success(
             "Files loaded successfully."
         )
+        
+        # Generation success message
+        if st.session_state.get(
+            "generation_success"
+        ):
+            st.success(
+                "Highlighted document generated successfully."
+            )
 
         st.markdown(
             "<h3 style='margin-bottom:5px;'>Difference Preview</h3>",
@@ -127,14 +136,7 @@ def render():
                     "word_compare_output"
                 ] = output_data
 
-                st.session_state["generation_success"] = True
-                if st.session_state.get(
-                    "generation_success"
-                ):
-                    st.success(
-                        "Highlighted document generated successfully."
-                    )
-
+                
             except Exception as e:
                 st.error(
                     f"Generation Error: {str(e)}"
