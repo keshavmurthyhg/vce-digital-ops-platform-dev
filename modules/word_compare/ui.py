@@ -53,7 +53,7 @@ def render():
     )
 
     # -----------------------------------
-    # Sidebar controls
+    # Sidebar
     # -----------------------------------
     controls = render_sidebar()
 
@@ -85,10 +85,11 @@ def render():
         message_placeholder = st.empty()
         current_time = time.time()
 
-        # -----------------------------------
         # Upload success message
-        # -----------------------------------
-        if old_file and new_file:
+        if (
+            old_file and new_file
+            and not st.session_state.get("generation_success")
+        ):
             if "upload_message_time" not in st.session_state:
                 st.session_state["upload_message_time"] = current_time
 
@@ -101,10 +102,13 @@ def render():
                 message_placeholder.success(
                     "Files loaded successfully."
                 )
+            else:
+                st.session_state.pop(
+                    "upload_message_time",
+                    None
+                )
 
-        # -----------------------------------
-        # Generation success message
-        # -----------------------------------
+        # Final generation success message
         if st.session_state.get(
             "generation_success"
         ):
@@ -119,13 +123,13 @@ def render():
 
             if generation_elapsed <= 4:
                 message_placeholder.success(
-                    "Highlighted document generated successfully."
+                    "Highlighted document generated successfully. File is ready for download."
                 )
             else:
-                st.session_state[
-                    "generation_success"
-                ] = False
-
+                st.session_state.pop(
+                    "generation_success",
+                    None
+                )
                 st.session_state.pop(
                     "generation_success_time",
                     None
@@ -146,9 +150,7 @@ def render():
                     percent,
                     message
                 ):
-                    progress_bar.progress(
-                        percent
-                    )
+                    progress_bar.progress(percent)
 
                     status_box.info(
                         f"{message} ({percent}%)"
@@ -164,13 +166,18 @@ def render():
                     "word_compare_output"
                 ] = output_data
 
-                # remove upload message immediately
+                # Remove upload message
                 st.session_state.pop(
                     "upload_message_time",
                     None
                 )
 
-                # set generation success message
+                progress_bar.progress(100)
+
+                # Remove progress message
+                status_box.empty()
+
+                # Final success message
                 st.session_state[
                     "generation_success"
                 ] = True
@@ -179,12 +186,7 @@ def render():
                     "generation_success_time"
                 ] = time.time()
 
-                progress_bar.progress(100)
-                status_box.success(
-                    "File generation completed successfully."
-                )
-
-                time.sleep(1)
+                time.sleep(0.5)
                 st.rerun()
 
             except Exception as e:
