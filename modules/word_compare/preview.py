@@ -1,28 +1,44 @@
 import difflib
 import html
+import textwrap
 import streamlit.components.v1 as components
 from docx import Document
 
 
-# --------------------------------------------------
+# ----------------------------------------
+# Split long lines for better preview
+# ----------------------------------------
+def split_long_text(text, width=90):
+    if not text:
+        return [""]
+
+    wrapped = textwrap.wrap(
+        text,
+        width=width,
+        break_long_words=False,
+        break_on_hyphens=False
+    )
+
+    return wrapped if wrapped else [text]
+
+
+# ----------------------------------------
 # Extract document content
-# --------------------------------------------------
+# ----------------------------------------
 def extract_doc_content(doc_file):
     doc = Document(doc_file)
     content = []
 
-    # -------------------------
     # Paragraphs
-    # -------------------------
     for para in doc.paragraphs:
         text = para.text.strip()
 
         if text:
-            content.append(text)
+            content.extend(
+                split_long_text(text)
+            )
 
-    # -------------------------
     # Tables
-    # -------------------------
     for table_index, table in enumerate(doc.tables):
         content.append(
             f"[TABLE-{table_index+1}]"
@@ -34,13 +50,14 @@ def extract_doc_content(doc_file):
                 for cell in row.cells
             )
 
-            content.append(
-                f"[TABLE] {row_text}"
-            )
+            if row_text.strip():
+                content.extend(
+                    split_long_text(
+                        f"[TABLE] {row_text}"
+                    )
+                )
 
-    # -------------------------
     # Images
-    # -------------------------
     image_count = 0
 
     for rel in doc.part.rels.values():
@@ -51,7 +68,7 @@ def extract_doc_content(doc_file):
             if "image" in rel.target_ref.lower():
                 image_count += 1
 
-        except Exception:
+        except:
             continue
 
     if image_count:
@@ -62,29 +79,23 @@ def extract_doc_content(doc_file):
     return content
 
 
-# --------------------------------------------------
-# Build row html
-# --------------------------------------------------
+# ----------------------------------------
+# Build row HTML
+# ----------------------------------------
 def build_row(text, css_class):
     safe_text = html.escape(text)
 
     return f"""
-    <div
-        class="line {css_class}"
-        title="{safe_text}"
-    >
+    <div class="line {css_class}" title="{safe_text}">
         {safe_text}
     </div>
     """
 
 
-# --------------------------------------------------
+# ----------------------------------------
 # Generate aligned diff rows
-# --------------------------------------------------
-def generate_aligned_diff_rows(
-    old_lines,
-    new_lines
-):
+# ----------------------------------------
+def generate_aligned_diff_rows(old_lines, new_lines):
     matcher = difflib.SequenceMatcher(
         None,
         old_lines,
@@ -96,92 +107,51 @@ def generate_aligned_diff_rows(
 
     for opcode, i1, i2, j1, j2 in matcher.get_opcodes():
 
-        # --------------------------------
-        # Equal rows
-        # --------------------------------
         if opcode == "equal":
-            max_len = max(
-                i2 - i1,
-                j2 - j1
-            )
+            max_len = max(i2-i1, j2-j1)
 
             for idx in range(max_len):
-
-                old_line = (
-                    old_lines[i1 + idx]
-                    if (i1 + idx) < i2
-                    else ""
-                )
-
-                new_line = (
-                    new_lines[j1 + idx]
-                    if (j1 + idx) < j2
-                    else ""
-                )
+                old_line = old_lines[i1+idx] if i1+idx < i2 else ""
+                new_line = new_lines[j1+idx] if j1+idx < j2 else ""
 
                 old_rows.append(
                     build_row(
                         old_line,
-                        "normal"
-                        if old_line
-                        else "blank"
+                        "normal" if old_line else "blank"
                     )
                 )
 
                 new_rows.append(
                     build_row(
                         new_line,
-                        "normal"
-                        if new_line
-                        else "blank"
+                        "normal" if new_line else "blank"
                     )
                 )
 
-        # --------------------------------
-        # Deleted rows
-        # --------------------------------
         elif opcode == "delete":
-            deleted_lines = old_lines[i1:i2]
-
-            for line in deleted_lines:
+            for line in old_lines[i1:i2]:
                 old_rows.append(
                     build_row(
-                        f"❌ Removed: {line}",
+                        f"Removed: {line}",
                         "removed"
                     )
                 )
-
                 new_rows.append(
-                    build_row(
-                        "",
-                        "blank"
-                    )
+                    build_row("", "blank")
                 )
 
-        # --------------------------------
-        # Added rows
-        # --------------------------------
         elif opcode == "insert":
-            inserted_lines = new_lines[j1:j2]
-
-            for line in inserted_lines:
+            for line in new_lines[j1:j2]:
                 old_rows.append(
-                    build_row(
-                        "",
-                        "blank"
-                    )
+                    build_row("", "blank")
                 )
-
                 new_rows.append(
                     build_row(
-                        f"➕ Added: {line}",
+                        f"Added: {line}",
                         "added"
                     )
                 )
 
-        # --------------------------------
-        # Replaced rows
-        # --------------------------------
         elif opcode == "replace":
             old_chunk = old_lines[i1:i2]
             new_chunk = new_lines[j1:j2]
@@ -192,52 +162,30 @@ def generate_aligned_diff_rows(
             )
 
             for idx in range(max_len):
-
-                old_line = (
-                    old_chunk[idx]
-                    if idx < len(old_chunk)
-                    else ""
-                )
-
-                new_line = (
-                    new_chunk[idx]
-                    if idx < len(new_chunk)
-                    else ""
-                )
+                old_line = old_chunk[idx] if idx < len(old_chunk) else ""
+                new_line = new_chunk[idx] if idx < len(new_chunk) else ""
 
                 old_rows.append(
                     build_row(
-                        f"🔄 Replaced: {old_line}"
-                        if old_line else "",
-                        "updated"
-                        if old_line
-                        else "blank"
+                        f"Replaced: {old_line}" if old_line else "",
+                        "updated" if old_line else "blank"
                     )
                 )
 
                 new_rows.append(
                     build_row(
-                        f"🔄 Updated: {new_line}"
-                        if new_line else "",
-                        "updated"
-                        if new_line
-                        else "blank"
+                        f"Updated: {new_line}" if new_line else "",
+                        "updated" if new_line else "blank"
                     )
                 )
 
-    return (
-        "".join(old_rows),
-        "".join(new_rows)
-    )
+    return "".join(old_rows), "".join(new_rows)
 
 
-# --------------------------------------------------
-# Render synced preview
-# --------------------------------------------------
-def render_synced_preview(
-    old_html,
-    new_html
-):
+# ----------------------------------------
+# Render preview
+# ----------------------------------------
+def render_synced_preview(old_html, new_html):
     combined_html = f"""
     <html>
     <head>
@@ -251,7 +199,7 @@ def render_synced_preview(
         .container {{
             display:flex;
             width:100%;
-            height:400px;
+            height:360px;
             border:1px solid #ccc;
             overflow:hidden;
         }}
@@ -259,19 +207,18 @@ def render_synced_preview(
         .pane {{
             width:50%;
             overflow-y:auto;
+            overflow-x:hidden;
             border-right:1px solid #ddd;
             font-family:Consolas, monospace;
         }}
 
         .line {{
-            height:24px;
+            min-height:24px;
             line-height:24px;
-            padding:0 6px;
-            margin:0;
+            padding:0 8px;
             font-size:12px;
-            white-space:nowrap;
-            overflow:hidden;
-            text-overflow:ellipsis;
+            white-space:normal;
+            word-break:break-word;
             border-radius:3px;
             box-sizing:border-box;
         }}
@@ -303,17 +250,11 @@ def render_synced_preview(
 
         <div class="container">
 
-            <div
-                class="pane"
-                id="leftPane"
-            >
+            <div class="pane" id="leftPane">
                 {old_html}
             </div>
 
-            <div
-                class="pane"
-                id="rightPane"
-            >
+            <div class="pane" id="rightPane">
                 {new_html}
             </div>
 
@@ -321,40 +262,28 @@ def render_synced_preview(
 
         <script>
             const left =
-                document.getElementById(
-                    "leftPane"
-                );
+                document.getElementById("leftPane");
 
             const right =
-                document.getElementById(
-                    "rightPane"
-                );
+                document.getElementById("rightPane");
 
             let syncing = false;
 
-            left.addEventListener(
-                "scroll",
-                function() {{
-                    if (!syncing) {{
-                        syncing = true;
-                        right.scrollTop =
-                            left.scrollTop;
-                        syncing = false;
-                    }}
+            left.addEventListener("scroll", function() {{
+                if (!syncing) {{
+                    syncing = true;
+                    right.scrollTop = left.scrollTop;
+                    syncing = false;
                 }}
-            );
+            }});
 
-            right.addEventListener(
-                "scroll",
-                function() {{
-                    if (!syncing) {{
-                        syncing = true;
-                        left.scrollTop =
-                            right.scrollTop;
-                        syncing = false;
-                    }}
+            right.addEventListener("scroll", function() {{
+                if (!syncing) {{
+                    syncing = true;
+                    left.scrollTop = right.scrollTop;
+                    syncing = false;
                 }}
-            );
+            }});
         </script>
 
     </body>
@@ -363,6 +292,6 @@ def render_synced_preview(
 
     components.html(
         combined_html,
-        height=410,
+        height=370,
         scrolling=False
     )
