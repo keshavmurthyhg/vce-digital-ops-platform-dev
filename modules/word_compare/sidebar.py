@@ -32,32 +32,35 @@ def render_sidebar():
     )
 
     # -----------------------------------
-    # Clear button (moved above generate)
+    # Clear button
     # -----------------------------------
     clear_clicked = st.sidebar.button(
         "Clear Files",
         use_container_width=True
     )
-
+    
     if clear_clicked:
         keys_to_remove = [
             "word_compare_output",
-            "generation_success"
+            "generation_success",
+            "wc_old_doc",
+            "wc_new_doc"
         ]
-
+    
+        # Remove stored session values
         for key in keys_to_remove:
             if key in st.session_state:
                 del st.session_state[key]
-
-        # Reset uploaders completely
+    
+        # Reset uploader keys completely
         st.session_state["old_uploader_key"] = (
             f"old_upload_{len(st.session_state)}"
         )
-
+    
         st.session_state["new_uploader_key"] = (
             f"new_upload_{len(st.session_state)+1}"
         )
-
+    
         st.rerun()
 
     # -----------------------------------
