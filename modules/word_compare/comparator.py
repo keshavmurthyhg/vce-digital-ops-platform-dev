@@ -65,11 +65,21 @@ def get_image_hashes(doc):
     hashes = []
 
     rels = doc.part.rels
-    for rel in rels:
-        if "image" in rels[rel].target_ref:
-            img_data = rels[rel].target_part.blob
-            img_hash = hashlib.md5(img_data).hexdigest()
-            hashes.append(img_hash)
+
+    for rel in rels.values():
+        try:
+            # Skip external references
+            if rel.is_external:
+                continue
+
+            if "image" in rel.target_ref.lower():
+                img_data = rel.target_part.blob
+                img_hash = hashlib.md5(img_data).hexdigest()
+                hashes.append(img_hash)
+
+        except Exception:
+            # Skip problematic relationships
+            continue
 
     return hashes
 
