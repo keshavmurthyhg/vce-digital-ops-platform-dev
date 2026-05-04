@@ -2,18 +2,27 @@ from docx import Document
 from docx.shared import RGBColor
 from copy import deepcopy
 import hashlib
-import io
+import os
+from datetime import datetime
 
 
+# ------------------------------------------
+# Highlight helpers
+# ------------------------------------------
 def highlight_run(run, color="yellow"):
     if color == "yellow":
         run.font.highlight_color = 7
+
     elif color == "red":
         run.font.color.rgb = RGBColor(255, 0, 0)
+
     elif color == "green":
         run.font.color.rgb = RGBColor(0, 128, 0)
 
 
+# ------------------------------------------
+# Compare paragraphs
+# ------------------------------------------
 def compare_paragraphs(old_doc, new_doc, output_doc):
     old_paras = old_doc.paragraphs
     new_paras = new_doc.paragraphs
@@ -21,6 +30,7 @@ def compare_paragraphs(old_doc, new_doc, output_doc):
     max_len = max(len(old_paras), len(new_paras))
 
     for i in range(max_len):
+
         if i >= len(old_paras):
             p = output_doc.add_paragraph()
             run = p.add_run(new_paras[i].text)
@@ -32,10 +42,16 @@ def compare_paragraphs(old_doc, new_doc, output_doc):
 
         if old_paras[i].text != new_paras[i].text:
             output_doc.paragraphs[i].clear()
-            run = output_doc.paragraphs[i].add_run(new_paras[i].text)
+
+            run = output_doc.paragraphs[i].add_run(
+                new_paras[i].text
+            )
             highlight_run(run, "yellow")
 
 
+# ------------------------------------------
+# Compare tables
+# ------------------------------------------
 def compare_tables(old_doc, new_doc, output_doc):
     old_tables = old_doc.tables
     new_tables = new_doc.tables
@@ -43,17 +59,25 @@ def compare_tables(old_doc, new_doc, output_doc):
     for t_idx in range(min(len(old_tables), len(new_tables))):
         old_table = old_tables[t_idx]
         new_table = new_tables[t_idx]
-        out_table = output_doc.tables[t_idx]
+        output_table = output_doc.tables[t_idx]
 
-        for r_idx in range(min(len(old_table.rows), len(new_table.rows))):
-            for c_idx in range(min(len(old_table.rows[r_idx].cells),
-                                   len(new_table.rows[r_idx].cells))):
+        for r_idx in range(
+            min(len(old_table.rows), len(new_table.rows))
+        ):
+            old_row = old_table.rows[r_idx]
+            new_row = new_table.rows[r_idx]
 
-                old_text = old_table.rows[r_idx].cells[c_idx].text
-                new_text = new_table.rows[r_idx].cells[c_idx].text
+            for c_idx in range(
+                min(
+                    len(old_row.cells),
+                    len(new_row.cells)
+                )
+            ):
+                old_text = old_row.cells[c_idx].text
+                new_text = new_row.cells[c_idx].text
 
                 if old_text != new_text:
-                    cell = out_table.rows[r_idx].cells[c_idx]
+                    cell = output_table.rows[r_idx].cells[c_idx]
                     cell.text = new_text
 
                     for para in cell.paragraphs:
@@ -61,14 +85,14 @@ def compare_tables(old_doc, new_doc, output_doc):
                             highlight_run(run, "yellow")
 
 
+# ------------------------------------------
+# Get embedded image hashes
+# ------------------------------------------
 def get_image_hashes(doc):
     hashes = []
 
-    rels = doc.part.rels
-
-    for rel in rels.values():
+    for rel in doc.part.rels.values():
         try:
-            # Skip external references
             if rel.is_external:
                 continue
 
@@ -78,12 +102,14 @@ def get_image_hashes(doc):
                 hashes.append(img_hash)
 
         except Exception:
-            # Skip problematic relationships
             continue
 
     return hashes
 
 
+# ------------------------------------------
+# Compare images
+# ------------------------------------------
 def compare_images(old_doc, new_doc, output_doc):
     old_images = set(get_image_hashes(old_doc))
     new_images = set(get_image_hashes(new_doc))
@@ -94,7 +120,7 @@ def compare_images(old_doc, new_doc, output_doc):
     if added:
         p = output_doc.add_paragraph()
         run = p.add_run(
-            f"New Images Added: {len(added)}"
+            f"Images Added: {len(added)}"
         )
         highlight_run(run, "green")
 
@@ -106,14 +132,31 @@ def compare_images(old_doc, new_doc, output_doc):
         highlight_run(run, "red")
 
 
+# ------------------------------------------
+# Main compare
+# ------------------------------------------
 def compare_documents(old_file, new_file, output_path):
     old_doc = Document(old_file)
     new_doc = Document(new_file)
 
     output_doc = deepcopy(old_doc)
 
-    compare_paragraphs(old_doc, new_doc, output_doc)
-    compare_tables(old_doc, new_doc, output_doc)
-    compare_images(old_doc, new_doc, output_doc)
+    compare_paragraphs(
+        old_doc,
+        new_doc,
+        output_doc
+    )
+
+    compare_tables(
+        old_doc,
+        new_doc,
+        output_doc
+    )
+
+    compare_images(
+        old_doc,
+        new_doc,
+        output_doc
+    )
 
     output_doc.save(output_path)
