@@ -79,32 +79,29 @@ def render():
             new_lines
         )
 
-        import time
         # -----------------------------------
         # Message container
         # -----------------------------------
         message_placeholder = st.empty()
-        
         current_time = time.time()
-                
+
         # -----------------------------------
         # Upload success message
         # -----------------------------------
         if old_file and new_file:
             if "upload_message_time" not in st.session_state:
                 st.session_state["upload_message_time"] = current_time
-        
+
             upload_elapsed = (
                 current_time -
                 st.session_state["upload_message_time"]
             )
-        
+
             if upload_elapsed <= 3:
                 message_placeholder.success(
                     "Files loaded successfully."
                 )
-        
-        
+
         # -----------------------------------
         # Generation success message
         # -----------------------------------
@@ -115,11 +112,11 @@ def render():
                 "generation_success_time",
                 current_time
             )
-        
+
             generation_elapsed = (
                 current_time - generation_time
             )
-        
+
             if generation_elapsed <= 4:
                 message_placeholder.success(
                     "Highlighted document generated successfully."
@@ -129,8 +126,13 @@ def render():
                     "generation_success"
                 ] = False
 
+                st.session_state.pop(
+                    "generation_success_time",
+                    None
+                )
+
         # -----------------------------------
-        # Generate output file with progress
+        # Generate output file
         # -----------------------------------
         if generate_clicked:
             try:
@@ -162,9 +164,20 @@ def render():
                     "word_compare_output"
                 ] = output_data
 
+                # remove upload message immediately
+                st.session_state.pop(
+                    "upload_message_time",
+                    None
+                )
+
+                # set generation success message
                 st.session_state[
                     "generation_success"
                 ] = True
+
+                st.session_state[
+                    "generation_success_time"
+                ] = time.time()
 
                 progress_bar.progress(100)
                 status_box.success(
