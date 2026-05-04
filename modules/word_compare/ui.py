@@ -79,19 +79,55 @@ def render():
             new_lines
         )
 
+        import time
         # -----------------------------------
-        # Top messages
+        # Message container
         # -----------------------------------
-        st.success(
-            "Files loaded successfully."
-        )
-
+        message_placeholder = st.empty()
+        
+        current_time = time.time()
+                
+        # -----------------------------------
+        # Upload success message
+        # -----------------------------------
+        if old_file and new_file:
+            if "upload_message_time" not in st.session_state:
+                st.session_state["upload_message_time"] = current_time
+        
+            upload_elapsed = (
+                current_time -
+                st.session_state["upload_message_time"]
+            )
+        
+            if upload_elapsed <= 3:
+                message_placeholder.success(
+                    "Files loaded successfully."
+                )
+        
+        
+        # -----------------------------------
+        # Generation success message
+        # -----------------------------------
         if st.session_state.get(
             "generation_success"
         ):
-            st.success(
-                "Highlighted document generated successfully."
+            generation_time = st.session_state.get(
+                "generation_success_time",
+                current_time
             )
+        
+            generation_elapsed = (
+                current_time - generation_time
+            )
+        
+            if generation_elapsed <= 4:
+                message_placeholder.success(
+                    "Highlighted document generated successfully."
+                )
+            else:
+                st.session_state[
+                    "generation_success"
+                ] = False
 
         # -----------------------------------
         # Generate output file with progress
