@@ -245,24 +245,19 @@ def render_synced_preview(
 
         body {{
             margin:0;
-            padding:0;
             font-family:Arial;
-            overflow:hidden;
         }}
 
         .container {{
             display:flex;
             width:100%;
-            height:360px;   /* show ~15 rows */
+            height:650px;
             border:1px solid #ccc;
-            overflow:hidden;
         }}
 
         .pane {{
             width:50%;
-            height:100%;
             overflow-y:auto;
-            overflow-x:hidden;
             border-right:1px solid #ddd;
             font-family:Consolas, monospace;
         }}
@@ -300,20 +295,6 @@ def render_synced_preview(
             background:white;
         }}
 
-        /* cleaner scrollbar */
-        .pane::-webkit-scrollbar {{
-            width:8px;
-        }}
-
-        .pane::-webkit-scrollbar-thumb {{
-            background:#b5b5b5;
-            border-radius:10px;
-        }}
-
-        .pane::-webkit-scrollbar-track {{
-            background:#f5f5f5;
-        }}
-
     </style>
     </head>
 
@@ -339,10 +320,14 @@ def render_synced_preview(
 
         <script>
             const left =
-                document.getElementById("leftPane");
+                document.getElementById(
+                    "leftPane"
+                );
 
             const right =
-                document.getElementById("rightPane");
+                document.getElementById(
+                    "rightPane"
+                );
 
             let syncing = false;
 
@@ -351,7 +336,8 @@ def render_synced_preview(
                 function() {{
                     if (!syncing) {{
                         syncing = true;
-                        right.scrollTop = left.scrollTop;
+                        right.scrollTop =
+                            left.scrollTop;
                         syncing = false;
                     }}
                 }}
@@ -362,7 +348,8 @@ def render_synced_preview(
                 function() {{
                     if (!syncing) {{
                         syncing = true;
-                        left.scrollTop = right.scrollTop;
+                        left.scrollTop =
+                            right.scrollTop;
                         syncing = false;
                     }}
                 }}
@@ -375,6 +362,6 @@ def render_synced_preview(
 
     components.html(
         combined_html,
-        height=380,   # slightly larger than container
+        height=420,
         scrolling=False
     )
