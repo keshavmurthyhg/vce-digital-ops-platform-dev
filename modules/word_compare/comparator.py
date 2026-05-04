@@ -1,92 +1,249 @@
 from docx import Document
 from docx.shared import RGBColor
+from docx.enum.text import WD_COLOR_INDEX
+from docx.oxml import parse_xml
+from docx.oxml.ns import nsdecls
 from copy import deepcopy
 import hashlib
-import os
-from datetime import datetime
+import difflib
 
 
 # ------------------------------------------
 # Highlight helpers
 # ------------------------------------------
 def highlight_run(run, color="yellow"):
+
+    # Replaced/Updated
     if color == "yellow":
-        run.font.highlight_color = 7
+        run.font.highlight_color = (
+            WD_COLOR_INDEX.YELLOW
+        )
 
-    elif color == "red":
-        run.font.color.rgb = RGBColor(255, 0, 0)
-
+    # Added
     elif color == "green":
-        run.font.color.rgb = RGBColor(0, 128, 0)
+        run.font.highlight_color = (
+            WD_COLOR_INDEX.BRIGHT_GREEN
+        )
+
+    # Deleted
+    elif color == "red":
+        run.font.color.rgb = RGBColor(
+            255,
+            255,
+            255
+        )
+
+        shading_elm = parse_xml(
+            r'<w:shd {} w:fill="FF0000"/>'.format(
+                nsdecls("w")
+            )
+        )
+
+        run._r.get_or_add_rPr().append(
+            shading_elm
+        )
 
 
 # ------------------------------------------
-# Compare paragraphs
+# Compare paragraph text
 # ------------------------------------------
-def compare_paragraphs(old_doc, new_doc, output_doc):
+def compare_paragraphs(
+    old_doc,
+    new_doc,
+    old_output_doc,
+    new_output_doc
+):
     old_paras = old_doc.paragraphs
     new_paras = new_doc.paragraphs
 
-    max_len = max(len(old_paras), len(new_paras))
+    max_len = max(
+        len(old_paras),
+        len(new_paras)
+    )
 
     for i in range(max_len):
 
+        # -------------------------------
+        # Added paragraph
+        # -------------------------------
         if i >= len(old_paras):
-            p = output_doc.add_paragraph()
-            run = p.add_run(new_paras[i].text)
-            highlight_run(run, "green")
+            if i < len(new_output_doc.paragraphs):
+                for run in new_output_doc.paragraphs[i].runs:
+                    highlight_run(
+                        run,
+                        "green"
+                    )
             continue
 
+        # -------------------------------
+        # Deleted paragraph
+        # -------------------------------
         if i >= len(new_paras):
+            if i < len(old_output_doc.paragraphs):
+                for run in old_output_doc.paragraphs[i].runs:
+                    highlight_run(
+                        run,
+                        "red"
+                    )
             continue
 
-        if old_paras[i].text != new_paras[i].text:
-            output_doc.paragraphs[i].clear()
+        old_text = old_paras[i].text
+        new_text = new_paras[i].text
 
-            run = output_doc.paragraphs[i].add_run(
-                new_paras[i].text
+        if old_text == new_text:
+            continue
+
+        old_words = old_text.split()
+        new_words = new_text.split()
+
+        matcher = difflib.SequenceMatcher(
+            None,
+            old_words,
+            new_words
+        )
+
+        # --------------------------------
+        # OLD file → only deleted text red
+        # --------------------------------
+        old_output_doc.paragraphs[i].clear()
+
+        for tag, a1, a2, b1, b2 in matcher.get_opcodes():
+            segment = " ".join(
+                old_words[a1:a2]
             )
-            highlight_run(run, "yellow")
+
+            if not segment:
+                continue
+
+            run = old_output_doc.paragraphs[i].add_run(
+                segment + " "
+            )
+
+            if tag in [
+                "delete",
+                "replace"
+            ]:
+                highlight_run(
+                    run,
+                    "red"
+                )
+
+        # --------------------------------
+        # NEW file → added/replaced
+        # --------------------------------
+        new_output_doc.paragraphs[i].clear()
+
+        for tag, a1, a2, b1, b2 in matcher.get_opcodes():
+            segment = " ".join(
+                new_words[b1:b2]
+            )
+
+            if not segment:
+                continue
+
+            run = new_output_doc.paragraphs[i].add_run(
+                segment + " "
+            )
+
+            if tag == "insert":
+                highlight_run(
+                    run,
+                    "green"
+                )
+
+            elif tag == "replace":
+                highlight_run(
+                    run,
+                    "yellow"
+                )
 
 
 # ------------------------------------------
 # Compare tables
 # ------------------------------------------
-def compare_tables(old_doc, new_doc, output_doc):
+def compare_tables(
+    old_doc,
+    new_doc,
+    old_output_doc,
+    new_output_doc
+):
     old_tables = old_doc.tables
     new_tables = new_doc.tables
 
-    for t_idx in range(min(len(old_tables), len(new_tables))):
+    for t_idx in range(
+        min(
+            len(old_tables),
+            len(new_tables)
+        )
+    ):
         old_table = old_tables[t_idx]
         new_table = new_tables[t_idx]
-        output_table = output_doc.tables[t_idx]
+
+        old_output_table = old_output_doc.tables[t_idx]
+        new_output_table = new_output_doc.tables[t_idx]
 
         for r_idx in range(
-            min(len(old_table.rows), len(new_table.rows))
+            min(
+                len(old_table.rows),
+                len(new_table.rows)
+            )
         ):
-            old_row = old_table.rows[r_idx]
-            new_row = new_table.rows[r_idx]
-
             for c_idx in range(
                 min(
-                    len(old_row.cells),
-                    len(new_row.cells)
+                    len(
+                        old_table.rows[r_idx].cells
+                    ),
+                    len(
+                        new_table.rows[r_idx].cells
+                    )
                 )
             ):
-                old_text = old_row.cells[c_idx].text
-                new_text = new_row.cells[c_idx].text
+                old_text = (
+                    old_table.rows[r_idx]
+                    .cells[c_idx]
+                    .text
+                )
 
-                if old_text != new_text:
-                    cell = output_table.rows[r_idx].cells[c_idx]
-                    cell.text = new_text
+                new_text = (
+                    new_table.rows[r_idx]
+                    .cells[c_idx]
+                    .text
+                )
 
-                    for para in cell.paragraphs:
-                        for run in para.runs:
-                            highlight_run(run, "yellow")
+                if old_text == new_text:
+                    continue
+
+                # Old table → deleted
+                old_cell = (
+                    old_output_table
+                    .rows[r_idx]
+                    .cells[c_idx]
+                )
+
+                for para in old_cell.paragraphs:
+                    for run in para.runs:
+                        highlight_run(
+                            run,
+                            "red"
+                        )
+
+                # New table → updated
+                new_cell = (
+                    new_output_table
+                    .rows[r_idx]
+                    .cells[c_idx]
+                )
+
+                for para in new_cell.paragraphs:
+                    for run in para.runs:
+                        highlight_run(
+                            run,
+                            "yellow"
+                        )
 
 
 # ------------------------------------------
-# Get embedded image hashes
+# Image hashes
 # ------------------------------------------
 def get_image_hashes(doc):
     hashes = []
@@ -98,8 +255,13 @@ def get_image_hashes(doc):
 
             if "image" in rel.target_ref.lower():
                 img_data = rel.target_part.blob
-                img_hash = hashlib.md5(img_data).hexdigest()
-                hashes.append(img_hash)
+                img_hash = hashlib.md5(
+                    img_data
+                ).hexdigest()
+
+                hashes.append(
+                    img_hash
+                )
 
         except Exception:
             continue
@@ -110,26 +272,46 @@ def get_image_hashes(doc):
 # ------------------------------------------
 # Compare images
 # ------------------------------------------
-def compare_images(old_doc, new_doc, output_doc):
-    old_images = set(get_image_hashes(old_doc))
-    new_images = set(get_image_hashes(new_doc))
+def compare_images(
+    old_doc,
+    new_doc,
+    old_output_doc,
+    new_output_doc
+):
+    old_images = set(
+        get_image_hashes(old_doc)
+    )
+
+    new_images = set(
+        get_image_hashes(new_doc)
+    )
 
     added = new_images - old_images
     removed = old_images - new_images
 
     if added:
-        p = output_doc.add_paragraph()
+        p = new_output_doc.add_paragraph()
+
         run = p.add_run(
             f"Images Added: {len(added)}"
         )
-        highlight_run(run, "green")
+
+        highlight_run(
+            run,
+            "green"
+        )
 
     if removed:
-        p = output_doc.add_paragraph()
+        p = old_output_doc.add_paragraph()
+
         run = p.add_run(
             f"Images Removed: {len(removed)}"
         )
-        highlight_run(run, "red")
+
+        highlight_run(
+            run,
+            "red"
+        )
 
 
 # ------------------------------------------
@@ -144,73 +326,32 @@ def compare_documents(
     old_doc = Document(old_file)
     new_doc = Document(new_file)
 
-    # Old output -> preserve old document
-    old_output_doc = deepcopy(old_doc)
-
-    # New output -> preserve new document
-    new_output_doc = deepcopy(new_doc)
-
-    old_paras = old_doc.paragraphs
-    new_paras = new_doc.paragraphs
-
-    max_len = max(
-        len(old_paras),
-        len(new_paras)
+    old_output_doc = deepcopy(
+        old_doc
     )
 
-    for i in range(max_len):
+    new_output_doc = deepcopy(
+        new_doc
+    )
 
-        # --------------------------
-        # Added content -> highlight in NEW file
-        # --------------------------
-        if i >= len(old_paras):
-            run = new_output_doc.paragraphs[i].runs
+    compare_paragraphs(
+        old_doc,
+        new_doc,
+        old_output_doc,
+        new_output_doc
+    )
 
-            for r in run:
-                highlight_run(r, "green")
+    compare_tables(
+        old_doc,
+        new_doc,
+        old_output_doc,
+        new_output_doc
+    )
 
-            continue
-
-        # --------------------------
-        # Deleted content -> highlight in OLD file
-        # --------------------------
-        if i >= len(new_paras):
-            run = old_output_doc.paragraphs[i].runs
-
-            for r in run:
-                highlight_run(r, "red")
-
-            continue
-
-        old_text = old_paras[i].text
-        new_text = new_paras[i].text
-
-        if old_text != new_text:
-
-            # OLD file → deleted version
-            old_output_doc.paragraphs[i].clear()
-            old_run = old_output_doc.paragraphs[i].add_run(
-                old_text
-            )
-            highlight_run(
-                old_run,
-                "red"
-            )
-
-            # NEW file → updated version
-            new_output_doc.paragraphs[i].clear()
-            new_run = new_output_doc.paragraphs[i].add_run(
-                new_text
-            )
-            highlight_run(
-                new_run,
-                "yellow"
-            )
-
-    # Compare images
     compare_images(
         old_doc,
         new_doc,
+        old_output_doc,
         new_output_doc
     )
 
