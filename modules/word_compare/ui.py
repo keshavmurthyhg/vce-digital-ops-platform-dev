@@ -131,12 +131,18 @@ def render():
                     old_file,
                     new_file
                 )
-
+        
                 st.session_state[
                     "word_compare_output"
                 ] = output_data
-
-                
+        
+                # FIX: trigger success message
+                st.session_state[
+                    "generation_success"
+                ] = True
+        
+                st.rerun()
+        
             except Exception as e:
                 st.error(
                     f"Generation Error: {str(e)}"
