@@ -6,38 +6,87 @@ def render_sidebar():
         "Word Compare Controls"
     )
 
+    # -------------------------
+    # Initialize uploader keys
+    # -------------------------
+    if "old_uploader_key" not in st.session_state:
+        st.session_state.old_uploader_key = "old_upload_1"
+
+    if "new_uploader_key" not in st.session_state:
+        st.session_state.new_uploader_key = "new_upload_1"
+
+    # -------------------------
+    # Old file upload
+    # -------------------------
+    st.sidebar.markdown(
+        "Upload Old Document (DOCX)"
+    )
+
     old_file = st.sidebar.file_uploader(
-        "Upload Old Document (DOCX | 200MB)",
+        "",
         type=["docx"],
-        key="wc_old_doc"
+        key=st.session_state.old_uploader_key
+    )
+
+    if old_file:
+        st.sidebar.success(
+            f"Uploaded: {old_file.name}"
+        )
+
+    # -------------------------
+    # New file upload
+    # -------------------------
+    st.sidebar.markdown(
+        "Upload New Document (DOCX)"
     )
 
     new_file = st.sidebar.file_uploader(
-        "Upload New Document (DOCX | 200MB)",
+        "",
         type=["docx"],
-        key="wc_new_doc"
+        key=st.session_state.new_uploader_key
     )
 
+    if new_file:
+        st.sidebar.success(
+            f"Uploaded: {new_file.name}"
+        )
+
+    # -------------------------
+    # Generate button
+    # -------------------------
     generate_clicked = st.sidebar.button(
         "Generate Highlighted File",
         use_container_width=True
     )
 
+    # -------------------------
+    # Clear button
+    # -------------------------
     clear_clicked = st.sidebar.button(
         "Clear Files",
         use_container_width=True
     )
 
     if clear_clicked:
-        keys_to_clear = [
-            "wc_old_doc",
-            "wc_new_doc",
-            "word_compare_output"
-        ]
+        # Remove output file
+        if "word_compare_output" in st.session_state:
+            del st.session_state[
+                "word_compare_output"
+            ]
 
-        for key in keys_to_clear:
-            if key in st.session_state:
-                del st.session_state[key]
+        if "generation_success" in st.session_state:
+            del st.session_state[
+                "generation_success"
+            ]
+
+        # Reset uploader keys
+        st.session_state.old_uploader_key = (
+            f"old_upload_{len(st.session_state)}"
+        )
+
+        st.session_state.new_uploader_key = (
+            f"new_upload_{len(st.session_state)+1}"
+        )
 
         st.rerun()
 
