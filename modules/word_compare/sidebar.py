@@ -28,11 +28,6 @@ def render_sidebar():
         key=st.session_state.old_uploader_key
     )
 
-    if old_file:
-        st.sidebar.success(
-            f"Uploaded: {old_file.name}"
-        )
-
     # -------------------------
     # New file upload
     # -------------------------
@@ -45,11 +40,6 @@ def render_sidebar():
         type=["docx"],
         key=st.session_state.new_uploader_key
     )
-
-    if new_file:
-        st.sidebar.success(
-            f"Uploaded: {new_file.name}"
-        )
 
     # -------------------------
     # Generate button
