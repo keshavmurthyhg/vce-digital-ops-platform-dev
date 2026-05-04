@@ -127,9 +127,13 @@ def render():
                     "word_compare_output"
                 ] = output_data
 
-                st.success(
-                    "Highlighted document generated successfully."
-                )
+                st.session_state["generation_success"] = True
+                if st.session_state.get(
+                    "generation_success"
+                ):
+                    st.success(
+                        "Highlighted document generated successfully."
+                    )
 
             except Exception as e:
                 st.error(
