@@ -181,21 +181,20 @@ def generate_bulk_zip(reports):
                 )
 
                 # File names with date
-                pdf_filename = (
-                    f"{number}_{current_date}.pdf"
-                )
-                word_filename = (
-                    f"{number}_{current_date}.docx"
-                )
-
-                # Write into ZIP
+                pdf_filename = f"{number}_{current_date}.pdf"
+                word_filename = f"{number}_{current_date}.docx"
+                
+                # Folder per incident
+                folder_path = f"{number}/"
+                
+                # Write into ZIP (WITH folder)
                 z.writestr(
-                    pdf_filename,
+                    f"{folder_path}{pdf_filename}",
                     pdf_bytes
                 )
-
+                
                 z.writestr(
-                    word_filename,
+                    f"{folder_path}{word_filename}",
                     word_bytes
                 )
 
