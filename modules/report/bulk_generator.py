@@ -1,18 +1,18 @@
-from io import BytesIO
+from io import BytesIO, StringIO
 import zipfile
+import csv
 from datetime import datetime
+import streamlit as st
 
 from modules.common.utils.links import extract_azure_id
 from modules.report.doc_generator import (
     generate_pdf,
-    generate_word_doc_wrapper
+    generate_word_doc_wrapper,
+    get_download_filename
 )
 from modules.report.services.rca_service import build_rca
 
 
-# -----------------------------------
-# SAFE TEXT
-# -----------------------------------
 def safe_text(val):
     if val is None:
         return ""
@@ -25,35 +25,11 @@ def safe_text(val):
     if val.lower() in ["nan", "none", "nat"]:
         return ""
 
-    MAX_LEN = 800
-    lines = []
-
-    for raw in val.split("\n"):
-        raw = raw.strip()
-
-        if not raw:
-            continue
-
-        if len(raw) > MAX_LEN:
-            chunks = [
-                raw[i:i + MAX_LEN]
-                for i in range(0, len(raw), MAX_LEN)
-            ]
-            lines.extend(chunks)
-        else:
-            lines.append(raw)
-
-    return "\n".join(lines)
+    return val
 
 
-# -----------------------------------
-# BUILD BULK REPORTS
-# -----------------------------------
-def build_bulk_reports(
-    df,
-    incident_list,
-    images_map=None
-):
+# ---------------- BUILD REPORTS ---------------- #
+def build_bulk_reports(df, incident_list, images_map=None):
     results = []
 
     for inc in incident_list:
@@ -61,150 +37,115 @@ def build_bulk_reports(
             row = df[df["number"] == inc]
 
             if row.empty:
-                print(f"Incident not found: {inc}")
                 continue
 
             r = row.iloc[0]
 
-            # -----------------------------------
-            # FIX:
-            # Azure bug should ONLY be extracted
-            # from resolution notes
-            # -----------------------------------
-            resolution_notes = str(
-                r.get("resolution notes", "")
-            )
+            resolution_notes = str(r.get("resolution notes", ""))
+            azure_bug = extract_azure_id(resolution_notes)
 
-            azure_bug = extract_azure_id(
-                resolution_notes
-            )
-
-            # FULL incident payload required by PDF/Word
             data = {
                 "number": r.get("number"),
-
                 "short_description": r.get("short description"),
                 "description": r.get("description"),
-
                 "priority": r.get("priority"),
-
                 "created_by": r.get("opened by"),
                 "created_date": r.get("created"),
-
                 "assigned_to": r.get("assigned to"),
                 "resolved_date": r.get("resolved"),
-
-                # Fixed Azure extraction
                 "azure_bug": azure_bug,
-
                 "ptc_case": r.get("vendor ticket"),
-
-                # RCA fields
                 "work notes": r.get("work notes", ""),
                 "additional comments": r.get("additional comments", ""),
-                "resolution notes": r.get("resolution notes", ""),
-
-                # aliases
-                "work_notes": r.get("work notes", ""),
-                "additional_comments": r.get("additional comments", ""),
-                "resolution_notes": r.get("resolution notes", "")
+                "resolution notes": r.get("resolution notes", "")
             }
 
-            # Build RCA
             rca = build_rca(data)
 
-            images = (
-                images_map.get(inc, {})
-                if images_map
-                else {}
-            )
+            images = images_map.get(inc, {}) if images_map else {}
 
             results.append({
                 "data": data,
-                "root": safe_text(
-                    rca.get("problem_statement", "")
-                ),
-                "l2": safe_text(
-                    rca.get("root_cause", "")
-                ),
-                "res": safe_text(
-                    rca.get("resolution", "")
-                ),
+                "root": safe_text(rca.get("problem_statement")),
+                "l2": safe_text(rca.get("root_cause")),
+                "res": safe_text(rca.get("resolution")),
                 "images": images
             })
 
-        except Exception as e:
-            print(f"Error building report for {inc}: {e}")
+        except Exception:
             continue
 
     return results
 
 
-# -----------------------------------
-# GENERATE BULK ZIP
-# -----------------------------------
-def generate_bulk_zip(reports):
+# ---------------- BULK ZIP ---------------- #
+def generate_bulk_zip(
+    reports,
+    file_type="both",      # pdf / word / both
+    group_by="priority"    # priority / date / none
+):
     zip_buffer = BytesIO()
+    failed_reports = []
+
+    total = len(reports)
+    progress = st.progress(0)
+    status = st.empty()
 
     current_date = datetime.now().strftime("%d%b%Y")
 
-    with zipfile.ZipFile(
-        zip_buffer,
-        "w",
-        zipfile.ZIP_DEFLATED
-    ) as z:
+    with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as z:
 
-        for report in reports:
+        for i, report in enumerate(reports, start=1):
             try:
                 data = report["data"]
-                number = data.get(
-                    "number",
-                    "unknown_incident"
-                )
+                number = str(data.get("number", "unknown")).strip().replace(" ", "_")
 
-                # Generate PDF
-                pdf_bytes = generate_pdf(
-                    data=data,
-                    root=report["root"],
-                    l2=report["l2"],
-                    res=report["res"],
-                    images=report["images"]
-                )
+                pdf_name = get_download_filename(data, "pdf")
+                word_name = get_download_filename(data, "docx")
 
-                # Generate Word
-                word_bytes = generate_word_doc_wrapper(
-                    data=data,
-                    root=report["root"],
-                    l2=report["l2"],
-                    res=report["res"],
-                    images=report["images"]
-                )
+                # -------- GROUPING -------- #
+                if group_by == "priority":
+                    priority = str(data.get("priority", "unknown")).strip()
+                    folder = f"{priority}/{number}/"
+                elif group_by == "date":
+                    folder = f"{current_date}/{number}/"
+                else:
+                    folder = f"{number}/"
 
-                # File names with date
-                pdf_filename = f"{number}_{current_date}.pdf"
-                word_filename = f"{number}_{current_date}.docx"
-                
-                # Folder per incident
-                folder_path = f"{number}/"
-                
-                # Write into ZIP (WITH folder)
-                z.writestr(
-                    f"{folder_path}{pdf_filename}",
-                    pdf_bytes
-                )
-                
-                z.writestr(
-                    f"{folder_path}{word_filename}",
-                    word_bytes
-                )
+                # -------- GENERATE -------- #
+                if file_type in ["pdf", "both"]:
+                    pdf_bytes = generate_pdf(
+                        data, report["root"], report["l2"], report["res"], report["images"]
+                    )
+                    z.writestr(f"{folder}{pdf_name}", pdf_bytes)
 
-                print(
-                    f"Generated bulk report for {number}"
-                )
+                if file_type in ["word", "both"]:
+                    word_bytes = generate_word_doc_wrapper(
+                        data, report["root"], report["l2"], report["res"], report["images"]
+                    )
+                    z.writestr(f"{folder}{word_name}", word_bytes)
 
             except Exception as e:
-                print(f"Failed bulk report: {e}")
-                continue
+                failed_reports.append({
+                    "incident": data.get("number"),
+                    "error": str(e)
+                })
+
+            # -------- PROGRESS -------- #
+            percent = int((i / total) * 100)
+            progress.progress(percent)
+            status.text(f"Processing {i}/{total} ({percent}%)")
+
+        # -------- FAILED CSV -------- #
+        if failed_reports:
+            buffer = StringIO()
+            writer = csv.DictWriter(buffer, fieldnames=["incident", "error"])
+            writer.writeheader()
+            writer.writerows(failed_reports)
+
+            z.writestr("failed_reports.csv", buffer.getvalue())
 
     zip_buffer.seek(0)
+    status.text("✅ Bulk completed")
+
     return zip_buffer
